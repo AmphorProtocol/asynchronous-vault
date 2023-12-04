@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity 0.8.21;
 
 /*
  _______  _______  _______           _______  _______
@@ -38,7 +38,7 @@ struct PermitParams {
     bytes32 s;
 }
 
-contract AmphorSyntheticVaultWithPermit is AmphorSyntheticVault {
+contract AmphorSyntheticVaultWithPermit is AmphorSyntheticVaultImp {
     /**
      * @dev The `constructor` function is used to initialize the vault.
      * @param underlying The underlying asset token.
@@ -52,7 +52,7 @@ contract AmphorSyntheticVaultWithPermit is AmphorSyntheticVault {
         string memory name,
         string memory symbol,
         uint8 _decimalsOffset
-    ) AmphorSyntheticVault(underlying, name, symbol, _decimalsOffset) {}
+    ) AmphorSyntheticVaultImp(underlying, name, symbol, _decimalsOffset) {}
 
     /**
      * @dev The `depositWithPermit` function is used to deposit underlying assets

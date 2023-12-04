@@ -1,14 +1,14 @@
 //SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity 0.8.21;
 
-import {Ownable2Step} from
+import {Ownable, Ownable2Step} from
     "@openzeppelin/contracts/access/Ownable2Step.sol";
-import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {SafeERC20} from
-    "@openzeppelin-v4.9.3/contracts/token/ERC20/utils/SafeERC20.sol";
+    "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
-import {PermitParams} from "./AmphorSyntheticVaultWithPermit.sol";
+import {PermitParams} from "./AmphorSyntheticVaultPermitImp.sol";
 import {ERC20Permit} from
     "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 
@@ -64,15 +64,17 @@ contract VaultZapper is Ownable2Step, Pausable {
         if (!authorizedVaults[vault]) revert NotVault(vault);
         _;
     }
+
+    constructor() Ownable(_msgSender()) {}
+
     /**
-     * @dev The `claimToken` function is used to claim other tokens that have
+     * @dev The `withdrawToken` function is used to claim other tokens that have
      * been sent to the vault.
-     * @notice The `claimToken` function is used to claim other tokens that have
+     * @notice The `withdrawToken` function is used to claim other tokens that have
      * been sent to the vault.
      * It can only be called by the owner of the contract (`onlyOwner` modifier).
      * @param token The IERC20 token to be claimed.
      */
-
     function withdrawToken(IERC20 token) external onlyOwner {
         token.safeTransfer(_msgSender(), token.balanceOf(address(this)));
     }

@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity 0.8.21;
 
 import {
     Ownable,
@@ -14,7 +14,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {SafeERC20} from
     "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ERC20Permit} from
     "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 
@@ -37,7 +37,7 @@ import {ERC20Permit} from
 \_______)   \_/   |/    )_)   )_(   |/     \|(_______/   )_(   \_______/(_______/
 */
 
-contract AmphorSyntheticVault is
+contract AmphorSyntheticVaultImp is
     IERC4626,
     ERC20,
     ERC20Permit,
@@ -251,7 +251,7 @@ contract AmphorSyntheticVault is
         string memory name,
         string memory symbol,
         uint8 _decimalsOffset
-    ) ERC20(name, symbol) ERC20Permit(name) Ownable2Step() {
+    ) ERC20(name, symbol) ERC20Permit(name) Ownable(_msgSender()) {
         _asset = underlying;
         decimalsOffset = _decimalsOffset;
         unchecked {
@@ -347,7 +347,7 @@ contract AmphorSyntheticVault is
      * assets amount.
      */
     function convertToShares(uint256 assets) public view returns (uint256) {
-        return _convertToShares(assets, Math.Rounding.Down);
+        return _convertToShares(assets, Math.Rounding.Floor);
     }
 
     /**
@@ -359,7 +359,7 @@ contract AmphorSyntheticVault is
      * amount.
      */
     function convertToAssets(uint256 shares) public view returns (uint256) {
-        return _convertToAssets(shares, Math.Rounding.Down);
+        return _convertToAssets(shares, Math.Rounding.Floor);
     }
 
     /**
@@ -394,7 +394,7 @@ contract AmphorSyntheticVault is
      */
     function maxWithdraw(address owner) public view returns (uint256) {
         return vaultIsOpen
-            ? _convertToAssets(balanceOf(owner), Math.Rounding.Down)
+            ? _convertToAssets(balanceOf(owner), Math.Rounding.Floor)
             : 0;
     }
 
@@ -418,7 +418,7 @@ contract AmphorSyntheticVault is
      * assets amount.
      */
     function previewDeposit(uint256 assets) public view returns (uint256) {
-        return _convertToShares(assets, Math.Rounding.Down);
+        return _convertToShares(assets, Math.Rounding.Floor);
     }
 
     /**
@@ -429,7 +429,7 @@ contract AmphorSyntheticVault is
      * amount of shares.
      */
     function previewMint(uint256 shares) public view returns (uint256) {
-        return _convertToAssets(shares, Math.Rounding.Up);
+        return _convertToAssets(shares, Math.Rounding.Ceil);
     }
 
     /**
@@ -440,7 +440,7 @@ contract AmphorSyntheticVault is
      * assets amount.
      */
     function previewWithdraw(uint256 assets) public view returns (uint256) {
-        return _convertToShares(assets, Math.Rounding.Up);
+        return _convertToShares(assets, Math.Rounding.Ceil);
     }
 
     /**
@@ -451,7 +451,7 @@ contract AmphorSyntheticVault is
      * amount of shares.
      */
     function previewRedeem(uint256 shares) public view returns (uint256) {
-        return _convertToAssets(shares, Math.Rounding.Down);
+        return _convertToAssets(shares, Math.Rounding.Floor);
     }
 
     /**
@@ -743,7 +743,7 @@ contract AmphorSyntheticVault is
             unchecked {
                 profits = assetReturned - lastSavedBalance;
             }
-            fees = (profits).mulDiv(feesInBps, 10000, Math.Rounding.Up);
+            fees = (profits).mulDiv(feesInBps, 10000, Math.Rounding.Ceil);
         }
 
         SafeERC20.safeTransferFrom(
