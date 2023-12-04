@@ -17,6 +17,7 @@ import {SafeERC20} from
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ERC20Permit} from
     "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
+import {AmprWithdrawReceipt} from "./amprWithdrawReceipt.sol";
 
 /*
  _______  _______  _______           _______  _______
@@ -36,6 +37,14 @@ import {ERC20Permit} from
 /\____) |   | |   | )  \  |   | |   | )   ( || (____/\   | |   ___) (___| (____/\
 \_______)   \_/   |/    )_)   )_(   |/     \|(_______/   )_(   \_______/(_______/
 */
+
+struct SignatureParams {
+    uint256 nonce;
+    uint256 timestamp;
+    uint8 v;
+    bytes32 r;
+    bytes32 s;
+}
 
 contract AmphorSyntheticVaultImp is
     IERC4626,
@@ -109,6 +118,25 @@ contract AmphorSyntheticVaultImp is
      * @return `true` if the vault is open for deposits, `false` otherwise.
      */
     bool public vaultIsOpen;
+
+    /*
+     * @dev Tells if an address is authorized to sign in order to accept an exit
+     * @notice Tells if an address is authorized to sign in order to accept an exit
+     * @return True if the address is authorized to sign, false otherwise
+     * @param signer The address to check
+    */
+    mapping (address => bool) private _isSignerWhitelisted;
+
+    /*
+     * @dev The liquidity pocket address of the early sell feature
+     * @notice The liquidity pocket address of the early sell feature
+     * @return The liquidity pocket address of the early sell feature
+    */
+    address private _earlySellLiquidityPocket;
+
+    bool[] private _nonces;
+    AmprWithdrawReceipt public amprWithdrawReceipt;
+    IERC20 private _oldShareToken;
 
     /*
      ########
@@ -232,6 +260,10 @@ contract AmphorSyntheticVaultImp is
         address owner, uint256 assets, uint256 maxAssets
     );
 
+    error BadSigner();
+    error BadTimestamp();
+    error BadNonce();
+
     /*
      #############
       CONSTRUCTOR
@@ -248,12 +280,16 @@ contract AmphorSyntheticVaultImp is
      */
     constructor(
         ERC20 underlying,
+        ERC20 oldShareToken,
         string memory name,
         string memory symbol,
-        uint8 _decimalsOffset
+        uint8 _decimalsOffset,
+        AmprWithdrawReceipt _amprWithdrawReceipt
     ) ERC20(name, symbol) ERC20Permit(name) Ownable(_msgSender()) {
+        _oldShareToken = oldShareToken;
         _asset = underlying;
         decimalsOffset = _decimalsOffset;
+        amprWithdrawReceipt = _amprWithdrawReceipt;
         unchecked {
             _decimalsShares = underlying.decimals() + _decimalsOffset;
         }
@@ -798,5 +834,122 @@ contract AmphorSyntheticVaultImp is
     function claimToken(IERC20 token) external onlyOwner {
         if (token == _asset) revert CannotClaimAsset();
         token.safeTransfer(_msgSender(), token.balanceOf(address(this)));
+    }
+
+    /**
+     * @dev The `buy` function is used to mint the specified sharesAmount in
+     * exchange of the corresponding underlyingAmount from the earlySellLiquidityPocket.
+     * It can only be called by the owner of the contract (`onlyOwner` modifier).
+     */
+    function buy(
+        address buyer,
+        address receiver,
+        uint256 sharesAmount,
+        uint256 underlyingAmount,
+        SignatureParams calldata signatureParams
+    ) public {
+        bytes32 unprovedMessage = keccak256(abi.encodePacked(buyer, sharesAmount, underlyingAmount, signatureParams.timestamp, signatureParams.nonce));
+        address recoveredSigner = ecrecover(unprovedMessage, signatureParams.v, signatureParams.r, signatureParams.s);
+
+        if (!_isSignerWhitelisted[recoveredSigner]) revert BadSigner();
+        if (block.timestamp > signatureParams.timestamp) revert BadTimestamp();
+        if (_nonces[signatureParams.nonce]) revert BadNonce();
+
+        _nonces[signatureParams.nonce] = true;
+
+        _asset.transferFrom(buyer, _earlySellLiquidityPocket, underlyingAmount);
+        _mint(receiver, sharesAmount);
+    }
+
+    /*
+     * @dev The `earlySell()` function is used to redeem the specified sharesAmount in exchange of the corresponding
+     * assetsAmount from the earlySellLiquidityPocket.
+     * @notice The `earlySell()` function is used to redeem the specified sharesAmount in exchange of the corresponding
+     * assetsAmount from the earlySellLiquidityPocket.
+     * @param owner The address of the owner
+     * @param recipient The address of the recipient of the underlying tokens
+     * @param sharesAmount The amount of shares to be converted into underlying token
+     * @param underlyingAmount The amount of underlying token to be converted into shares
+     * @param timestamp The timestamp of the transaction
+     * @param v The v value of the signature
+     * @param r The r value of the signature
+     * @param s The s value of the signature
+    */
+    function sell(
+        address owner,
+        address recipient,
+        uint256 sharesAmount,
+        uint256 underlyingAmount,
+        SignatureParams calldata signatureParams
+    ) public {
+        bytes32 unprovedMessage = keccak256(abi.encodePacked(owner, sharesAmount, underlyingAmount, signatureParams.timestamp, signatureParams.nonce));
+        address recoveredSigner = ecrecover(unprovedMessage, signatureParams.v, signatureParams.r, signatureParams.s);
+
+        if (!_isSignerWhitelisted[recoveredSigner]) revert BadSigner();
+        if (block.timestamp > signatureParams.timestamp) revert BadTimestamp();
+        if (_nonces[signatureParams.nonce]) revert BadNonce();
+
+        _nonces[signatureParams.nonce] = true;
+        _burn(owner, sharesAmount);
+
+        uint256 availableLiquidity = _asset.balanceOf(_earlySellLiquidityPocket);
+
+        if (availableLiquidity < underlyingAmount) {
+            underlyingAmount-= availableLiquidity;
+            _asset.transferFrom(_earlySellLiquidityPocket, recipient, availableLiquidity);
+            amprWithdrawReceipt.mintFrom(underlyingAmount, recipient);
+        } else 
+            ERC20(asset()).transferFrom(_earlySellLiquidityPocket, recipient, underlyingAmount);
+    }
+
+    /*
+     * @dev The `getEarlySellLiquidityPocket()` function is used to get the address of the earlySellLiquidityPocket.
+     * @notice The `getEarlySellLiquidityPocket()` function is used to get the address of the earlySellLiquidityPocket.
+     * @return The address of the earlySellLiquidityPocket
+    */
+    function getEarlySellLiquidityPocket() external view onlyOwner returns (address) {
+        return _earlySellLiquidityPocket;
+    }
+
+    /*
+     * @dev The `setEarlySellLiquidityPocket()` function is used to set the address of the earlySellLiquidityPocket.
+     * @notice The `setEarlySellLiquidityPocket()` function is used to set the address of the earlySellLiquidityPocket.
+     * @param _earlySellLiquidityPocket The address of the earlySellLiquidityPocket
+    */
+    function setEarlySellLiquidityPocket(address earlySellLiquidityPocket) external onlyOwner {
+        _earlySellLiquidityPocket = earlySellLiquidityPocket;
+    }
+
+    /*
+     * @dev The `isSignerWhitelisted()` function is used to check if an address is whitelisted as signer.
+     * @notice The `isSignerWhitelisted()` function is used to check if an address is whitelisted as signer.
+     * @param signer The address of the signer
+     * @return True if the signer is whitelisted, false otherwise
+    */
+    function isSignerWhitelisted(address signer) external view onlyOwner returns (bool) {
+        return _isSignerWhitelisted[signer];
+    }
+
+    /*
+     * @dev The `addSigner()` function is used to add a signer to the whitelist.
+     * @notice The `addSigner()` function is used to add a signer to the whitelist.
+     * @param signer The address of the signer
+    */
+    function addSigner(address signer) external onlyOwner {
+        _isSignerWhitelisted[signer] = true;
+    }
+
+    /*
+     * @dev The `removeSigner()` function is used to remove a signer from the whitelist.
+     * @notice The `removeSigner()` function is used to remove a signer from the whitelist.
+     * @param signer The address of the signer
+    */
+    function removeSigner(address signer) external onlyOwner {
+        _isSignerWhitelisted[signer] = false;
+    }
+
+    function migrate(address owner) external onlyOwner {
+        _oldShareToken.transferFrom(owner, address(0), _oldShareToken.balanceOf(owner));
+        _mint(owner, _oldShareToken.balanceOf(owner));
     }
 }

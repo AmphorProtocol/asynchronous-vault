@@ -23,7 +23,7 @@ pragma solidity 0.8.21;
 import "./AmphorSyntheticVaultImp.sol";
 import {ERC20Permit} from
     "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
-import {IPermit2, ISignatureTransfer} from "@permit2/src/interfaces/IPermit2.sol";
+import {IPermit2, ISignatureTransfer} from "permit2/src/interfaces/IPermit2.sol";
 
 struct Permit2Params {
     uint256 amount;
@@ -33,7 +33,7 @@ struct Permit2Params {
     bytes signature;
 }
 
-contract AmphorSyntheticVaultWithPermit2 is AmphorSyntheticVault {
+contract AmphorSyntheticVaultPermit2Imp is AmphorSyntheticVaultImp {
     /*
      ####################################
       GENERAL PERMIT2 RELATED ATTRIBUTES
@@ -57,9 +57,9 @@ contract AmphorSyntheticVaultWithPermit2 is AmphorSyntheticVault {
         string memory name,
         string memory symbol,
         uint8 _decimalsOffset,
-        IPermit2 _permit2,
-        AmprWithdrawReceipt _amprWithdrawReceipt
-    ) AmphorSyntheticVault(underlying, oldShareToken, name, symbol, _decimalsOffset, _amprWithdrawReceipt) {
+        AmprWithdrawReceipt _amprWithdrawReceipt,
+        IPermit2 _permit2
+    ) AmphorSyntheticVaultImp(underlying, oldShareToken, name, symbol, _decimalsOffset, _amprWithdrawReceipt) {
         permit2 = _permit2;
     }
 

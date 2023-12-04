@@ -38,7 +38,7 @@ struct PermitParams {
     bytes32 s;
 }
 
-contract AmphorSyntheticVaultWithPermit is AmphorSyntheticVaultImp {
+contract AmphorSyntheticVaultPermitImp is AmphorSyntheticVaultImp {
     /**
      * @dev The `constructor` function is used to initialize the vault.
      * @param underlying The underlying asset token.
@@ -49,10 +49,12 @@ contract AmphorSyntheticVaultWithPermit is AmphorSyntheticVaultImp {
      */
     constructor(
         ERC20 underlying,
+        ERC20 oldShareToken,
         string memory name,
         string memory symbol,
-        uint8 _decimalsOffset
-    ) AmphorSyntheticVaultImp(underlying, name, symbol, _decimalsOffset) {}
+        uint8 _decimalsOffset,
+        AmprWithdrawReceipt _amprWithdrawReceipt
+    ) AmphorSyntheticVaultImp(underlying, oldShareToken, name, symbol, _decimalsOffset, _amprWithdrawReceipt) {}
 
     /**
      * @dev The `depositWithPermit` function is used to deposit underlying assets
