@@ -1,4 +1,6 @@
 @openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/
+@ERC-7540-Reference/=lib/ERC-7540-Reference/src/
+ERC4626/=lib/ERC-7540-Reference/lib/ERC4626/src/
 ds-test/=lib/forge-std/lib/ds-test/src/
 erc4626-tests/=lib/openzeppelin-contracts/lib/erc4626-tests/
 forge-gas-snapshot/=lib/permit2/lib/forge-gas-snapshot/src/

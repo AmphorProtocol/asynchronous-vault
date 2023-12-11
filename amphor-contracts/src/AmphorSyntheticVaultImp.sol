@@ -277,7 +277,7 @@ contract AmphorSyntheticVaultImp is
      * @param symbol The symbol of the vault.
      * @param _decimalsOffset The decimal offset between the underlying asset
      * token and the share token.
-     */
+     */ 
     constructor(
         ERC20 underlying,
         ERC20 oldShareToken,
