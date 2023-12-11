@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import {IERC7540} from "./interfaces/IERC7540.sol";
+import {IERC7540, IERC165, IERC7540Redeem} from "./interfaces/IERC7540.sol";
 import {
     Ownable,
     Ownable2Step
@@ -40,7 +40,7 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
     function pendingRedeemRequest(address operator) external view returns (uint256 shares) {return 0;}
     function supportsInterface(bytes4 interfaceId) external pure override returns (bool) {
         return interfaceId == type(IERC165).interfaceId || interfaceId == type(IERC7540Redeem).interfaceId
-            || interfaceId == type(ERC4626).interfaceId;
+            || interfaceId == type(IERC4626).interfaceId;
     }
     function asset() public view returns (address assetTokenAddress) {return address(0);}
     function totalAssets() external view returns (uint256 totalManagedAssets) {return 0;}
