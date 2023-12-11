@@ -21,17 +21,18 @@ import {ERC20Permit} from
 
 contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step, Pausable {
 
+    ERC20 public asset;
+
     constructor(
         ERC20 underlying,
         ERC20 oldShareToken,
         string memory name,
         string memory symbol
     ) ERC20(name, symbol) ERC20Permit(name) Ownable(_msgSender()) {
-        //_asset = underlying;
+        asset = underlying;
     }
 
     function nextEpoch(uint256 returnedUnderlyingAmount) external returns (uint256) {
-        // TODO: implement fees calculation, then sub the deposits and the withdraw ask and take the money to the caller of this tx
     }
 
     function requestDeposit(uint256 assets, address operator) external {}
@@ -42,7 +43,6 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         return interfaceId == type(IERC165).interfaceId || interfaceId == type(IERC7540Redeem).interfaceId
             || interfaceId == type(IERC4626).interfaceId;
     }
-    function asset() public view returns (address assetTokenAddress) {return address(0);}
     function totalAssets() external view returns (uint256 totalManagedAssets) {return 0;}
     function convertToShares(uint256 assets) external view returns (uint256 shares) {return 0;}
     function convertToAssets(uint256 shares) external view returns (uint256 assets) {return 0;}
