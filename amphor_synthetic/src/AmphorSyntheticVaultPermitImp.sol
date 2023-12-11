@@ -71,7 +71,8 @@ contract AmphorSyntheticVaultPermitImp is AmphorSyntheticVaultImp {
         address receiver,
         PermitParams calldata permitParams
     ) external returns (uint256) {
-        execPermit(_msgSender(), address(this), permitParams);
+        if (_asset.allowance(msg.sender, address(this)) < assets)
+            execPermit(_msgSender(), address(this), permitParams);
         return deposit(assets, receiver);
     }
 
@@ -93,7 +94,8 @@ contract AmphorSyntheticVaultPermitImp is AmphorSyntheticVaultImp {
         uint256 minShares,
         PermitParams calldata permitParams
     ) external returns (uint256) {
-        execPermit(_msgSender(), address(this), permitParams);
+        if (_asset.allowance(msg.sender, address(this)) < assets)
+            execPermit(_msgSender(), address(this), permitParams);
         return depositMinShares(assets, receiver, minShares);
     }
 
@@ -112,7 +114,8 @@ contract AmphorSyntheticVaultPermitImp is AmphorSyntheticVaultImp {
         address receiver,
         PermitParams calldata permitParams
     ) external returns (uint256) {
-        execPermit(_msgSender(), address(this), permitParams);
+        if (_asset.allowance(msg.sender, address(this)) < previewMint(shares))
+            execPermit(_msgSender(), address(this), permitParams);
         return mint(shares, receiver);
     }
 
@@ -134,7 +137,8 @@ contract AmphorSyntheticVaultPermitImp is AmphorSyntheticVaultImp {
         uint256 maxAssets,
         PermitParams calldata permitParams
     ) external returns (uint256) {
-        execPermit(_msgSender(), address(this), permitParams);
+        if (_asset.allowance(msg.sender, address(this)) < previewMint(shares))
+            execPermit(_msgSender(), address(this), permitParams);
         return mintMaxAssets(shares, receiver, maxAssets);
     }
 
