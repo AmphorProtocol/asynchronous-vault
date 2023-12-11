@@ -10,3 +10,6 @@
 [submodule "amphor-contracts/lib/ERC-7540-Reference"]
 	path = amphor-contracts/lib/ERC-7540-Reference
 	url = https://github.com/ERC4626-Alliance/ERC-7540-Reference
+[submodule "amphor-contracts/lib/solmate"]
+	path = amphor-contracts/lib/solmate
+	url = https://github.com/transmissions11/solmate
