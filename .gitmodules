@@ -10,3 +10,6 @@
 [submodule "amphor-contracts/lib/ERC-7540-Reference"]
 	path = amphor-contracts/lib/ERC-7540-Reference
 	url = https://github.com/ERC4626-Alliance/ERC-7540-Reference
+[submodule "amphor-contracts/lib/ERC-6909"]
+	path = amphor-contracts/lib/ERC-6909
+	url = https://github.com/jtriley-eth/ERC-6909
