@@ -206,7 +206,8 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
 
     function nextEpoch(uint256 returnedUnderlyingAmount) external onlyOwner returns (uint256) {
         // end + start epochs
-        epochNonce++;
+        returnedUnderlyingAmount; // tired of warning
+        return ++epochNonce;
     }
 
     function requestDeposit(uint256 assets, address operator) external whenNotPaused {
@@ -224,16 +225,16 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
     }
     function requestRedeem(uint256 shares, address operator, address owner) external whenNotPaused {
         totalSharesWidrawRequest += shares;
-        IERC20(this).transferFrom(_msgSender(), address(this), shares);
-        withdrawRequestLP.mint(operator, epochNonce, shares);
+        IERC20(this).transferFrom(operator, address(this), shares);
+        withdrawRequestLP.mint(owner, epochNonce, shares);
     }
     function withdrawRedeemRequest(uint256 shares, address operator, address owner) external whenNotPaused {
         totalSharesWidrawRequest -= shares;
         withdrawRequestLP.burn(operator, epochNonce, shares);
-        IERC20(this).transfer(_msgSender(), shares);
+        IERC20(this).transfer(owner, shares);
     }
     function pendingRedeemRequest(address operator) external view returns (uint256 shares) {
-        return 0;
+        return withdrawRequestLP.balanceOf(operator, epochNonce);
     }
     function supportsInterface(bytes4 interfaceId) public pure returns (bool) {
         return interfaceId == type(IERC165).interfaceId || interfaceId == type(IERC7540Redeem).interfaceId;
