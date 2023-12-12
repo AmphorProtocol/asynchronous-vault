@@ -187,12 +187,15 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
      */
     bool public vaultIsOpen;
 
-    ERC20 public immutable _asset;
+    IERC20 public immutable _asset;
+    uint256 public epochNonce;
+    uint256 public totalSharesWidrawRequest;
+    uint256 public totalDepositRequest;
     AmphorAsyncSynthVaultRequestLPImp public immutable depositRequestLP;
     AmphorAsyncSynthVaultRequestLPImp public immutable withdrawRequestLP;
 
     constructor(
-        ERC20 underlying,
+        IERC20 underlying,
         string memory name,
         string memory symbol
     ) ERC20(name, symbol) ERC20Permit(name) Ownable(_msgSender()) {
@@ -202,24 +205,32 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
     }
 
     function nextEpoch(uint256 returnedUnderlyingAmount) external onlyOwner returns (uint256) {
-        // increase epoch nonce
+        // end + start epochs
+        epochNonce++;
     }
 
     function requestDeposit(uint256 assets, address operator) external whenNotPaused {
-        // mint depositRequestLP, discriminated by epoch & operator
+        totalDepositRequest += assets;
+        _asset.safeTransferFrom(_msgSender(), address(this), assets);
+        depositRequestLP.mint(operator, epochNonce, assets);
     }
     function withdrawDepositRequest(uint256 assets, address operator) external whenNotPaused {
-        // burn depositRequestLP, discriminated by epoch & operator
+        totalDepositRequest -= assets;
+        depositRequestLP.burn(operator, epochNonce, assets);
+        _asset.safeTransfer(_msgSender(), assets);
     }
     function pendingDepositRequest(address operator) external view returns (uint256 assets) {
-        // return depositRequestLP.balanceOf(operator)
-        return 0;
+        return depositRequestLP.balanceOf(operator, epochNonce);
     }
     function requestRedeem(uint256 shares, address operator, address owner) external whenNotPaused {
-        // mint withdrawRequestLP, discriminated by epoch & operator
+        totalSharesWidrawRequest += shares;
+        IERC20(this).transferFrom(_msgSender(), address(this), shares);
+        withdrawRequestLP.mint(operator, epochNonce, shares);
     }
     function withdrawRedeemRequest(uint256 shares, address operator, address owner) external whenNotPaused {
-        // burn withdrawRequestLP, discriminated by epoch & operator
+        totalSharesWidrawRequest -= shares;
+        withdrawRequestLP.burn(operator, epochNonce, shares);
+        IERC20(this).transfer(_msgSender(), shares);
     }
     function pendingRedeemRequest(address operator) external view returns (uint256 shares) {
         return 0;
@@ -618,7 +629,7 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
 
     //     lastSavedBalance = _totalAssets();
     //     vaultIsOpen = false;
-    //     IERC20(_asset).safeTransfer(owner(), lastSavedBalance);
+    //     _asset.safeTransfer(owner(), lastSavedBalance);
 
     //     emit EpochStart(block.timestamp, lastSavedBalance, totalSupply());
     // }
