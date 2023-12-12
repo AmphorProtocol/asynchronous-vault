@@ -425,14 +425,14 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         return 0;
     }
 
-    function _claimDeposit(uint256 id, uint256 pendingShares, address owner) internal {
+    function claimDeposit(uint256 id, uint256 pendingShares, address owner) public {
         uint256 amount = depositRequestLP.balanceOf(owner, id);
         if (amount > 0) {
             depositRequestLP.burn(owner, id, amount);
             IERC20(this).transfer(owner, amount);
         }
         uint256 shares = amount.mulDiv(
-            depositRequestLP.totalSupply(id) + 1, totalAssets() + 1, Math.Rounding.Floor
+            bigShares[epochNonce] + 1, depositRequestLP.totalSupply(id) + 1, Math.Rounding.Floor
         );
     }
 
