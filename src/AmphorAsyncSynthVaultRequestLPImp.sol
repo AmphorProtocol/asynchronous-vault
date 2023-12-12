@@ -48,5 +48,21 @@ contract AmphorAsyncSynthVaultRequestLPImp is ERC6909, Ownable2Step {
         emit Transfer(msg.sender, sender, address(0), id, amount);
     }
 
-    // TODO: add batched version
+    function getPositiveBalances(address account, uint256 epochNonce)
+        external
+        view
+        returns (uint256[] memory)
+    {
+        uint256[] memory allBalances = new uint256[](epochNonce);
+        uint256 allBalancesIndex;
+        for (allBalancesIndex; allBalancesIndex < epochNonce; allBalancesIndex++) {
+            uint256 lpBalances = balanceOf[account][allBalancesIndex];
+            if (lpBalances > 0) allBalances[allBalancesIndex] = lpBalances;
+        }
+        uint256[] memory positiveBalances = new uint256[](epochNonce);
+        uint256 positiveBalancesIndex;
+        for (positiveBalancesIndex; positiveBalancesIndex < allBalancesIndex; positiveBalancesIndex++)
+            positiveBalances[positiveBalancesIndex] = positiveBalances[positiveBalancesIndex];
+        return positiveBalances;
+    } 
 }

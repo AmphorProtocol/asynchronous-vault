@@ -436,6 +436,10 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         );
     }
 
+    function claimDeposits(uint256[] memory ids, uint256[] memory pendingShares, address owner) public {
+        for (uint i = 0; i < ids.length; i++) claimDeposit(ids[i], pendingShares[i], owner);
+    }
+
     /**
      * @dev The `mint` function is used to mint the specified amount of shares in
      * exchange of the corresponding assets amount from owner.
