@@ -17,7 +17,7 @@ import {SafeERC20} from
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ERC20Permit} from
     "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
-import {AmphorAsyncSynthVaultRequestLPImp} from "./AmphorAsyncSynthVaultRequestLPImp.sol";
+import {AmphorAsyncSynthVaultPendingRequestLPImp} from "./AmphorAsyncSynthVaultPendingRequestLPImp.sol";
 
 
 contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step, Pausable {
@@ -186,8 +186,8 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
     uint256 public totalDepositRequest;
     uint256 public totalAssets;
     uint256[] public bigShares;
-    AmphorAsyncSynthVaultRequestLPImp public immutable depositRequestLP;
-    AmphorAsyncSynthVaultRequestLPImp public immutable withdrawRequestLP;
+    // AmphorAsyncSynthVaultRequestLPImp public immutable depositRequestLP;
+    // AmphorAsyncSynthVaultRequestLPImp public immutable withdrawRequestLP;
     // mapping(address => bool) public hasPendingDepositRequest;
     // mapping(address => bool) public hasPendingWithdrawRequest;
     // mapping(address => uint256) public hasPendingDepositRequest;
@@ -200,8 +200,8 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         string memory symbol
     ) ERC20(name, symbol) ERC20Permit(name) Ownable(_msgSender()) {
         _asset = IERC20(underlying);
-        depositRequestLP = new AmphorAsyncSynthVaultRequestLPImp(underlying, "amphorAsyncDepositLP", "ampAsDLP");
-        withdrawRequestLP = new AmphorAsyncSynthVaultRequestLPImp(underlying, "amphorAsyncWithdrawLP", "ampAsWLP");
+        // depositRequestLP = new AmphorAsyncSynthVaultRequestLPImp(underlying, "amphorAsyncDepositLP", "ampAsDLP");
+        // withdrawRequestLP = new AmphorAsyncSynthVaultRequestLPImp(underlying, "amphorAsyncWithdrawLP", "ampAsWLP");
     }
 
     function nextEpoch(uint256 returnedUnderlyingAmount) external onlyOwner returns (uint256) {
@@ -221,7 +221,8 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         _asset.safeTransfer(_msgSender(), assets);
     }
     function pendingDepositRequest(address operator) external view returns (uint256 assets) {
-        return depositRequestLP.balanceOf(operator, epochNonce);
+        // return depositRequestLP.balanceOf(operator, epochNonce);
+        return 0;
     }
     function requestRedeem(uint256 shares, address operator, address owner) external whenNotPaused {
         totalSharesWidrawRequest += shares;
@@ -234,7 +235,8 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         IERC20(this).transfer(owner, shares);
     }
     function pendingRedeemRequest(address operator) external view returns (uint256 shares) {
-        return withdrawRequestLP.balanceOf(operator, epochNonce);
+        // return withdrawRequestLP.balanceOf(operator, epochNonce);
+        return 0;
     }
     function supportsInterface(bytes4 interfaceId) public pure returns (bool) {
         return interfaceId == type(IERC165).interfaceId || interfaceId == type(IERC7540Redeem).interfaceId;
@@ -395,12 +397,12 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         uint256[] memory allBalances = new uint256[](epochNonce);
         uint256[] memory allIds = new uint256[](epochNonce);
         for (uint256 epochIndex; totalAssetsToClaim > 0 && epochIndex < epochNonce; epochIndex++) {
-            uint256 lpBalances = depositRequestLP.balanceOf(_msgSender(), epochIndex);//balanceOf[_msgSender()][epochIndex];
-            if (lpBalances > 0) {
-                uint256 assetsToClaim = totalAssetsToClaim > lpBalances ? lpBalances : totalAssetsToClaim;
-                sharesClaimed += deposit(epochIndex, assetsToClaim, _msgSender(), receiver);
-                totalAssetsToClaim -= assetsToClaim;
-            }
+            // uint256 lpBalances = depositRequestLP.balanceOf(_msgSender(), epochIndex);//balanceOf[_msgSender()][epochIndex];
+            // if (lpBalances > 0) {
+            //     uint256 assetsToClaim = totalAssetsToClaim > lpBalances ? lpBalances : totalAssetsToClaim;
+            //     sharesClaimed += deposit(epochIndex, assetsToClaim, _msgSender(), receiver);
+            //     totalAssetsToClaim -= assetsToClaim;
+            // }
         }
 
         // TODO: finish this
@@ -428,14 +430,14 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
     }
 
     function claimDeposit(uint256 id, uint256 pendingShares, address owner) public {
-        uint256 amount = depositRequestLP.balanceOf(owner, id);
-        if (amount > 0) {
-            //depositRequestLP.burn(owner, id, amount);
-            IERC20(this).transfer(owner, amount);
-        }
-        uint256 shares = amount.mulDiv(
-            bigShares[epochNonce] + 1, depositRequestLP.totalSupply(id) + 1, Math.Rounding.Floor
-        );
+        // uint256 amount = depositRequestLP.balanceOf(owner, id);
+        // if (amount > 0) {
+        //     depositRequestLP.burn(owner, id, amount);
+        //     IERC20(this).transfer(owner, amount);
+        // }
+        // uint256 shares = amount.mulDiv(
+        //     bigShares[epochNonce] + 1, depositRequestLP.totalSupply(id) + 1, Math.Rounding.Floor
+        // );
     }
 
     function claimDeposits(uint256[] memory ids, uint256[] memory pendingShares, address owner) public {

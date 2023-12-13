@@ -8,34 +8,73 @@ import {
 import {
     Ownable
 } from "@openzeppelin/contracts/access/Ownable.sol";
+import {AmphorAsyncSynthVaultImp} from "./AmphorAsyncSynthVaultImp.sol";
 
-contract AmphorAsyncSynthVaultRequestLPImp is ERC6909ib, Ownable {
+contract AmphorAsyncSynthVaultPendingRequestLPImp is ERC6909ib, Ownable {
 
     ERC20 private immutable underyling;
-    uint256 public constant MAX_UINT256 = type(uint256).max;
-    uint256[] private _totalAssets;
+    AmphorAsyncSynthVaultImp private immutable vault;
 
-    constructor(ERC20 _underlying, string memory name, string memory symbol) ERC6909ib(name, symbol) Ownable(_msgSender()) {
+    constructor(
+        ERC20 _underlying,
+        string memory name,
+        string memory symbol
+    ) ERC6909ib(name, symbol) Ownable(_msgSender()) {
         underyling = _underlying;
+        vault = AmphorAsyncSynthVaultImp(msg.sender);
     }
 
     function asset(uint256) public view virtual override returns (ERC20) {
-        return ERC20(underyling);
+        return underyling;
     }
-    
+
     function totalAssets(uint256 tokenId) public view virtual override returns (uint256) {
-        return _totalAssets[tokenId];
+        return underyling.balanceOf(address(this));
     }
 
     function decimals(uint256 tokenId) public view virtual override returns (uint8) {
         return underyling.decimals();
     }
 
-    function getPositiveBalances(address account, uint256 epochNonce)
+    function deposit(uint256, uint256 assets, address receiver)
+        public
+        override
+        returns (uint256 shares) 
+    {
+        super.deposit(vault.epochNonce(), assets, receiver);
+    }
+
+    function mint(uint256, uint256 shares, address receiver)
+        public
+        override
+        returns (uint256 assets) 
+    {
+        super.mint(vault.epochNonce(), shares, receiver);
+    }
+
+    function withdraw(uint256, uint256 assets, address receiver, address owner)
+        public
+        override
+        returns (uint256 shares) 
+    {
+        super.withdraw(vault.epochNonce(), assets, receiver, owner);
+    }
+
+    function redeem(uint256, uint256 shares, address receiver, address owner)
+        public
+        override
+        returns (uint256 assets) 
+    {
+        super.redeem(vault.epochNonce(), shares, receiver, owner);
+    }
+
+    // Only for display purposes, nasty code
+    function getPositiveBalances(address account)
         external
         view
         returns (uint256[] memory ids, uint256[] memory positiveBalances)
     {
+        uint256 epochNonce = vault.epochNonce();
         uint256[] memory allBalances = new uint256[](epochNonce);
         uint256[] memory allIds = new uint256[](epochNonce);
         uint256 allBalancesIndex;
