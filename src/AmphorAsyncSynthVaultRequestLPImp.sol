@@ -12,6 +12,7 @@ contract AmphorAsyncSynthVaultRequestLPImp is ERC6909, Ownable2Step {
     /// @notice Total supply for a token.
     mapping(uint256 tokenId => uint256 supply) public totalSupply;
     constructor() ERC6909() Ownable(_msgSender()) {}
+    uint256 public constant MAX_UINT256 = type(uint256).max;
 
     function mint(
         address operator,
@@ -22,27 +23,23 @@ contract AmphorAsyncSynthVaultRequestLPImp is ERC6909, Ownable2Step {
     }
 
     function burn(
-        address operator,
+        address owner,
         uint256 requestId,
         uint256 amount
     ) external onlyOwner {
-        _burn(operator, requestId, amount);
+        _burn(owner, requestId, amount);
     }
 
     function _mint(address receiver, uint256 id, uint256 amount) internal {
         // WARNING: important safety checks should precede calls to this method.
         balanceOf[receiver][id] += amount;
-        unchecked {
-            totalSupply[id] += amount;
-        }
+        totalSupply[id] += amount;
         emit Transfer(msg.sender, address(0), receiver, id, amount);
     }
 
     function _burn(address sender, uint256 id, uint256 amount) internal {
         // WARNING: important safety checks should precede calls to this method.
-        unchecked {
-            totalSupply[id] -= amount;
-        }
+        totalSupply[id] -= amount;
 
         balanceOf[sender][id] -= amount;
         emit Transfer(msg.sender, sender, address(0), id, amount);

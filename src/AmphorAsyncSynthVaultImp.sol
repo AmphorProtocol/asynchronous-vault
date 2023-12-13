@@ -169,13 +169,6 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
     */
 
     /**
-     * @dev The total underlying assets amount just before the lock period.
-     * @return Amount of the total underlying assets just before the last vault
-     * locking.
-     */
-    uint256 public lastSavedBalance;
-
-    /**
      * @dev The perf fees applied on the positive yield.
      * @return Amount of the perf fees applied on the positive yield.
      */
@@ -191,9 +184,15 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
     uint256 public epochNonce;
     uint256 public totalSharesWidrawRequest;
     uint256 public totalDepositRequest;
+    uint256 public totalAssets;
     uint256[] public bigShares;
     AmphorAsyncSynthVaultRequestLPImp public immutable depositRequestLP;
     AmphorAsyncSynthVaultRequestLPImp public immutable withdrawRequestLP;
+    // mapping(address => bool) public hasPendingDepositRequest;
+    // mapping(address => bool) public hasPendingWithdrawRequest;
+    // mapping(address => uint256) public hasPendingDepositRequest;
+    // mapping(address => uint256) public hasPendingWithdrawRequest;
+
 
     constructor(
         IERC20 underlying,
@@ -255,20 +254,6 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
      */
     function asset() public view returns (address) {
         return address(_asset);
-    }
-
-    /**
-     * @dev The `totalAssets` function is used to calculate the theoretical
-     * total underlying assets owned by the vault.
-     * If the vault is locked, the last saved balance is added to the current
-     * balance.
-     * @notice The `totalAssets` function is used to know what is the
-     * theoretical TVL of the vault.
-     * @return Amount of the total underlying assets in the vault.
-     */
-    function totalAssets() public view returns (uint256) {
-        if (vaultIsOpen) return _totalAssets();
-        return _totalAssets() + lastSavedBalance;
     }
 
     /**
@@ -401,13 +386,22 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         public
         returns (uint256)
     {
-        // uint256 maxAssets = maxDeposit(receiver);
-        // if (assets > maxAssets) {
-        //     revert ERC4626ExceededMaxDeposit(receiver, assets, maxAssets);
-        // }
-        
-
-
+        uint256 maxAssets = maxDeposit(receiver);
+        if (assets > maxAssets) {
+            revert ERC4626ExceededMaxDeposit(receiver, assets, maxAssets);
+        }
+        uint256 totalAssetsToClaim = assets;
+        uint256 sharesClaimed;
+        uint256[] memory allBalances = new uint256[](epochNonce);
+        uint256[] memory allIds = new uint256[](epochNonce);
+        for (uint256 epochIndex; totalAssetsToClaim > 0 && epochIndex < epochNonce; epochIndex++) {
+            uint256 lpBalances = depositRequestLP.balanceOf(_msgSender(), epochIndex);//balanceOf[_msgSender()][epochIndex];
+            if (lpBalances > 0) {
+                uint256 assetsToClaim = totalAssetsToClaim > lpBalances ? lpBalances : totalAssetsToClaim;
+                sharesClaimed += deposit(epochIndex, assetsToClaim, _msgSender(), receiver);
+                totalAssetsToClaim -= assetsToClaim;
+            }
+        }
 
         // TODO: finish this
         // for (uint256 i = 0; i < epochNonce; i++) {
@@ -423,6 +417,14 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
 
         // return sharesAmount;
         return 0;
+    }
+
+    function deposit (uint256 requestId, uint256 assets, address owner, address receiver)
+        public
+        returns (uint256 sharesAmount)
+    {
+        sharesAmount = previewDeposit(assets);
+        _deposit(owner, receiver, requestId, assets, sharesAmount);
     }
 
     function claimDeposit(uint256 id, uint256 pendingShares, address owner) public {
@@ -455,7 +457,7 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         }
 
         uint256 assetsAmount = previewMint(shares);
-        _deposit(_msgSender(), receiver, assetsAmount, shares);
+        _deposit(_msgSender(), receiver, 0, assetsAmount, shares);
 
         return assetsAmount;
     }
@@ -535,19 +537,6 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
     }
 
     /**
-     * @dev The `_totalAssets` function is used to return the current assets
-     * balance of the vault contract.
-     * @notice The `_totalAssets` is used to know the balance of underlying of
-     * the vault contract without
-     * taking care of any theoretical external funds of the vault.
-     * @return Amount of underlying assets balance actually contained into the
-     * vault contract.
-     */
-    function _totalAssets() internal view returns (uint256) {
-        return _asset.balanceOf(address(this));
-    }
-
-    /**
      * @dev Internal conversion function (from assets to shares) with support
      * for rounding direction.
      * @param assets Theunderlying assets amount to be converted into shares.
@@ -561,7 +550,7 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         returns (uint256)
     {
         return assets.mulDiv(
-            totalSupply() + 1, totalAssets() + 1, rounding
+            totalSupply() + 1, totalAssets + 1, rounding
         );
     }
 
@@ -579,7 +568,7 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         returns (uint256)
     {
         return shares.mulDiv(
-            totalAssets() + 1, totalSupply() + 1, rounding
+            totalAssets + 1, totalSupply() + 1, rounding
         );
     }
 
@@ -594,6 +583,7 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
     function _deposit(
         address caller,
         address receiver,
+        uint256 requestId,
         uint256 assets,
         uint256 shares
     ) internal {
@@ -605,8 +595,7 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         // Conclusion: we need to do the transfer before we mint so that any
         // reentrancy would happen before the assets are transferred and before
         // the shares are minted, which is a valid state.
-        // slither-disable-next-line reentrancy-no-eth
-        SafeERC20.safeTransferFrom(_asset, caller, address(this), assets);
+        depositRequestLP.burn(caller, requestId, assets);
         _mint(receiver, shares);
 
         emit Deposit(caller, receiver, assets, shares);
