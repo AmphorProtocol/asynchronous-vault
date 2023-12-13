@@ -68,6 +68,10 @@ contract AmphorAsyncSynthVaultPendingRequestLPImp is ERC6909ib, Ownable {
         super.redeem(vault.epochNonce(), shares, receiver, owner);
     }
 
+    function burn(address account, uint256 tokenId, uint256 shares) external onlyOwner {
+        if (balanceOf[account][tokenId] >= shares) _burn(account, tokenId, shares);
+    }
+
     // Only for display purposes, nasty code
     function getPositiveBalances(address account)
         external
