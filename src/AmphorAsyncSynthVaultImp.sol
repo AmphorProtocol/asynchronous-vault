@@ -195,13 +195,13 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
 
 
     constructor(
-        IERC20 underlying,
+        ERC20 underlying,
         string memory name,
         string memory symbol
     ) ERC20(name, symbol) ERC20Permit(name) Ownable(_msgSender()) {
-        _asset = underlying;
-        depositRequestLP = new AmphorAsyncSynthVaultRequestLPImp();
-        withdrawRequestLP = new AmphorAsyncSynthVaultRequestLPImp();
+        _asset = IERC20(underlying);
+        depositRequestLP = new AmphorAsyncSynthVaultRequestLPImp(underlying, "amphorAsyncDepositLP", "ampAsDLP");
+        withdrawRequestLP = new AmphorAsyncSynthVaultRequestLPImp(underlying, "amphorAsyncWithdrawLP", "ampAsWLP");
     }
 
     function nextEpoch(uint256 returnedUnderlyingAmount) external onlyOwner returns (uint256) {
@@ -213,11 +213,11 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
     function requestDeposit(uint256 assets, address operator) external whenNotPaused {
         totalDepositRequest += assets;
         _asset.safeTransferFrom(_msgSender(), address(this), assets);
-        depositRequestLP.mint(operator, epochNonce, assets);
+        //depositRequestLP.mint(operator, epochNonce, assets);
     }
     function withdrawDepositRequest(uint256 assets, address operator) external whenNotPaused {
         totalDepositRequest -= assets;
-        depositRequestLP.burn(operator, epochNonce, assets);
+        // depositRequestLP.burn(operator, epochNonce, assets);
         _asset.safeTransfer(_msgSender(), assets);
     }
     function pendingDepositRequest(address operator) external view returns (uint256 assets) {
@@ -226,11 +226,11 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
     function requestRedeem(uint256 shares, address operator, address owner) external whenNotPaused {
         totalSharesWidrawRequest += shares;
         IERC20(this).transferFrom(operator, address(this), shares);
-        withdrawRequestLP.mint(owner, epochNonce, shares);
+        // withdrawRequestLP.mint(owner, epochNonce, shares);
     }
     function withdrawRedeemRequest(uint256 shares, address operator, address owner) external whenNotPaused {
         totalSharesWidrawRequest -= shares;
-        withdrawRequestLP.burn(operator, epochNonce, shares);
+        // withdrawRequestLP.burn(operator, epochNonce, shares);
         IERC20(this).transfer(owner, shares);
     }
     function pendingRedeemRequest(address operator) external view returns (uint256 shares) {
@@ -430,7 +430,7 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
     function claimDeposit(uint256 id, uint256 pendingShares, address owner) public {
         uint256 amount = depositRequestLP.balanceOf(owner, id);
         if (amount > 0) {
-            depositRequestLP.burn(owner, id, amount);
+            //depositRequestLP.burn(owner, id, amount);
             IERC20(this).transfer(owner, amount);
         }
         uint256 shares = amount.mulDiv(
@@ -595,7 +595,7 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         // Conclusion: we need to do the transfer before we mint so that any
         // reentrancy would happen before the assets are transferred and before
         // the shares are minted, which is a valid state.
-        depositRequestLP.burn(caller, requestId, assets);
+        //depositRequestLP.burn(caller, requestId, assets);
         _mint(receiver, shares);
 
         emit Deposit(caller, receiver, assets, shares);

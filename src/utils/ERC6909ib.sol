@@ -3,13 +3,14 @@ pragma solidity ^0.8.19;
 
 import {ERC6909} from "./ERC6909.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
+import {SafeERC20} from
+    "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 
 /// @title Interest bearing ERC6909
 /// @author mergd (@mergd)
 abstract contract ERC6909ib is ERC6909 {
-    using SafeTransferLib for ERC20;
+    using SafeERC20 for ERC20;
     using FixedPointMathLib for uint256;
 
     /// @notice Total supply for a token.
