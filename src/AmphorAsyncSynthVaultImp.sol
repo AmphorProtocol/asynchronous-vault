@@ -405,7 +405,7 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         // if (assets > maxAssets) {
         //     revert ERC4626ExceededMaxDeposit(receiver, assets, maxAssets);
         // }
-
+        
 
 
 

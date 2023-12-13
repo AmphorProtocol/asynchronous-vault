@@ -51,18 +51,24 @@ contract AmphorAsyncSynthVaultRequestLPImp is ERC6909, Ownable2Step {
     function getPositiveBalances(address account, uint256 epochNonce)
         external
         view
-        returns (uint256[] memory)
+        returns (uint256[] memory ids, uint256[] memory positiveBalances)
     {
         uint256[] memory allBalances = new uint256[](epochNonce);
+        uint256[] memory allIds = new uint256[](epochNonce);
         uint256 allBalancesIndex;
         for (allBalancesIndex; allBalancesIndex < epochNonce; allBalancesIndex++) {
             uint256 lpBalances = balanceOf[account][allBalancesIndex];
-            if (lpBalances > 0) allBalances[allBalancesIndex] = lpBalances;
+            if (lpBalances > 0) {
+                allBalances[allBalancesIndex] = lpBalances;
+                allIds[allBalancesIndex] = allBalancesIndex;
+            }
         }
-        uint256[] memory positiveBalances = new uint256[](epochNonce);
+        positiveBalances = new uint256[](epochNonce);
+        ids = new uint256[](epochNonce);
         uint256 positiveBalancesIndex;
-        for (positiveBalancesIndex; positiveBalancesIndex < allBalancesIndex; positiveBalancesIndex++)
+        for (positiveBalancesIndex; positiveBalancesIndex < allBalancesIndex; positiveBalancesIndex++) {
             positiveBalances[positiveBalancesIndex] = positiveBalances[positiveBalancesIndex];
-        return positiveBalances;
+            ids[positiveBalancesIndex] = allIds[positiveBalancesIndex];
+        }
     } 
 }
