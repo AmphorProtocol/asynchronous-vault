@@ -63,8 +63,8 @@ contract AmphorAsyncSynthVaultRequestLPImp is ERC6909, Ownable2Step {
                 allIds[allBalancesIndex] = allBalancesIndex;
             }
         }
-        positiveBalances = new uint256[](epochNonce);
-        ids = new uint256[](epochNonce);
+        positiveBalances = new uint256[](allBalancesIndex);
+        ids = new uint256[](allBalancesIndex);
         uint256 positiveBalancesIndex;
         for (positiveBalancesIndex; positiveBalancesIndex < allBalancesIndex; positiveBalancesIndex++) {
             positiveBalances[positiveBalancesIndex] = positiveBalances[positiveBalancesIndex];
