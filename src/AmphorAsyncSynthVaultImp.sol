@@ -12,12 +12,10 @@ import {
     IERC20Metadata
 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-import {SafeERC20} from
-    "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ERC20Permit} from
     "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
-import {AmphorAsyncSynthVaultPendingRequestLPImp} from "./AmphorAsyncSynthVaultPendingRequestLPImp.sol";
+import {AmphorAsyncSynthVaultPendingRequestLPImp, SafeERC20} from "./AmphorAsyncSynthVaultPendingRequestLPImp.sol";
 
 
 contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step, Pausable {
@@ -182,67 +180,62 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
 
     IERC20 public immutable _asset;
     uint256 public epochNonce;
-    uint256 public totalSharesWidrawRequest;
-    uint256 public totalDepositRequest;
-    uint256 public totalAssets;
-    uint256[] public bigShares;
-    // AmphorAsyncSynthVaultRequestLPImp public immutable depositRequestLP;
-    // AmphorAsyncSynthVaultRequestLPImp public immutable withdrawRequestLP;
-    // mapping(address => bool) public hasPendingDepositRequest;
-    // mapping(address => bool) public hasPendingWithdrawRequest;
-    // mapping(address => uint256) public hasPendingDepositRequest;
-    // mapping(address => uint256) public hasPendingWithdrawRequest;
+    uint256[] public bigAssets; // pending withdrawals requests that has been processed && waiting for claim/deposit
+    uint256[] public bigShares; // pending deposits requests that has been processed && waiting for claim/withdraw
+    uint256 public totalAssets; // total working assets (in the strategy), not including pending withdrawals money
+
+    AmphorAsyncSynthVaultPendingRequestLPImp public depositRequestLP;
+    AmphorAsyncSynthVaultPendingRequestLPImp public withdrawRequestLP;
 
 
     constructor(
         ERC20 underlying,
         string memory name,
-        string memory symbol
+        string memory symbol,
+        string memory depositRequestLPName,
+        string memory depositRequestLPSymbol,
+        string memory withdrawRequestLPName,
+        string memory withdrawRequestLPSymbol
     ) ERC20(name, symbol) ERC20Permit(name) Ownable(_msgSender()) {
         _asset = IERC20(underlying);
-        // depositRequestLP = new AmphorAsyncSynthVaultRequestLPImp(underlying, "amphorAsyncDepositLP", "ampAsDLP");
-        // withdrawRequestLP = new AmphorAsyncSynthVaultRequestLPImp(underlying, "amphorAsyncWithdrawLP", "ampAsWLP");
+        depositRequestLP = new AmphorAsyncSynthVaultPendingRequestLPImp(underlying, depositRequestLPName, depositRequestLPSymbol);
+        withdrawRequestLP = new AmphorAsyncSynthVaultPendingRequestLPImp(underlying, withdrawRequestLPName, withdrawRequestLPSymbol);
     }
 
+    // TODO: implement this
     function nextEpoch(uint256 returnedUnderlyingAmount) external onlyOwner returns (uint256) {
         // end + start epochs
         returnedUnderlyingAmount; // tired of warning
         return ++epochNonce;
     }
 
-    function requestDeposit(uint256 assets, address operator) external whenNotPaused {
-        totalDepositRequest += assets;
-        _asset.safeTransferFrom(_msgSender(), address(this), assets);
-        //depositRequestLP.mint(operator, epochNonce, assets);
+    function requestDeposit(uint256 assets, address receiver, address owner) external whenNotPaused {
+        depositRequestLP.deposit(assets, receiver, owner);
+        //TODO emit event ?
     }
-    function withdrawDepositRequest(uint256 assets, address operator) external whenNotPaused {
-        totalDepositRequest -= assets;
-        // depositRequestLP.burn(operator, epochNonce, assets);
-        _asset.safeTransfer(_msgSender(), assets);
+    function withdrawDepositRequest(uint256 assets, address receiver, address owner) external whenNotPaused {
+        depositRequestLP.withdraw(assets, receiver, owner);
+        //TODO emit event ?
     }
-    function pendingDepositRequest(address operator) external view returns (uint256 assets) {
-        // return depositRequestLP.balanceOf(operator, epochNonce);
-        return 0;
+    function pendingDepositRequest(address owner) external view returns (uint256 assets) {
+        return depositRequestLP.balanceOf(owner, epochNonce);
     }
-    function requestRedeem(uint256 shares, address operator, address owner) external whenNotPaused {
-        totalSharesWidrawRequest += shares;
-        IERC20(this).transferFrom(operator, address(this), shares);
-        // withdrawRequestLP.mint(owner, epochNonce, shares);
+    function requestRedeem(uint256 shares, address receiver, address owner, bytes memory data) external whenNotPaused {
+        withdrawRequestLP.deposit(shares, receiver, owner);
+        //TODO emit event ?
     }
-    function withdrawRedeemRequest(uint256 shares, address operator, address owner) external whenNotPaused {
-        totalSharesWidrawRequest -= shares;
-        // withdrawRequestLP.burn(operator, epochNonce, shares);
-        IERC20(this).transfer(owner, shares);
+    function withdrawRedeemRequest(uint256 shares, address receiver, address owner) external whenNotPaused {
+        withdrawRequestLP.withdraw(shares, receiver, owner);
+        //TODO emit event ?
     }
-    function pendingRedeemRequest(address operator) external view returns (uint256 shares) {
-        // return withdrawRequestLP.balanceOf(operator, epochNonce);
-        return 0;
+    function pendingRedeemRequest(address owner) external view returns (uint256 shares) {
+        return withdrawRequestLP.balanceOf(owner, epochNonce);
     }
     function supportsInterface(bytes4 interfaceId) public pure returns (bool) {
         return interfaceId == type(IERC165).interfaceId || interfaceId == type(IERC7540Redeem).interfaceId;
     }
 
-    // TODO: implement claimBatchedAssets
+    // TODO: implement batched version of claims deposits/withdraws
 
     /*
      ####################################
