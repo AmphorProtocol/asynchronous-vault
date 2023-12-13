@@ -236,6 +236,8 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
     }
 
     // TODO: implement batched version of claims deposits/withdraws
+    // TODO: imp a permit vault
+    // TODO: imp a permit2 vault
 
     /*
      ####################################
@@ -275,6 +277,7 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         return _convertToAssets(shares, Math.Rounding.Floor);
     }
 
+    // TODO: implement this correclty
     /**
      * @dev The `maxDeposit` function is used to calculate the maximum deposit.
      * @notice If the vault is locked or paused, users are not allowed to mint,
@@ -286,6 +289,7 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         return !vaultIsOpen || paused() ? 0 : type(uint256).max;
     }
 
+    // TODO: implement this correclty
     /**
      * @dev The `maxMint` function is used to calculate the maximum amount of
      * shares you can mint.
@@ -297,6 +301,7 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         return !vaultIsOpen || paused() ? 0 : type(uint256).max;
     }
 
+    // TODO: implement this correclty
     /**
      * @dev The `maxWithdraw` function is used to calculate the maximum amount
      * of withdrawable underlying assets.
@@ -311,6 +316,7 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
             : 0;
     }
 
+    // TODO: implement this correclty
     /**
      * @dev The `maxRedemm` function is used to calculate the maximum amount of
      * redeemable shares.
@@ -367,6 +373,7 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         return _convertToAssets(shares, Math.Rounding.Floor);
     }
 
+    // TODO: implement this correclty
     /**
      * @dev The `deposit` function is used to deposit underlying assets into the
      * vault.
@@ -414,6 +421,7 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         return 0;
     }
 
+    // TODO: implement this correclty if it is useful
     function deposit (uint256 requestId, uint256 assets, address owner, address receiver)
         public
         returns (uint256 sharesAmount)
@@ -422,21 +430,24 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         _deposit(owner, receiver, requestId, assets, sharesAmount);
     }
 
-    function claimDeposit(uint256 id, uint256 pendingShares, address owner) public {
-        // uint256 amount = depositRequestLP.balanceOf(owner, id);
-        // if (amount > 0) {
-        //     depositRequestLP.burn(owner, id, amount);
-        //     IERC20(this).transfer(owner, amount);
-        // }
-        // uint256 shares = amount.mulDiv(
-        //     bigShares[epochNonce] + 1, depositRequestLP.totalSupply(id) + 1, Math.Rounding.Floor
-        // );
-    }
 
-    function claimDeposits(uint256[] memory ids, uint256[] memory pendingShares, address owner) public {
-        for (uint i = 0; i < ids.length; i++) claimDeposit(ids[i], pendingShares[i], owner);
-    }
+    // function claimDeposit(uint256 id, uint256 pendingShares, address owner) public {
+    //     // uint256 amount = depositRequestLP.balanceOf(owner, id);
+    //     // if (amount > 0) {
+    //     //     depositRequestLP.burn(owner, id, amount);
+    //     //     IERC20(this).transfer(owner, amount);
+    //     // }
+    //     // uint256 shares = amount.mulDiv(
+    //     //     bigShares[epochNonce] + 1, depositRequestLP.totalSupply(id) + 1, Math.Rounding.Floor
+    //     // );
+    // }
 
+    // TODO: check this, it can be useful
+    // function claimDeposits(uint256[] memory ids, uint256[] memory pendingShares, address owner) public {
+    //     for (uint i = 0; i < ids.length; i++) claimDeposit(ids[i], pendingShares[i], owner);
+    // }
+
+    // TODO: implement this correclty
     /**
      * @dev The `mint` function is used to mint the specified amount of shares in
      * exchange of the corresponding assets amount from owner.
@@ -457,31 +468,7 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         return assetsAmount;
     }
 
-    /**
-     * @dev The `mintMaxAssets` function is used to mint the specified amount of
-     * shares in exchange of the corresponding underlying assets amount from
-     * owner. It also checks that the amount of assets deposited is less or equal
-     * to the specified maximum amount.
-     * @param shares The shares amount to be converted into underlying assets.
-     * @param receiver The address of the shares receiver.
-     * @param maxAssets The maximum amount of assets to be deposited.
-     * @return Amount of underlying assets deposited in exchange of the specified
-     * amount of shares.
-     */
-    function mintMaxAssets(uint256 shares, address receiver, uint256 maxAssets)
-        public
-        returns (uint256)
-    {
-        uint256 assetsAmount = mint(shares, receiver);
-        if (assetsAmount > maxAssets) {
-            revert ERC4626TooMuchAssetsDeposited(
-                receiver, assetsAmount, maxAssets
-            );
-        }
-
-        return assetsAmount;
-    }
-
+    // TODO: implement this correclty
     /**
      * @dev The `withdraw` function is used to withdraw the specified underlying
      * assets amount in exchange of a proportional amount of shares.
@@ -506,6 +493,7 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         return sharesAmount;
     }
 
+    // TODO: implement this correclty
     /**
      * @dev The `redeem` function is used to redeem the specified amount of
      * shares in exchange of the corresponding underlying assets amount from
@@ -567,6 +555,7 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         );
     }
 
+    // TODO: implement this correclty
     /**
      * @dev The `_deposit` function is used to deposit the specified underlying
      * assets amount in exchange of a proportionnal amount of shares.
@@ -596,6 +585,7 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         emit Deposit(caller, receiver, assets, shares);
     }
 
+    // TODO: implement this correclty
     /**
      * @dev The function `_withdraw` is used to withdraw the specified
      * underlying assets amount in exchange of a proportionnal amount of shares by
@@ -708,6 +698,7 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         emit FeesChanged(feesInBps, newFees);
     }
 
+    // TODO: implement this correclty
     /**
      * @dev The `claimToken` function is used to claim other tokens that have
      * been sent to the vault.
