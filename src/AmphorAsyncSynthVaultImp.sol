@@ -321,15 +321,15 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         return _convertToAssets(shares, Math.Rounding.Ceil);
     }
 
-    /**
-     * @dev The `previewWithdraw` function is used to calculate the shares
-     * amount received in exchange of the specified underlying amount.
-     * @param assets The underlying assets amount to be converted into shares.
-     * @return Amount of shares received in exchange of the specified underlying
-     * assets amount.
-     */
-    function previewWithdraw(uint256 assets) public view returns (uint256) {
-        return _convertToShares(assets, Math.Rounding.Ceil);
+    function previewWithdraw(uint256 assets) public view returns (uint256 shares) {
+        // for (uint256 i = 0; i < epochNonce - 1; i++) {
+        //     uint256 lpBalance = withdrawRequestLP.balanceOf(_msgSender(), epochNonce);
+        //     if (lpBalance > 0)
+        //         shares += lpBalance.mulDiv(
+        //             assets + 1, withdrawRequestLP.totalSupply(i) + 1, Math.Rounding.Floor
+        //         );
+        // }
+        // return _convertToShares(assets, Math.Rounding.Ceil);
     }
 
     /**
