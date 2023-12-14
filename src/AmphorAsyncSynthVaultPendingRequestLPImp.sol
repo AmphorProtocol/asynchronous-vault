@@ -32,20 +32,20 @@ contract AmphorAsyncSynthVaultPendingRequestLPImp is ERC6909ib, Ownable {
         return underyling;
     }
 
-    function totalAssets(uint256 tokenId) public view virtual override returns (uint256) {
-        return underyling.balanceOf(address(this));
+    function totalAssets(uint256) public view virtual override returns (uint256) {
+        return underyling.balanceOf(address(this)); // This contract holds the underlying asset of only one epoch
     }
 
-    function decimals(uint256 tokenId) public view virtual override returns (uint8) {
+    function decimals(uint256) public view virtual override returns (uint8) {
         return underyling.decimals();
     }
 
     function deposit(uint256, uint256 assets, address receiver)
         public
         override
-        returns (uint256 shares) 
+        returns (uint256) 
     {
-        super.deposit(vault.epochNonce(), assets, receiver);
+        return super.deposit(vault.epochNonce(), assets, receiver);
     }
 
     function deposit(uint256 assets, address receiver, address owner) public returns (uint256 shares) {
@@ -66,9 +66,9 @@ contract AmphorAsyncSynthVaultPendingRequestLPImp is ERC6909ib, Ownable {
     function mint(uint256, uint256 shares, address receiver)
         public
         override
-        returns (uint256 assets) 
+        returns (uint256) 
     {
-        super.mint(vault.epochNonce(), shares, receiver);
+        return super.mint(vault.epochNonce(), shares, receiver);
     }
 
     function mint(uint256 shares, address receiver, address owner) public returns (uint256 assets) {
@@ -91,31 +91,31 @@ contract AmphorAsyncSynthVaultPendingRequestLPImp is ERC6909ib, Ownable {
     function withdraw(uint256, uint256 assets, address receiver, address owner)
         public
         override
-        returns (uint256 shares) 
+        returns (uint256) 
     {
-        super.withdraw(vault.epochNonce(), assets, receiver, owner);
+        return super.withdraw(vault.epochNonce(), assets, receiver, owner);
     }
 
     function withdraw(uint256 assets, address receiver, address owner)
         public
-        returns (uint256 shares) 
+        returns (uint256) 
     {
-        super.withdraw(vault.epochNonce(), assets, receiver, owner);
+        return super.withdraw(vault.epochNonce(), assets, receiver, owner);
     }
 
     function redeem(uint256, uint256 shares, address receiver, address owner)
         public
         override
-        returns (uint256 assets) 
+        returns (uint256) 
     {
-        super.redeem(vault.epochNonce(), shares, receiver, owner);
+        return super.redeem(vault.epochNonce(), shares, receiver, owner);
     }
 
     function redeem(uint256 shares, address receiver, address owner)
         public
-        returns (uint256 assets) 
+        returns (uint256) 
     {
-        super.redeem(vault.epochNonce(), shares, receiver, owner);
+        return super.redeem(vault.epochNonce(), shares, receiver, owner);
     }
 
     function burn(address account, uint256 tokenId, uint256 shares) external onlyOwner {

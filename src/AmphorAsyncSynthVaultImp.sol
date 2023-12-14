@@ -228,14 +228,38 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
 
         // TODO
         // 1. take fees from returnedUnderlyingAmount
+        // 7. we update the totalAssets
         // 2. with the resting amount we know how much cost a share
         // 3. we can take the pending deposits underlying (same as this vault underlying) and mint shares
         // 4. we update the bigShares array for the appropriate epoch (epoch 0 request is a deposit into epoch 1...)
         // 5. we can take the pending withdraws shares and redeem underlying (which are shares of this vault) against this vault underlying
         // 6. we update the bigAssets array for the appropriate epoch (epoch 0 request is a withdraw at the end of the epoch 0...)
 
-        
-        returnedUnderlyingAmount; // tired of warning
+        uint256 fees;
+
+        if (returnedUnderlyingAmount > totalAssets && feesInBps > 0) {
+            uint256 profits;
+            unchecked {
+                profits = returnedUnderlyingAmount - totalAssets;
+            }
+            fees = (profits).mulDiv(feesInBps, 10000, Math.Rounding.Ceil);
+        }
+
+        totalAssets = returnedUnderlyingAmount - fees;
+
+        // Can be done in one time at the end
+        SafeERC20.safeTransferFrom(
+            _asset, _msgSender(), address(this), returnedUnderlyingAmount - fees
+        );
+
+        emit EpochEnd(
+            block.timestamp,
+            totalAssets,
+            returnedUnderlyingAmount,
+            fees,
+            totalSupply()
+        );
+
         return ++epochNonce;
     }
 
@@ -250,7 +274,7 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
     function pendingDepositRequest(address owner) external view returns (uint256 assets) {
         return depositRequestLP.balanceOf(owner, epochNonce);
     }
-    function requestRedeem(uint256 shares, address receiver, address owner, bytes memory data) external whenNotPaused {
+    function requestRedeem(uint256 shares, address receiver, address owner, bytes memory) external whenNotPaused {
         withdrawRequestLP.deposit(shares, receiver, owner);
         //TODO emit event ?
     }
@@ -335,19 +359,12 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
     }
 
     // TODO implement this correctly if possible
-    /**
-     * @dev The `previewMint` function is used to calculate the underlying asset
-     * amount received in exchange of the specified amount of shares.
-     * @param shares The shares amount to be converted into underlying assets.
-     * @return Amount of underlying assets received in exchange of the specified
-     * amount of shares.
-     */
-    function previewMint(uint256 shares) public view returns (uint256) {
+    function previewMint(uint256) public pure returns (uint256) {
         return 0;
     }
 
     //TODO implement this correctly if possible
-    function previewWithdraw(uint256 assets) public view returns (uint256) {
+    function previewWithdraw(uint256) public pure returns (uint256) {
         return 0;
     }
 
@@ -374,7 +391,7 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
     // shares = shares to mint
     function _deposit(address owner, address receiver, uint256 requestId, uint256 assets)
         internal
-        returns (uint256 sharesAmount)
+        returns (uint256)
     {
         uint256 maxAssets = maxDeposit(owner); // what he can claim from the last epoch request 
         if (assets > maxAssets) { // he is trying to claim more than he can by saying he has more pending lp that he has in reality
@@ -393,30 +410,14 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
     }
 
     // TODO: implement this correclty if possible
-    /**
-     * @dev The `mint` function is used to mint the specified amount of shares in
-     * exchange of the corresponding assets amount from owner.
-     * @param shares The shares amount to be converted into underlying assets.
-     * @param receiver The address of the shares receiver.
-     * @return Amount of underlying assets deposited in exchange of the specified
-     * amount of shares.
-     */
-    function mint(uint256 shares, address receiver) public whenNotPaused returns (uint256) {
+    function mint(uint256, address) public pure returns (uint256) {
         return 0;
     }
 
     // TODO: implement this correclty if possible
-    /**
-     * @dev The `withdraw` function is used to withdraw the specified underlying
-     * assets amount in exchange of a proportional amount of shares.
-     * @param assets The underlying assets amount to be converted into shares.
-     * @param receiver The address of the shares receiver.
-     * @param owner The address of the owner.
-     * @return Amount of shares received in exchange of the specified underlying
-     * assets amount.
-     */
-    function withdraw(uint256 assets, address receiver, address owner)
+    function withdraw(uint256, address, address)
         external
+        pure
         returns (uint256)
     {
         return 0;
