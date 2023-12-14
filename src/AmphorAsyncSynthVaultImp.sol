@@ -222,57 +222,6 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         nextEpoch(0); // in order to start at epoch 1, otherwise users might try to claim epoch -1 requests
     }
 
-    // TODO: implement this
-    function nextEpoch(uint256 returnedUnderlyingAmount) public onlyOwner returns (uint256) {
-        // (end + start epochs)
-
-        // TODO
-        // 1. take fees from returnedUnderlyingAmount
-        // 7. we update the totalAssets
-        // 2. with the resting amount we know how much cost a share
-        // 3. we can take the pending deposits underlying (same as this vault underlying) and mint shares
-        // 4. we update the bigShares array for the appropriate epoch (epoch 0 request is a deposit into epoch 1...)
-        // 5. we can take the pending withdraws shares and redeem underlying (which are shares of this vault) against this vault underlying
-        // 6. we update the bigAssets array for the appropriate epoch (epoch 0 request is a withdraw at the end of the epoch 0...)
-
-        ///////////////////////
-        // Ending current epoch
-        ///////////////////////
-        uint256 fees;
-
-        if (returnedUnderlyingAmount > totalAssets && feesInBps > 0) {
-            uint256 profits;
-            unchecked {
-                profits = returnedUnderlyingAmount - totalAssets;
-            }
-            fees = (profits).mulDiv(feesInBps, 10000, Math.Rounding.Ceil);
-        }
-
-        totalAssets = returnedUnderlyingAmount - fees;
-
-        // Can be done in one time at the end
-        SafeERC20.safeTransferFrom(
-            _asset, _msgSender(), address(this), returnedUnderlyingAmount - fees
-        );
-
-        emit EpochEnd(
-            block.timestamp,
-            totalAssets,
-            returnedUnderlyingAmount,
-            fees,
-            totalSupply()
-        );
-
-        //////////////////
-        // Start new epoch
-        //////////////////
-        _asset.safeTransfer(owner(), totalAssets);
-
-        emit EpochStart(block.timestamp, totalAssets, totalSupply());
-
-        return ++epochNonce;
-    }
-
     function requestDeposit(uint256 assets, address receiver, address owner) external whenNotPaused {
         depositRequestLP.deposit(assets, receiver, owner);
         //TODO emit event ?
@@ -530,71 +479,82 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
      ####################################
     */
 
-    /**
-     * @dev The `start` function is used to start the lock period of the vault.
-     * It is the only way to lock the vault. It can only be called by the owner
-     * of the contract (`onlyOwner` modifier).
-     */
-    // function start() external onlyOwner {
-    //     if (!vaultIsOpen) revert VaultIsLocked();
+    // TODO: implement this
+    function nextEpoch(uint256 returnedUnderlyingAmount) public onlyOwner returns (uint256) {
+        // (end + start epochs)
 
-    //     lastSavedBalance = _totalAssets();
-    //     vaultIsOpen = false;
-    //     _asset.safeTransfer(owner(), lastSavedBalance);
+        // TODO
+        // 1. take fees from returnedUnderlyingAmount
+        // 7. we update the totalAssets
+        // 2. with the resting amount we know how much cost a share
+        // 3. we can take the pending deposits underlying (same as this vault underlying) and mint shares
+        // 4. we update the bigShares array for the appropriate epoch (epoch 0 request is a deposit into epoch 1...)
+        // 5. we can take the pending withdraws shares and redeem underlying (which are shares of this vault) against this vault underlying
+        // 6. we update the bigAssets array for the appropriate epoch (epoch 0 request is a withdraw at the end of the epoch 0...)
 
-    //     emit EpochStart(block.timestamp, lastSavedBalance, totalSupply());
-    // }
+        ///////////////////////
+        // Ending current epoch
+        ///////////////////////
+        uint256 fees;
 
-    /**
-     * @dev The `end` function is used to end the lock period of the vault.
-     * @notice The `end` function is used to end the lock period of the vault.
-     * It can only be called by the owner of the contract (`onlyOwner` modifier)
-     * and only when the vault is locked.
-     * If there are profits, the performance fees are taken and sent to the
-     * owner of the contract.
-     * @param assetReturned The underlying assets amount to be deposited into
-     * the vault.
-     */
-    // function end(uint256 assetReturned) external onlyOwner {
-    //     if (vaultIsOpen) revert VaultIsOpen();
+        if (returnedUnderlyingAmount > totalAssets && feesInBps > 0) {
+            uint256 profits;
+            unchecked {
+                profits = returnedUnderlyingAmount - totalAssets;
+            }
+            fees = (profits).mulDiv(feesInBps, 10000, Math.Rounding.Ceil);
+        }
 
-    //     uint256 fees;
+        totalAssets = returnedUnderlyingAmount - fees;
 
-    //     if (assetReturned > lastSavedBalance && feesInBps > 0) {
-    //         uint256 profits;
-    //         unchecked {
-    //             profits = assetReturned - lastSavedBalance;
-    //         }
-    //         fees = (profits).mulDiv(feesInBps, 10000, Math.Rounding.Ceil);
-    //     }
+        // Can be done in one time at the end
+        SafeERC20.safeTransferFrom(
+            _asset, _msgSender(), address(this), returnedUnderlyingAmount - fees
+        );
 
-    //     SafeERC20.safeTransferFrom(
-    //         _asset, _msgSender(), address(this), assetReturned - fees
-    //     );
+        emit EpochEnd(
+            block.timestamp,
+            totalAssets,
+            returnedUnderlyingAmount,
+            fees,
+            totalSupply()
+        );
 
-    //     vaultIsOpen = true;
+        ///////////////////
+        // Pending deposits
+        ///////////////////
+        uint256 pendingDeposit = depositRequestLP.nextEpoch(); // get the underlying of the pending deposits
+        // Updating the bigShares array
+        bigShares.push(pendingDeposit.mulDiv(
+            totalSupply() + 1, totalAssets + 1, Math.Rounding.Floor
+        ));
+        // Minting the shares
+        _mint(address(this), bigShares[epochNonce]); // mint the shares into the vault
+        // Update the totalAssets
+        totalAssets += pendingDeposit;
 
-    //     emit EpochEnd(
-    //         block.timestamp,
-    //         lastSavedBalance,
-    //         assetReturned,
-    //         fees,
-    //         totalSupply()
-    //     );
+        ////////////////////
+        // Pending redeem
+        ////////////////////
+        uint256 pendingRedeem = withdrawRequestLP.nextEpoch(); // get the shares of the pending withdraws
+        // Updating the bigAssets array
+        bigAssets.push(pendingRedeem.mulDiv(
+            totalAssets + 1, totalSupply() + 1, Math.Rounding.Floor
+        ));
+        // Burn the vault shares
+        _burn(address(this), pendingRedeem); // burn the shares from the vault
+        // Update the totalAssets
+        totalAssets -= bigAssets[epochNonce];
 
-    //     lastSavedBalance = 0;
-    // }
+        //////////////////
+        // Start new epoch
+        //////////////////
+        _asset.safeTransfer(owner(), totalAssets);
 
-    // function restruct(uint256 virtualReturnedAsset) external onlyOwner {
-    //     emit EpochEnd(
-    //         block.timestamp,
-    //         lastSavedBalance,
-    //         virtualReturnedAsset,
-    //         0,
-    //         totalSupply()
-    //     );
-    //     emit EpochStart(block.timestamp, lastSavedBalance, totalSupply());
-    // }
+        emit EpochStart(block.timestamp, totalAssets, totalSupply());
+
+        return ++epochNonce;
+    }
 
     /**
      * @dev The `setFees` function is used to modify the protocol fees.

@@ -122,8 +122,9 @@ contract AmphorAsyncSynthVaultPendingRequestLPImp is ERC6909ib, Ownable {
         if (balanceOf[account][tokenId] >= shares) _burn(account, tokenId, shares);
     }
 
-    function nextEpoch() external onlyOwner {
-        underyling.safeTransfer(address(vault), underyling.balanceOf(address(this)));
+    function nextEpoch() external onlyOwner returns (uint256 returnedUnderlying) {
+        returnedUnderlying = underyling.balanceOf(address(this));
+        underyling.safeTransfer(address(vault), returnedUnderlying);
     }
 
     // Only for display purposes, nasty code
