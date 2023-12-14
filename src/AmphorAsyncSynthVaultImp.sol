@@ -2,28 +2,10 @@
 pragma solidity 0.8.21;
 
 
-
-
-// TODO: implement a "lastRequest" into the pendingLP contract code that we will
+// TODO:code lastRequest" into the pendingLP contract code that we will
 // check before the engage new requests or implement batched version of deposits/redeem claims
 // TODO: imp a permit vault
 // TODO: imp a permit2 vault
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 import {IERC7540, IERC165, IERC7540Redeem} from "./interfaces/IERC7540.sol";
@@ -290,12 +272,14 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         return depositRequestLP.balanceOf(owner, epochNonce - 1);
     }
 
+    // TODO: implement this correclty if possible
     function maxMint(address owner) public view returns (uint256) {
-        return _convertToShares(maxDeposit(owner), Math.Rounding.Floor); // check if the rounding is correct
+        return 0;
     }
 
+    // TODO: implement this correclty if possible
     function maxWithdraw(address owner) public view returns (uint256) {
-        return _convertToAssets(maxRedeem(owner), Math.Rounding.Floor); // check if the rounding is correct
+        return 0; // check if the rounding is correct
     }
 
     function maxRedeem(address owner) public view returns (uint256) {

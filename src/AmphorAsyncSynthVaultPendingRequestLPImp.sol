@@ -123,7 +123,7 @@ contract AmphorAsyncSynthVaultPendingRequestLPImp is ERC6909ib, Ownable {
     }
 
     function nextEpoch() external onlyOwner returns (uint256 returnedUnderlying) {
-        returnedUnderlying = underyling.balanceOf(address(this));
+        returnedUnderlying = underyling.totalAssets(vault.epochNonce());
         underyling.safeTransfer(address(vault), returnedUnderlying);
     }
 
