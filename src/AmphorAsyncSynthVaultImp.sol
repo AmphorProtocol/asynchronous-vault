@@ -276,23 +276,21 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
     }
 
     function maxMint(address owner) public view returns (uint256 maxMintAmount) {
-        for (uint256 i = 0; i < epochNonce - 1; i++) {
-            uint256 lpBalance = depositRequestLP.balanceOf(owner, epochNonce);
-            if (lpBalance > 0)
-                maxMintAmount += lpBalance.mulDiv(
-                    bigShares[i] + 1, depositRequestLP.totalSupply(i) + 1, Math.Rounding.Floor
-                );
-        }
+        uint256 targetedRequest = epochNonce - 1;
+        uint256 lpBalance = depositRequestLP.balanceOf(owner, targetedRequest);
+        if (lpBalance > 0)
+            maxMintAmount += lpBalance.mulDiv(
+                bigShares[targetedRequest] + 1, depositRequestLP.totalSupply(targetedRequest) + 1, Math.Rounding.Floor
+            );
     }
 
     function maxWithdraw(address owner) public view returns (uint256 maxWithdrawAmount) {
-        for (uint256 i = 0; i < epochNonce - 1; i++) {
-            uint256 lpBalance = withdrawRequestLP.balanceOf(owner, epochNonce);
-            if (lpBalance > 0)
-                maxWithdrawAmount += lpBalance.mulDiv(
-                    bigAssets[i] + 1, withdrawRequestLP.totalSupply(i) + 1, Math.Rounding.Floor
-                );
-        }
+        uint256 targetedRequest = epochNonce - 1;
+        uint256 lpBalance = withdrawRequestLP.balanceOf(owner, targetedRequest);
+        if (lpBalance > 0)
+            maxWithdrawAmount += lpBalance.mulDiv(
+                bigAssets[targetedRequest] + 1, withdrawRequestLP.totalSupply(targetedRequest) + 1, Math.Rounding.Floor
+            );
     }
 
     function maxRedeem(address owner) public view returns (uint256) {
@@ -527,34 +525,18 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         );
     }
 
-    // TODO: implement this correclty
-    /**
-     * @dev The `_deposit` function is used to deposit the specified underlying
-     * assets amount in exchange of a proportionnal amount of shares.
-     * @param caller The address of the caller.
-     * @param receiver The address of the shares receiver.
-     * @param assets The underlying assets amount to be converted into shares.
-     * @param shares The shares amount to be converted into underlying assets.
-     */
+    // Claim Deposit
     function _deposit(
-        address caller,
+        address owner,
         address receiver,
         uint256 requestId,
-        uint256 assets,
-        uint256 shares
+        uint256 assets, // = pending lp balance
+        uint256 shares // = shares to mint
     ) internal {
-        // If _asset is ERC777, transferFrom can trigger a reentrancy BEFORE the
-        // transfer happens through the tokensToSend hook. On the other hand,
-        // the tokenReceived hook, that is triggered after the transfer,calls
-        // the vault, which is assumed not malicious.
-        //
-        // Conclusion: we need to do the transfer before we mint so that any
-        // reentrancy would happen before the assets are transferred and before
-        // the shares are minted, which is a valid state.
-        //depositRequestLP.burn(caller, requestId, assets);
+        depositRequestLP.burn(owner, requestId, assets);
         _mint(receiver, shares);
 
-        emit Deposit(caller, receiver, assets, shares);
+        emit Deposit(owner, receiver, assets, shares);
     }
 
     /**
