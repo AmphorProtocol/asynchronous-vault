@@ -305,7 +305,8 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
      * assets amount.
      */
     function previewDeposit(uint256 assets) public view returns (uint256) {
-        return _convertToShares(assets, Math.Rounding.Floor);
+
+        return _convertDepositLPToShares(epochNonce - 1, assets, Math.Rounding.Floor);
     }
 
     /**
@@ -341,52 +342,19 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         return _convertToAssets(shares, Math.Rounding.Floor);
     }
 
-    // TODO: implement this correclty
-    /**
-     * @dev The `deposit` function is used to deposit underlying assets into the
-     * vault.
-     * @notice The `deposit` function is used to deposit underlying assets into
-     * the vault.
-     * @param assets The underlying assets amount to be converted into shares.
-     * @param receiver The address of the shares receiver.
-     * @return Amount of shares received in exchange of the
-     * specified underlying assets amount.
-     */
     function deposit(uint256 assets, address receiver)
         public
         returns (uint256)
     {
-        uint256 maxAssets = maxDeposit(receiver);
-        if (assets > maxAssets) {
+        uint256 maxAssets = maxDeposit(receiver); // what he can claim from the last epoch request 
+        if (assets > maxAssets) { // he is trying to claim more than he can by saying he has more pending lp that he has in reality
             revert ERC4626ExceededMaxDeposit(receiver, assets, maxAssets);
         }
-        uint256 totalAssetsToClaim = assets;
-        uint256 sharesClaimed;
-        uint256[] memory allBalances = new uint256[](epochNonce);
-        uint256[] memory allIds = new uint256[](epochNonce);
-        for (uint256 epochIndex; totalAssetsToClaim > 0 && epochIndex < epochNonce; epochIndex++) {
-            // uint256 lpBalances = depositRequestLP.balanceOf(_msgSender(), epochIndex);//balanceOf[_msgSender()][epochIndex];
-            // if (lpBalances > 0) {
-            //     uint256 assetsToClaim = totalAssetsToClaim > lpBalances ? lpBalances : totalAssetsToClaim;
-            //     sharesClaimed += deposit(epochIndex, assetsToClaim, _msgSender(), receiver);
-            //     totalAssetsToClaim -= assetsToClaim;
-            // }
-        }
 
-        // TODO: finish this
-        // for (uint256 i = 0; i < epochNonce; i++) {
-        //     uint256 amount = depositRequestLP.balanceOf(operator, epochNonce);
-        //     if (amount > 0) {
-        //         depositRequestLP.burn(operator, epochNonce, amount);
-        //         IERC20(this).transfer(receiver, amount);
-        //     }
-        // }
+        uint256 sharesAmount = previewDeposit(assets);
+        _deposit(_msgSender(), receiver, epochNonce - 1, assets, sharesAmount);
 
-        // uint256 sharesAmount = previewDeposit(assets);
-        // _deposit(_msgSender(), receiver, assets, sharesAmount);
-
-        // return sharesAmount;
-        return 0;
+        return sharesAmount;
     }
 
     // TODO: implement this correclty if it is useful
@@ -504,6 +472,26 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
     {
         return assets.mulDiv(
             totalSupply() + 1, totalAssets + 1, rounding
+        );
+    }
+
+    function _convertDepositLPToShares(uint256 epochId, uint256 assets, Math.Rounding rounding)
+        internal
+        view
+        returns (uint256)
+    {
+        return assets.mulDiv(
+            bigShares[epochId] + 1, depositRequestLP.totalSupply(epochId) + 1, rounding
+        );
+    }
+
+    function _convertWithdrawLPToAssets(uint256 epochId, uint256 pendingLPs, Math.Rounding rounding)
+        internal
+        view
+        returns (uint256)
+    {
+        return pendingLPs.mulDiv(
+            bigAssets[epochId] + 1, withdrawRequestLP.totalSupply(epochId) + 1, rounding
         );
     }
 
