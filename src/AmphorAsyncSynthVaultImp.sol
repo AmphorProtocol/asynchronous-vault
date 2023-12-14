@@ -172,12 +172,6 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
      */
     uint16 public feesInBps;
 
-    /**
-     * @dev The locking status of the vault.
-     * @return `true` if the vault is open for deposits, `false` otherwise.
-     */
-    bool public vaultIsOpen;
-
     IERC20 public immutable _asset;
     uint256 public epochNonce;
     uint256[] public bigAssets; // pending withdrawals requests that has been processed && waiting for claim/deposit
@@ -277,28 +271,18 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         return _convertToAssets(shares, Math.Rounding.Floor);
     }
 
-    // TODO: implement this correclty
-    /**
-     * @dev The `maxDeposit` function is used to calculate the maximum deposit.
-     * @notice If the vault is locked or paused, users are not allowed to mint,
-     * the maxMint is 0.
-     * @ param _ The address of the receiver.
-     * @return Amount of the maximum underlying assets deposit amount.
-     */
-    function maxDeposit(address) public view returns (uint256) {
-        return !vaultIsOpen || paused() ? 0 : type(uint256).max;
+    function maxDeposit(address owner) public view returns (uint256) {
+        return _convertToAssets(maxMint(owner), Math.Rounding.Ceil);
     }
 
-    // TODO: implement this correclty
-    /**
-     * @dev The `maxMint` function is used to calculate the maximum amount of
-     * shares you can mint.
-     * @notice If the vault is locked or paused, the maxMint is 0.
-     * @ param _ The address of the receiver.
-     * @return Amount of the maximum shares mintable for the specified address.
-     */
-    function maxMint(address) public view returns (uint256) {
-        return !vaultIsOpen || paused() ? 0 : type(uint256).max;
+    function maxMint(address owner) public view returns (uint256 maxMintAmount) {
+        for (uint256 i = 0; i < epochNonce - 1; i++) {
+            uint256 lpBalance = depositRequestLP.balanceOf(owner, epochNonce);
+            if (lpBalance > 0)
+                maxMintAmount += lpBalance.mulDiv(
+                    bigShares[i] + 1, depositRequestLP.totalSupply(i) + 1, Math.Rounding.Floor
+                );
+        }
     }
 
     // TODO: implement this correclty
@@ -311,9 +295,7 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
      * @return Amount of the maximum number of withdrawable underlying assets.
      */
     function maxWithdraw(address owner) public view returns (uint256) {
-        return vaultIsOpen
-            ? _convertToAssets(balanceOf(owner), Math.Rounding.Floor)
-            : 0;
+        return 0;
     }
 
     // TODO: implement this correclty
@@ -326,7 +308,7 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
      * @return Amount of the maximum number of redeemable shares.
      */
     function maxRedeem(address owner) public view returns (uint256) {
-        return vaultIsOpen ? balanceOf(owner) : 0;
+        return 0;
     }
 
     /**
