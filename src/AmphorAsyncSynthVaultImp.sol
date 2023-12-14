@@ -272,29 +272,19 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
     }
 
     function maxDeposit(address owner) public view returns (uint256) {
-        return _convertToAssets(maxMint(owner), Math.Rounding.Ceil);
+        return depositRequestLP.balanceOf(owner, epochNonce - 1);
     }
 
-    function maxMint(address owner) public view returns (uint256 maxMintAmount) {
-        uint256 targetedRequest = epochNonce - 1;
-        uint256 lpBalance = depositRequestLP.balanceOf(owner, targetedRequest);
-        if (lpBalance > 0)
-            maxMintAmount += lpBalance.mulDiv(
-                bigShares[targetedRequest] + 1, depositRequestLP.totalSupply(targetedRequest) + 1, Math.Rounding.Floor
-            );
+    function maxMint(address owner) public view returns (uint256) {
+        return _convertToShares(maxDeposit(owner), Math.Rounding.Floor); // check if the rounding is correct
     }
 
-    function maxWithdraw(address owner) public view returns (uint256 maxWithdrawAmount) {
-        uint256 targetedRequest = epochNonce - 1;
-        uint256 lpBalance = withdrawRequestLP.balanceOf(owner, targetedRequest);
-        if (lpBalance > 0)
-            maxWithdrawAmount += lpBalance.mulDiv(
-                bigAssets[targetedRequest] + 1, withdrawRequestLP.totalSupply(targetedRequest) + 1, Math.Rounding.Floor
-            );
+    function maxWithdraw(address owner) public view returns (uint256) {
+        return _convertToAssets(maxRedeem(owner), Math.Rounding.Floor); // check if the rounding is correct
     }
 
     function maxRedeem(address owner) public view returns (uint256) {
-        return _convertToShares(maxWithdraw(owner), Math.Rounding.Floor);
+        return withdrawRequestLP.balanceOf(owner, epochNonce - 1);
     }
 
     /**
@@ -368,7 +358,9 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
 
         uint256 sharesAmount = previewDeposit(requestId, assets);
         depositRequestLP.burn(owner, requestId, assets);
-        _mint(receiver, sharesAmount);
+        // _mint(receiver, sharesAmount); // actually the shares have already been minted into the nextEpoch function
+        IERC20(address(this)).safeTransfer(receiver, sharesAmount); // transfer the vault shares to the receiver
+        bigShares[requestId] += sharesAmount; // decrease the bigShares
 
         emit Deposit(owner, receiver, assets, sharesAmount);
 
@@ -396,7 +388,7 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         return assetsAmount;
     }
 
-    // TODO: implement this correclty
+    // TODO: implement this correclty if possible
     /**
      * @dev The `withdraw` function is used to withdraw the specified underlying
      * assets amount in exchange of a proportional amount of shares.
@@ -410,16 +402,7 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         external
         returns (uint256)
     {
-        uint256 maxAssets = maxWithdraw(owner);
-        if (assets > maxAssets) {
-            revert ERC4626ExceededMaxWithdraw(owner, assets, maxAssets);
-        }
-
-        // TODO this is not correct
-        uint256 sharesAmount = previewWithdraw(assets);
-        // _withdraw(receiver, owner, assets, sharesAmount);
-
-        return sharesAmount;
+        return 0;
     }
 
     // TODO: implement this correclty
@@ -437,14 +420,23 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         external
         returns (uint256)
     {
+        return _redeem(owner, receiver, epochNonce - 1, shares);
+    }
+    
+    function _redeem(address owner, address receiver, uint256 requestId, uint256 shares)
+        internal
+        returns (uint256)
+    {
         uint256 maxShares = maxRedeem(owner);
-        if (shares > maxShares) {
-            revert ERC4626ExceededMaxRedeem(owner, shares, maxShares);
-        }
+        if (shares > maxShares) revert ERC4626ExceededMaxRedeem(owner, shares, maxShares);
 
-        // TODO this is not correct
         uint256 assetsAmount = previewRedeem(shares);
-        // _withdraw(receiver, owner, assetsAmount, shares);
+        withdrawRequestLP.burn(owner, requestId, shares);
+
+        _asset.safeTransfer(receiver, assetsAmount);
+        bigAssets[requestId] -= assetsAmount; // decrease the bigAssets
+
+        emit Withdraw(requestId, owner, receiver, assetsAmount, shares);
 
         return assetsAmount;
     }
@@ -503,31 +495,6 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         return shares.mulDiv(
             totalAssets + 1, totalSupply() + 1, rounding
         );
-    }
-
-    /**
-     * @dev The function `_withdraw` is used to withdraw the specified
-     * underlying assets amount in exchange of a proportionnal amount of shares by
-     * specifying all the params.
-     * @notice The `withdraw` function is used to withdraw the specified
-     * underlying assets amount in exchange of a proportionnal amount of shares.
-     * @param receiver The address of the shares receiver.
-     * @param owner The address of the owner.
-     * @param assets The underlying assets amount to be converted into shares.
-     * @param shares The shares amount to be converted into underlying assets.
-     */
-    function _withdraw(
-        address receiver,
-        address owner,
-        uint256 epochId,
-        uint256 assets,
-        uint256 shares
-    ) internal {
-        withdrawRequestLP.burn(owner, epochId, shares);
-
-        SafeERC20.safeTransfer(_asset, receiver, assets);
-
-        emit Withdraw(_msgSender(), receiver, owner, assets, shares);
     }
 
     /*
