@@ -436,7 +436,7 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         _asset.safeTransfer(receiver, assetsAmount);
         bigAssets[requestId] -= assetsAmount; // decrease the bigAssets
 
-        emit Withdraw(requestId, owner, receiver, assetsAmount, shares);
+        emit Withdraw(_msgSender(), receiver, owner, assetsAmount, shares);
 
         return assetsAmount;
     }
