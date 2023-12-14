@@ -1,6 +1,31 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
+
+
+
+// TODO: implement a "lastRequest" into the pendingLP contract code that we will
+// check before the engage new requests or implement batched version of deposits/redeem claims
+// TODO: imp a permit vault
+// TODO: imp a permit2 vault
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 import {IERC7540, IERC165, IERC7540Redeem} from "./interfaces/IERC7540.sol";
 import {
     Ownable,
@@ -194,11 +219,22 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         _asset = IERC20(underlying);
         depositRequestLP = new AmphorAsyncSynthVaultPendingRequestLPImp(underlying, depositRequestLPName, depositRequestLPSymbol);
         withdrawRequestLP = new AmphorAsyncSynthVaultPendingRequestLPImp(underlying, withdrawRequestLPName, withdrawRequestLPSymbol);
+        nextEpoch(0); // in order to start at epoch 1, otherwise users might try to claim epoch -1 requests
     }
 
     // TODO: implement this
-    function nextEpoch(uint256 returnedUnderlyingAmount) external onlyOwner returns (uint256) {
-        // end + start epochs
+    function nextEpoch(uint256 returnedUnderlyingAmount) public onlyOwner returns (uint256) {
+        // (end + start epochs)
+
+        // TODO
+        // 1. take fees from returnedUnderlyingAmount
+        // 2. with the resting amount we know how much cost a share
+        // 3. we can take the pending deposits underlying (same as this vault underlying) and mint shares
+        // 4. we update the bigShares array for the appropriate epoch (epoch 0 request is a deposit into epoch 1...)
+        // 5. we can take the pending withdraws shares and redeem underlying (which are shares of this vault) against this vault underlying
+        // 6. we update the bigAssets array for the appropriate epoch (epoch 0 request is a withdraw at the end of the epoch 0...)
+
+        
         returnedUnderlyingAmount; // tired of warning
         return ++epochNonce;
     }
@@ -228,10 +264,6 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
     function supportsInterface(bytes4 interfaceId) public pure returns (bool) {
         return interfaceId == type(IERC165).interfaceId || interfaceId == type(IERC7540Redeem).interfaceId;
     }
-
-    // TODO: implement batched version of claims deposits/withdraws
-    // TODO: imp a permit vault
-    // TODO: imp a permit2 vault
 
     /*
      ####################################
@@ -302,7 +334,7 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         return _convertDepositLPToShares(epochId, assets, Math.Rounding.Floor);
     }
 
-    // TODO implement this correctly
+    // TODO implement this correctly if possible
     /**
      * @dev The `previewMint` function is used to calculate the underlying asset
      * amount received in exchange of the specified amount of shares.
@@ -311,19 +343,12 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
      * amount of shares.
      */
     function previewMint(uint256 shares) public view returns (uint256) {
-        return _convertToAssets(shares, Math.Rounding.Ceil);
+        return 0;
     }
 
-    //TODO implement this correctly
-    function previewWithdraw(uint256 assets) public view returns (uint256 shares) {
-        // for (uint256 i = 0; i < epochNonce - 1; i++) {
-        //     uint256 lpBalance = withdrawRequestLP.balanceOf(_msgSender(), epochNonce);
-        //     if (lpBalance > 0)
-        //         shares += lpBalance.mulDiv(
-        //             assets + 1, withdrawRequestLP.totalSupply(i) + 1, Math.Rounding.Floor
-        //         );
-        // }
-        // return _convertToShares(assets, Math.Rounding.Ceil);
+    //TODO implement this correctly if possible
+    function previewWithdraw(uint256 assets) public view returns (uint256) {
+        return 0;
     }
 
     /**
@@ -367,7 +392,7 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         return sharesAmount;
     }
 
-    // TODO: implement this correclty
+    // TODO: implement this correclty if possible
     /**
      * @dev The `mint` function is used to mint the specified amount of shares in
      * exchange of the corresponding assets amount from owner.
@@ -377,15 +402,7 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
      * amount of shares.
      */
     function mint(uint256 shares, address receiver) public whenNotPaused returns (uint256) {
-        uint256 maxShares = maxMint(receiver);
-        if (shares > maxShares) {
-            revert ERC4626ExceededMaxMint(receiver, shares, maxShares);
-        }
-
-        uint256 assetsAmount = previewMint(shares);
-        //_deposit(_msgSender(), receiver, 0, assetsAmount, shares);
-
-        return assetsAmount;
+        return 0;
     }
 
     // TODO: implement this correclty if possible
@@ -405,7 +422,6 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         return 0;
     }
 
-    // TODO: implement this correclty
     /**
      * @dev The `redeem` function is used to redeem the specified amount of
      * shares in exchange of the corresponding underlying assets amount from
