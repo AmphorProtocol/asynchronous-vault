@@ -305,10 +305,14 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
      * assets amount.
      */
     function previewDeposit(uint256 assets) public view returns (uint256) {
-
         return _convertDepositLPToShares(epochNonce - 1, assets, Math.Rounding.Floor);
     }
 
+    function previewDeposit(uint256 epochId, uint256 assets) public view returns (uint256) {
+        return _convertDepositLPToShares(epochId, assets, Math.Rounding.Floor);
+    }
+
+    // TODO implement this correctly
     /**
      * @dev The `previewMint` function is used to calculate the underlying asset
      * amount received in exchange of the specified amount of shares.
@@ -320,6 +324,7 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         return _convertToAssets(shares, Math.Rounding.Ceil);
     }
 
+    //TODO implement this correctly
     function previewWithdraw(uint256 assets) public view returns (uint256 shares) {
         // for (uint256 i = 0; i < epochNonce - 1; i++) {
         //     uint256 lpBalance = withdrawRequestLP.balanceOf(_msgSender(), epochNonce);
@@ -339,49 +344,36 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
      * amount of shares.
      */
     function previewRedeem(uint256 shares) public view returns (uint256) {
-        return _convertToAssets(shares, Math.Rounding.Floor);
+        return _convertWithdrawLPToAssets(epochNonce - 1, shares, Math.Rounding.Floor);
     }
+    
 
     function deposit(uint256 assets, address receiver)
         public
         returns (uint256)
     {
-        uint256 maxAssets = maxDeposit(receiver); // what he can claim from the last epoch request 
+        return _deposit(_msgSender(), receiver, epochNonce - 1, assets);
+    }
+
+    // assets = pending lp balance
+    // shares = shares to mint
+    function _deposit(address owner, address receiver, uint256 requestId, uint256 assets)
+        internal
+        returns (uint256 sharesAmount)
+    {
+        uint256 maxAssets = maxDeposit(owner); // what he can claim from the last epoch request 
         if (assets > maxAssets) { // he is trying to claim more than he can by saying he has more pending lp that he has in reality
-            revert ERC4626ExceededMaxDeposit(receiver, assets, maxAssets);
+            revert ERC4626ExceededMaxDeposit(owner, assets, maxAssets);
         }
 
-        uint256 sharesAmount = previewDeposit(assets);
-        _deposit(_msgSender(), receiver, epochNonce - 1, assets, sharesAmount);
+        uint256 sharesAmount = previewDeposit(requestId, assets);
+        depositRequestLP.burn(owner, requestId, assets);
+        _mint(receiver, sharesAmount);
+
+        emit Deposit(owner, receiver, assets, sharesAmount);
 
         return sharesAmount;
     }
-
-    // TODO: implement this correclty if it is useful
-    function deposit (uint256 requestId, uint256 assets, address owner, address receiver)
-        public
-        returns (uint256 sharesAmount)
-    {
-        sharesAmount = previewDeposit(assets);
-        _deposit(owner, receiver, requestId, assets, sharesAmount);
-    }
-
-
-    // function claimDeposit(uint256 id, uint256 pendingShares, address owner) public {
-    //     // uint256 amount = depositRequestLP.balanceOf(owner, id);
-    //     // if (amount > 0) {
-    //     //     depositRequestLP.burn(owner, id, amount);
-    //     //     IERC20(this).transfer(owner, amount);
-    //     // }
-    //     // uint256 shares = amount.mulDiv(
-    //     //     bigShares[epochNonce] + 1, depositRequestLP.totalSupply(id) + 1, Math.Rounding.Floor
-    //     // );
-    // }
-
-    // TODO: check this, it can be useful
-    // function claimDeposits(uint256[] memory ids, uint256[] memory pendingShares, address owner) public {
-    //     for (uint i = 0; i < ids.length; i++) claimDeposit(ids[i], pendingShares[i], owner);
-    // }
 
     // TODO: implement this correclty
     /**
@@ -399,7 +391,7 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         }
 
         uint256 assetsAmount = previewMint(shares);
-        _deposit(_msgSender(), receiver, 0, assetsAmount, shares);
+        //_deposit(_msgSender(), receiver, 0, assetsAmount, shares);
 
         return assetsAmount;
     }
@@ -511,20 +503,6 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         return shares.mulDiv(
             totalAssets + 1, totalSupply() + 1, rounding
         );
-    }
-
-    // Claim Deposit
-    function _deposit(
-        address owner,
-        address receiver,
-        uint256 requestId,
-        uint256 assets, // = pending lp balance
-        uint256 shares // = shares to mint
-    ) internal {
-        depositRequestLP.burn(owner, requestId, assets);
-        _mint(receiver, shares);
-
-        emit Deposit(owner, receiver, assets, shares);
     }
 
     /**
