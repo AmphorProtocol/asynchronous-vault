@@ -457,8 +457,9 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
             revert ERC4626ExceededMaxWithdraw(owner, assets, maxAssets);
         }
 
+        // TODO this is not correct
         uint256 sharesAmount = previewWithdraw(assets);
-        _withdraw(receiver, owner, assets, sharesAmount);
+        // _withdraw(receiver, owner, assets, sharesAmount);
 
         return sharesAmount;
     }
@@ -483,8 +484,9 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
             revert ERC4626ExceededMaxRedeem(owner, shares, maxShares);
         }
 
+        // TODO this is not correct
         uint256 assetsAmount = previewRedeem(shares);
-        _withdraw(receiver, owner, assetsAmount, shares);
+        // _withdraw(receiver, owner, assetsAmount, shares);
 
         return assetsAmount;
     }
@@ -555,7 +557,6 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         emit Deposit(caller, receiver, assets, shares);
     }
 
-    // TODO: implement this correclty
     /**
      * @dev The function `_withdraw` is used to withdraw the specified
      * underlying assets amount in exchange of a proportionnal amount of shares by
@@ -570,14 +571,12 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
     function _withdraw(
         address receiver,
         address owner,
+        uint256 epochId,
         uint256 assets,
         uint256 shares
     ) internal {
-        if (_msgSender() != owner) {
-            _spendAllowance(owner, _msgSender(), shares);
-        }
+        withdrawRequestLP.burn(owner, epochId, shares);
 
-        _burn(owner, shares);
         SafeERC20.safeTransfer(_asset, receiver, assets);
 
         emit Withdraw(_msgSender(), receiver, owner, assets, shares);
