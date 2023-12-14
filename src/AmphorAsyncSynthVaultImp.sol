@@ -235,6 +235,9 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         // 5. we can take the pending withdraws shares and redeem underlying (which are shares of this vault) against this vault underlying
         // 6. we update the bigAssets array for the appropriate epoch (epoch 0 request is a withdraw at the end of the epoch 0...)
 
+        ///////////////////////
+        // Ending current epoch
+        ///////////////////////
         uint256 fees;
 
         if (returnedUnderlyingAmount > totalAssets && feesInBps > 0) {
@@ -259,6 +262,13 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
             fees,
             totalSupply()
         );
+
+        //////////////////
+        // Start new epoch
+        //////////////////
+        _asset.safeTransfer(owner(), totalAssets);
+
+        emit EpochStart(block.timestamp, totalAssets, totalSupply());
 
         return ++epochNonce;
     }
