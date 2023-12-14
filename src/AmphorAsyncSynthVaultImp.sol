@@ -285,30 +285,18 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         }
     }
 
-    // TODO: implement this correclty
-    /**
-     * @dev The `maxWithdraw` function is used to calculate the maximum amount
-     * of withdrawable underlying assets.
-     * @notice If the function is called during the lock period the maxWithdraw
-     * is `0`.
-     * @param owner The address of the owner.
-     * @return Amount of the maximum number of withdrawable underlying assets.
-     */
-    function maxWithdraw(address owner) public view returns (uint256) {
-        return 0;
+    function maxWithdraw(address owner) public view returns (uint256 maxWithdrawAmount) {
+        for (uint256 i = 0; i < epochNonce - 1; i++) {
+            uint256 lpBalance = withdrawRequestLP.balanceOf(owner, epochNonce);
+            if (lpBalance > 0)
+                maxWithdrawAmount += lpBalance.mulDiv(
+                    bigAssets[i] + 1, withdrawRequestLP.totalSupply(i) + 1, Math.Rounding.Floor
+                );
+        }
     }
 
-    // TODO: implement this correclty
-    /**
-     * @dev The `maxRedemm` function is used to calculate the maximum amount of
-     * redeemable shares.
-     * @notice If the function is called during the lock period the maxRedeem is
-     * `0`.
-     * @param owner The address of the owner.
-     * @return Amount of the maximum number of redeemable shares.
-     */
     function maxRedeem(address owner) public view returns (uint256) {
-        return 0;
+        return _convertToShares(maxWithdraw(owner), Math.Rounding.Floor);
     }
 
     /**
