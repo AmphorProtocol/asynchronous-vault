@@ -17,6 +17,7 @@ contract AmphorAsyncSynthVaultPendingRequestLPImp is ERC6909ib, Ownable {
     using SafeERC20 for ERC20;
 
     ERC20 private immutable underyling; // usdc for deposits, shares for withdraws
+    mapping(address => uint256) public lastRequestId;
     AmphorAsyncSynthVaultImp private immutable vault;
 
     constructor(
@@ -43,12 +44,17 @@ contract AmphorAsyncSynthVaultPendingRequestLPImp is ERC6909ib, Ownable {
     function deposit(uint256, uint256 assets, address receiver)
         public
         override
+        onlyOwner
         returns (uint256) 
     {
         return super.deposit(vault.epochNonce(), assets, receiver);
     }
 
-    function deposit(uint256 assets, address receiver, address owner) public returns (uint256 shares) {
+    function deposit(uint256 assets, address receiver, address owner)
+        public
+        onlyOwner
+        returns (uint256 shares)
+    {
         uint256 tokenId = vault.epochNonce();
         // Check for rounding error since we round down in previewDeposit.
         require((shares = previewDeposit(tokenId, assets)) != 0, "ZERO_SHARES");
@@ -65,13 +71,14 @@ contract AmphorAsyncSynthVaultPendingRequestLPImp is ERC6909ib, Ownable {
 
     function mint(uint256, uint256 shares, address receiver)
         public
+        onlyOwner
         override
         returns (uint256) 
     {
         return super.mint(vault.epochNonce(), shares, receiver);
     }
 
-    function mint(uint256 shares, address receiver, address owner) public returns (uint256 assets) {
+    function mint(uint256 shares, address receiver, address owner) public onlyOwner returns (uint256 assets) {
         uint256 tokenId = vault.epochNonce();
 
         assets = previewMint(tokenId, shares); // No need to check for rounding error, previewMint rounds up.
@@ -90,6 +97,7 @@ contract AmphorAsyncSynthVaultPendingRequestLPImp is ERC6909ib, Ownable {
 
     function withdraw(uint256, uint256 assets, address receiver, address owner)
         public
+        onlyOwner
         override
         returns (uint256) 
     {
@@ -98,6 +106,7 @@ contract AmphorAsyncSynthVaultPendingRequestLPImp is ERC6909ib, Ownable {
 
     function withdraw(uint256 assets, address receiver, address owner)
         public
+        onlyOwner
         returns (uint256) 
     {
         return super.withdraw(vault.epochNonce(), assets, receiver, owner);
@@ -105,6 +114,7 @@ contract AmphorAsyncSynthVaultPendingRequestLPImp is ERC6909ib, Ownable {
 
     function redeem(uint256, uint256 shares, address receiver, address owner)
         public
+        onlyOwner
         override
         returns (uint256) 
     {
@@ -113,6 +123,7 @@ contract AmphorAsyncSynthVaultPendingRequestLPImp is ERC6909ib, Ownable {
 
     function redeem(uint256 shares, address receiver, address owner)
         public
+        onlyOwner
         returns (uint256) 
     {
         return super.redeem(vault.epochNonce(), shares, receiver, owner);
@@ -122,34 +133,12 @@ contract AmphorAsyncSynthVaultPendingRequestLPImp is ERC6909ib, Ownable {
         if (balanceOf[account][tokenId] >= shares) _burn(account, tokenId, shares);
     }
 
-    function nextEpoch() external onlyOwner returns (uint256 returnedUnderlying) {
-        returnedUnderlying = underyling.totalAssets(vault.epochNonce());
-        underyling.safeTransfer(address(vault), returnedUnderlying);
+    function setLastRequest(address owner, uint256 id) external onlyOwner {
+        lastRequestId[owner] = id;
     }
 
-    // Only for display purposes, nasty code
-    function getPositiveBalances(address account)
-        external
-        view
-        returns (uint256[] memory ids, uint256[] memory positiveBalances)
-    {
-        uint256 epochNonce = vault.epochNonce();
-        uint256[] memory allBalances = new uint256[](epochNonce);
-        uint256[] memory allIds = new uint256[](epochNonce);
-        uint256 allBalancesIndex;
-        for (allBalancesIndex; allBalancesIndex < epochNonce; allBalancesIndex++) {
-            uint256 lpBalances = balanceOf[account][allBalancesIndex];
-            if (lpBalances > 0) {
-                allBalances[allBalancesIndex] = lpBalances;
-                allIds[allBalancesIndex] = allBalancesIndex;
-            }
-        }
-        positiveBalances = new uint256[](allBalancesIndex);
-        ids = new uint256[](allBalancesIndex);
-        uint256 positiveBalancesIndex;
-        for (positiveBalancesIndex; positiveBalancesIndex < allBalancesIndex; positiveBalancesIndex++) {
-            positiveBalances[positiveBalancesIndex] = positiveBalances[positiveBalancesIndex];
-            ids[positiveBalancesIndex] = allIds[positiveBalancesIndex];
-        }
-    } 
+    function nextEpoch() external onlyOwner returns (uint256 returnedUnderlying) {
+        returnedUnderlying = totalAssets(vault.epochNonce());
+        underyling.safeTransfer(address(vault), returnedUnderlying);
+    }
 }

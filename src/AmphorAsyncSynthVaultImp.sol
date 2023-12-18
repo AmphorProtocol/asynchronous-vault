@@ -1,12 +1,10 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-
 // TODO:code lastRequest" into the pendingLP contract code that we will
 // check before the engage new requests or implement batched version of deposits/redeem claims
 // TODO: imp a permit vault
 // TODO: imp a permit2 vault
-
 
 import {IERC7540, IERC165, IERC7540Redeem} from "./interfaces/IERC7540.sol";
 import {
@@ -205,7 +203,16 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
     }
 
     function requestDeposit(uint256 assets, address receiver, address owner) external whenNotPaused {
+        // Claim not claimed request
+        uint256 lastRequestId = depositRequestLP.lastRequestId(owner);
+        uint256 lastRequestBalance = depositRequestLP.balanceOf(owner, lastRequestId);
+        if (lastRequestBalance > 0 && lastRequestId != epochNonce) // We don't want to call _deposit for nothing and we don't want to cancel a current request if the user just want to increase it.
+            _deposit(owner, receiver, lastRequestId, lastRequestBalance);
+
+        // Create a new request
         depositRequestLP.deposit(assets, receiver, owner);
+        depositRequestLP.setLastRequest(owner, epochNonce);
+
         //TODO emit event ?
     }
     function withdrawDepositRequest(uint256 assets, address receiver, address owner) external whenNotPaused {
@@ -216,6 +223,12 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         return depositRequestLP.balanceOf(owner, epochNonce);
     }
     function requestRedeem(uint256 shares, address receiver, address owner, bytes memory) external whenNotPaused {
+        // Claim not claimed request
+        uint256 lastRequestId = depositRequestLP.lastRequestId(owner);
+        uint256 lastRequestBalance = depositRequestLP.balanceOf(owner, lastRequestId);
+        if (lastRequestBalance > 0 && lastRequestId != epochNonce) // We don't want to call _redeem for nothing and we don't want to cancel a current request if the user just want to increase it.
+            _redeem(owner, receiver, lastRequestId, lastRequestBalance);
+
         withdrawRequestLP.deposit(shares, receiver, owner);
         //TODO emit event ?
     }
@@ -273,12 +286,12 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
     }
 
     // TODO: implement this correclty if possible
-    function maxMint(address owner) public view returns (uint256) {
+    function maxMint(address) public pure returns (uint256) {
         return 0;
     }
 
     // TODO: implement this correclty if possible
-    function maxWithdraw(address owner) public view returns (uint256) {
+    function maxWithdraw(address) public pure returns (uint256) {
         return 0; // check if the rounding is correct
     }
 
