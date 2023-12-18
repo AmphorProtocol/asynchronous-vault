@@ -1,10 +1,10 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-// TODO:code lastRequest" into the pendingLP contract code that we will
 // check before the engage new requests or implement batched version of deposits/redeem claims
 // TODO: imp a permit vault
 // TODO: imp a permit2 vault
+// TODO: imp upgradability
 
 import {IERC7540, IERC165, IERC7540Redeem} from "./interfaces/IERC7540.sol";
 import {
@@ -12,18 +12,20 @@ import {
     Ownable2Step
 } from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {
-    ERC20,
     IERC20,
     IERC20Metadata
 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {
+    ERC20Pausable,
+    Pausable,
+    ERC20
+} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ERC20Permit} from
     "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 import {AmphorAsyncSynthVaultPendingRequestLPImp, SafeERC20} from "./AmphorAsyncSynthVaultPendingRequestLPImp.sol";
 
-
-contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step, Pausable {
+contract AmphorAsyncSynthVaultImp is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
 
     /*
      ######
@@ -195,7 +197,7 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         string memory depositRequestLPSymbol,
         string memory withdrawRequestLPName,
         string memory withdrawRequestLPSymbol
-    ) ERC20(name, symbol) ERC20Permit(name) Ownable(_msgSender()) {
+    ) ERC20(name, symbol) Ownable(_msgSender()) ERC20Permit(name) {
         _asset = IERC20(underlying);
         depositRequestLP = new AmphorAsyncSynthVaultPendingRequestLPImp(underlying, depositRequestLPName, depositRequestLPSymbol);
         withdrawRequestLP = new AmphorAsyncSynthVaultPendingRequestLPImp(underlying, withdrawRequestLPName, withdrawRequestLPSymbol);
@@ -337,6 +339,7 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
 
     function deposit(uint256 assets, address receiver)
         public
+        whenNotPaused
         returns (uint256)
     {
         return _deposit(_msgSender(), receiver, epochNonce - 1, assets);
@@ -390,6 +393,7 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
      */
     function redeem(uint256 shares, address receiver, address owner)
         external
+        whenNotPaused
         returns (uint256)
     {
         return _redeem(owner, receiver, epochNonce - 1, shares);
@@ -529,9 +533,9 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         // Update the totalAssets
         totalAssets += pendingDeposit;
 
-        ////////////////////
+        /////////////////
         // Pending redeem
-        ////////////////////
+        /////////////////
         uint256 pendingRedeem = withdrawRequestLP.nextEpoch(epochNonce); // get the shares of the pending withdraws
         // Updating the bigAssets array
         bigAssets.push(pendingRedeem.mulDiv(
@@ -577,5 +581,22 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
     function claimToken(IERC20 token) external onlyOwner {
         if (token == _asset) {/*TODO: get the discrepancy between returned assets and pending deposits*/}
         token.safeTransfer(_msgSender(), token.balanceOf(address(this)));
+    }
+
+    // Pausability
+    function pause() public onlyOwner {
+        _pause();
+        // depositRequestLP.pause();
+        // withdrawRequestLP.pause();
+    }
+
+    function unpause() public onlyOwner {
+        _unpause();
+        // depositRequestLP.unpause();
+        // withdrawRequestLP.unpause();
+    }
+
+    function _update(address from, address to, uint256 value) internal virtual override(ERC20, ERC20Pausable) whenNotPaused {
+        super._update(from, to, value);
     }
 }
