@@ -210,13 +210,13 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
             _deposit(owner, receiver, lastRequestId, lastRequestBalance);
 
         // Create a new request
-        depositRequestLP.deposit(assets, receiver, owner);
+        depositRequestLP.deposit(epochNonce, assets, receiver, owner);
         depositRequestLP.setLastRequest(owner, epochNonce);
 
         //TODO emit event ?
     }
     function withdrawDepositRequest(uint256 assets, address receiver, address owner) external whenNotPaused {
-        depositRequestLP.withdraw(assets, receiver, owner);
+        depositRequestLP.withdraw(epochNonce, assets, receiver, owner);
         //TODO emit event ?
     }
     function pendingDepositRequest(address owner) external view returns (uint256 assets) {
@@ -229,11 +229,11 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         if (lastRequestBalance > 0 && lastRequestId != epochNonce) // We don't want to call _redeem for nothing and we don't want to cancel a current request if the user just want to increase it.
             _redeem(owner, receiver, lastRequestId, lastRequestBalance);
 
-        withdrawRequestLP.deposit(shares, receiver, owner);
+        withdrawRequestLP.deposit(epochNonce, shares, receiver, owner);
         //TODO emit event ?
     }
     function withdrawRedeemRequest(uint256 shares, address receiver, address owner) external whenNotPaused {
-        withdrawRequestLP.withdraw(shares, receiver, owner);
+        withdrawRequestLP.withdraw(epochNonce, shares, receiver, owner);
         //TODO emit event ?
     }
     function pendingRedeemRequest(address owner) external view returns (uint256 shares) {
@@ -520,7 +520,7 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         ///////////////////
         // Pending deposits
         ///////////////////
-        uint256 pendingDeposit = depositRequestLP.nextEpoch(); // get the underlying of the pending deposits
+        uint256 pendingDeposit = depositRequestLP.nextEpoch(epochNonce); // get the underlying of the pending deposits
         // Updating the bigShares array
         bigShares.push(pendingDeposit.mulDiv(
             totalSupply() + 1, totalAssets + 1, Math.Rounding.Floor
@@ -533,7 +533,7 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         ////////////////////
         // Pending redeem
         ////////////////////
-        uint256 pendingRedeem = withdrawRequestLP.nextEpoch(); // get the shares of the pending withdraws
+        uint256 pendingRedeem = withdrawRequestLP.nextEpoch(epochNonce); // get the shares of the pending withdraws
         // Updating the bigAssets array
         bigAssets.push(pendingRedeem.mulDiv(
             totalAssets + 1, totalSupply() + 1, Math.Rounding.Floor

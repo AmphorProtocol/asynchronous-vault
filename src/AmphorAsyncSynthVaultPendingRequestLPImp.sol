@@ -10,7 +10,6 @@ import {SafeERC20} from
 import {
     Ownable
 } from "@openzeppelin/contracts/access/Ownable.sol";
-import {AmphorAsyncSynthVaultImp} from "./AmphorAsyncSynthVaultImp.sol";
 
 contract AmphorAsyncSynthVaultPendingRequestLPImp is ERC6909ib, Ownable {
 
@@ -18,7 +17,6 @@ contract AmphorAsyncSynthVaultPendingRequestLPImp is ERC6909ib, Ownable {
 
     ERC20 private immutable underyling; // usdc for deposits, shares for withdraws
     mapping(address => uint256) public lastRequestId;
-    AmphorAsyncSynthVaultImp private immutable vault;
 
     constructor(
         ERC20 _underlying,
@@ -26,7 +24,6 @@ contract AmphorAsyncSynthVaultPendingRequestLPImp is ERC6909ib, Ownable {
         string memory symbol
     ) ERC6909ib(name, symbol) Ownable(_msgSender()) {
         underyling = _underlying;
-        vault = AmphorAsyncSynthVaultImp(msg.sender);
     }
 
     function asset(uint256) public view virtual override returns (ERC20) {
@@ -41,92 +38,58 @@ contract AmphorAsyncSynthVaultPendingRequestLPImp is ERC6909ib, Ownable {
         return underyling.decimals();
     }
 
-    function deposit(uint256, uint256 assets, address receiver)
+    function deposit(uint256 epochNonce, uint256 assets, address receiver)
         public
         override
         onlyOwner
         returns (uint256) 
     {
-        return super.deposit(vault.epochNonce(), assets, receiver);
+        return super.deposit(epochNonce, assets, receiver);
     }
 
-    function deposit(uint256 assets, address receiver, address owner)
+    function deposit(uint256 epochNonce, uint256 assets, address receiver, address owner)
         public
         onlyOwner
         returns (uint256 shares)
     {
-        uint256 tokenId = vault.epochNonce();
         // Check for rounding error since we round down in previewDeposit.
-        require((shares = previewDeposit(tokenId, assets)) != 0, "ZERO_SHARES");
-        ERC20 _asset = asset(tokenId);
+        require((shares = previewDeposit(epochNonce, assets)) != 0, "ZERO_SHARES");
+        ERC20 _asset = asset(epochNonce);
         // Need to transfer before minting or ERC777s could reenter.
         _asset.safeTransferFrom(owner, address(this), assets);
 
-        _mint(receiver, tokenId, shares);
+        _mint(receiver, epochNonce, shares);
 
-        emit Deposit(tokenId, owner, receiver, assets, shares);
+        emit Deposit(epochNonce, owner, receiver, assets, shares);
 
-        afterDeposit(tokenId, assets, shares);
+        afterDeposit(epochNonce, assets, shares);
     }
 
-    function mint(uint256, uint256 shares, address receiver)
+    function mint(uint256 epochNonce, uint256 shares, address receiver)
         public
         onlyOwner
         override
         returns (uint256) 
     {
-        return super.mint(vault.epochNonce(), shares, receiver);
+        return super.mint(epochNonce, shares, receiver);
     }
 
-    function mint(uint256 shares, address receiver, address owner) public onlyOwner returns (uint256 assets) {
-        uint256 tokenId = vault.epochNonce();
-
-        assets = previewMint(tokenId, shares); // No need to check for rounding error, previewMint rounds up.
-
-        ERC20 _asset = asset(tokenId);
-
-        // Need to transfer before minting or ERC777s could reenter.
-        _asset.safeTransferFrom(owner, address(this), assets);
-
-        _mint(receiver, tokenId, shares);
-
-        emit Deposit(tokenId, owner, receiver, assets, shares);
-
-        afterDeposit(tokenId, assets, shares);
-    }
-
-    function withdraw(uint256, uint256 assets, address receiver, address owner)
+    function withdraw(uint256 epochNonce, uint256 assets, address receiver, address owner)
         public
         onlyOwner
         override
         returns (uint256) 
     {
-        return super.withdraw(vault.epochNonce(), assets, receiver, owner);
+        return super.withdraw(epochNonce, assets, receiver, owner);
     }
 
-    function withdraw(uint256 assets, address receiver, address owner)
-        public
-        onlyOwner
-        returns (uint256) 
-    {
-        return super.withdraw(vault.epochNonce(), assets, receiver, owner);
-    }
-
-    function redeem(uint256, uint256 shares, address receiver, address owner)
+    function redeem(uint256 epochNonce, uint256 shares, address receiver, address owner)
         public
         onlyOwner
         override
         returns (uint256) 
     {
-        return super.redeem(vault.epochNonce(), shares, receiver, owner);
-    }
-
-    function redeem(uint256 shares, address receiver, address owner)
-        public
-        onlyOwner
-        returns (uint256) 
-    {
-        return super.redeem(vault.epochNonce(), shares, receiver, owner);
+        return super.redeem(epochNonce, shares, receiver, owner);
     }
 
     function burn(address account, uint256 tokenId, uint256 shares) external onlyOwner {
@@ -137,8 +100,8 @@ contract AmphorAsyncSynthVaultPendingRequestLPImp is ERC6909ib, Ownable {
         lastRequestId[owner] = id;
     }
 
-    function nextEpoch() external onlyOwner returns (uint256 returnedUnderlying) {
-        returnedUnderlying = totalAssets(vault.epochNonce());
-        underyling.safeTransfer(address(vault), returnedUnderlying);
+    function nextEpoch(uint256 currentEpochNonce) external onlyOwner returns (uint256 returnedUnderlying) {
+        returnedUnderlying = totalAssets(currentEpochNonce);
+        underyling.safeTransfer(owner(), returnedUnderlying);
     }
 }
