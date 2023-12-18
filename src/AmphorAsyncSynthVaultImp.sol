@@ -199,7 +199,7 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         _asset = IERC20(underlying);
         depositRequestLP = new AmphorAsyncSynthVaultPendingRequestLPImp(underlying, depositRequestLPName, depositRequestLPSymbol);
         withdrawRequestLP = new AmphorAsyncSynthVaultPendingRequestLPImp(underlying, withdrawRequestLPName, withdrawRequestLPSymbol);
-        nextEpoch(0); // in order to start at epoch 1, otherwise users might try to claim epoch -1 requests
+        epochNonce++; // in order to start at epoch 1, otherwise users might try to claim epoch -1 requests
     }
 
     function requestDeposit(uint256 assets, address receiver, address owner) external whenNotPaused {
@@ -334,7 +334,6 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
     function previewRedeem(uint256 shares) public view returns (uint256) {
         return _convertWithdrawLPToAssets(epochNonce - 1, shares, Math.Rounding.Floor);
     }
-    
 
     function deposit(uint256 assets, address receiver)
         public
