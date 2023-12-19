@@ -1,8 +1,6 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-// check before the engage new requests or implement batched version of deposits/redeem claims
-// TODO: imp an approveFrom for the pendingLP
 // TODO: imp upgradability
 
 import {IERC7540, IERC165, IERC7540Redeem} from "./interfaces/IERC7540.sol";
@@ -23,6 +21,15 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ERC20Permit} from
     "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 import {AsyncVaultPendingLPImp, SafeERC20} from "./AsyncVaultPendingLPImp.sol";
+import {IPermit2, ISignatureTransfer} from "permit2/src/interfaces/IPermit2.sol";
+
+struct Permit2Params {
+    uint256 amount;
+    uint256 nonce;
+    uint256 deadline;
+    address token;
+    bytes signature;
+}
 
 contract AmphorAsyncSynthVaultImp is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
 
@@ -107,6 +114,14 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20Pausable, Ownable2Step, ERC2
      */
     error ERC4626ExceededMaxRedeem(address owner, uint256 shares, uint256 max);
 
+    /*
+     ####################################
+      GENERAL PERMIT2 RELATED ATTRIBUTES
+     ####################################
+    */
+
+    // The canonical permit2 contract.
+    IPermit2 public immutable permit2;
 
     /*
      #####################################
@@ -129,7 +144,6 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20Pausable, Ownable2Step, ERC2
     AsyncVaultPendingLPImp public depositRequestLP;
     AsyncVaultPendingLPImp public withdrawRequestLP;
 
-
     constructor(
         ERC20 underlying,
         string memory name,
@@ -137,9 +151,11 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20Pausable, Ownable2Step, ERC2
         string memory depositRequestLPName,
         string memory depositRequestLPSymbol,
         string memory withdrawRequestLPName,
-        string memory withdrawRequestLPSymbol
+        string memory withdrawRequestLPSymbol,
+        IPermit2 _permit2
     ) ERC20(name, symbol) Ownable(_msgSender()) ERC20Permit(name) {
         _asset = IERC20(underlying);
+        permit2 = _permit2;
         depositRequestLP = new AsyncVaultPendingLPImp(underlying, depositRequestLPName, depositRequestLPSymbol);
         withdrawRequestLP = new AsyncVaultPendingLPImp(underlying, withdrawRequestLPName, withdrawRequestLPSymbol);
     }
@@ -538,5 +554,53 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20Pausable, Ownable2Step, ERC2
 
     function _update(address from, address to, uint256 value) internal virtual override(ERC20, ERC20Pausable) whenNotPaused {
         super._update(from, to, value);
+    }
+
+    /*
+     ##################
+      PERMIT2 FUNCTION
+     ##################
+    */
+
+    // Deposit some amount of an ERC20 token into this contract
+    // using Permit2.
+    function execPermit2(
+        Permit2Params calldata permit2Params
+    ) internal {
+        // Transfer tokens from the caller to ourselves.
+        permit2.permitTransferFrom(
+            // The permit message.
+            ISignatureTransfer.PermitTransferFrom({
+                permitted: ISignatureTransfer.TokenPermissions({
+                    token: permit2Params.token,
+                    amount: permit2Params.amount
+                }),
+                nonce: permit2Params.nonce,
+                deadline: permit2Params.deadline
+            }),
+            // The transfer recipient and amount.
+            ISignatureTransfer.SignatureTransferDetails({
+                to: address(this),
+                requestedAmount: permit2Params.amount
+            }),
+            // The owner of the tokens, which must also be
+            // the signer of the message, otherwise this call
+            // will fail.
+            _msgSender(),
+            // The packed signature that was the result of signing
+            // the EIP712 hash of `permit`.
+            permit2Params.signature
+        );
+    }
+
+    function requestDepositWithPermit2(
+        uint256 assets,
+        address receiver,
+        address owner,
+        Permit2Params calldata permit2Params
+    ) external {
+        if (_asset.allowance(owner, address(this)) < assets)
+            execPermit2(permit2Params);
+        return requestDeposit(assets, receiver, owner);
     }
 }

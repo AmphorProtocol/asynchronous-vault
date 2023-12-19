@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import {AmphorAsyncSynthVaultImp, ERC20, ERC20Permit} from "./AmphorAsyncSynthVaultImp.sol";
+import {AmphorAsyncSynthVaultImp, ERC20, ERC20Permit, IPermit2} from "./AmphorAsyncSynthVaultImp.sol";
 
 /*
  * @dev The `PermitParams` struct is used to pass the permit signature and data.
@@ -28,8 +28,9 @@ contract AsyncVaultPermitImp is AmphorAsyncSynthVaultImp {
         string memory depositRequestLPName,
         string memory depositRequestLPSymbol,
         string memory withdrawRequestLPName,
-        string memory withdrawRequestLPSymbol
-    ) AmphorAsyncSynthVaultImp(underlying, name, symbol, depositRequestLPName, depositRequestLPSymbol, withdrawRequestLPName, withdrawRequestLPSymbol) {}
+        string memory withdrawRequestLPSymbol,
+        IPermit2 _permit2
+    ) AmphorAsyncSynthVaultImp(underlying, name, symbol, depositRequestLPName, depositRequestLPSymbol, withdrawRequestLPName, withdrawRequestLPSymbol, _permit2) {}
 
     /**
      * @dev The `requestDepositWithPermit` function is used to request a deposit
