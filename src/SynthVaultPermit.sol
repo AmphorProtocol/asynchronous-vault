@@ -3,14 +3,6 @@ pragma solidity 0.8.21;
 
 import {SynthVault, ERC20, ERC20Permit, IPermit2} from "./SynthVault.sol";
 
-/*
- * @dev The `PermitParams` struct is used to pass the permit signature and data.
- * @param value The amount of tokens the spender is allowed to spend.
- * @param deadline The timestamp after which the permit is no longer valid.
- * @param v The recovery byte of the permit signature.
- * @param r Half of the ECDSA signature pair of the permit.
- * @param s Half of the ECDSA signature pair of the permit.
- */
 struct PermitParams {
     uint256 value;
     uint256 deadline;
@@ -32,15 +24,6 @@ contract SynthVaultPermit is SynthVault {
         IPermit2 _permit2
     ) SynthVault(underlying, name, symbol, depositRequestLPName, depositRequestLPSymbol, withdrawRequestLPName, withdrawRequestLPSymbol, _permit2) {}
 
-    /**
-     * @dev The `requestDepositWithPermit` function is used to request a deposit
-     * using a permit for approval.
-     * @param assets The underlying assets amount to be converted into
-     * shares.
-     * @param receiver The address of the shares receiver.
-     * @param owner The address of the shares owner.
-     * @param permitParams The permit struct containing the permit signature and data.
-     */
     function requestDepositWithPermit(
         uint256 assets,
         address receiver,
@@ -52,12 +35,6 @@ contract SynthVaultPermit is SynthVault {
         return super.requestDeposit(assets, receiver, owner);
     }
 
-    /*
-     * @dev The `execPermit` function is used to execute a permit for approval.
-     * @param owner The owner of the funds.
-     * @param spender The spender of the funds.
-     * @param permitParams The permit struct containing the permit signature and data.
-     */
     function execPermit(
         address owner,
         address spender,

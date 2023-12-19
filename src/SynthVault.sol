@@ -1,8 +1,6 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-// TODO: imp upgradability
-
 import {IERC7540, IERC165, IERC7540Redeem} from "./interfaces/IERC7540.sol";
 import {
     Ownable,
@@ -144,6 +142,12 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     SynthVaultPendingLP public depositRequestLP;
     SynthVaultPendingLP public withdrawRequestLP;
 
+    /*
+     ############################
+      AMPHOR SYNTHETIC FUNCTIONS
+     ############################
+    */
+
     constructor(
         ERC20 underlying,
         string memory name,
@@ -173,13 +177,16 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
 
         //TODO emit event ?
     }
+
     function withdrawDepositRequest(uint256 assets, address receiver, address owner) external whenNotPaused {
         depositRequestLP.withdraw(epochNonce, assets, receiver, owner);
         //TODO emit event ?
     }
+
     function pendingDepositRequest(address owner) external view returns (uint256 assets) {
         return depositRequestLP.balanceOf(owner, epochNonce);
     }
+
     function requestRedeem(uint256 shares, address receiver, address owner, bytes memory) external whenNotPaused {
         // Claim not claimed request
         uint256 lastRequestId = depositRequestLP.lastRequestId(owner);
@@ -190,13 +197,16 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         withdrawRequestLP.deposit(epochNonce, shares, receiver, owner);
         //TODO emit event ?
     }
+
     function withdrawRedeemRequest(uint256 shares, address receiver, address owner) external whenNotPaused {
         withdrawRequestLP.withdraw(epochNonce, shares, receiver, owner);
         //TODO emit event ?
     }
+
     function pendingRedeemRequest(address owner) external view returns (uint256 shares) {
         return withdrawRequestLP.balanceOf(owner, epochNonce);
     }
+
     function supportsInterface(bytes4 interfaceId) public pure returns (bool) {
         return interfaceId == type(IERC165).interfaceId || interfaceId == type(IERC7540Redeem).interfaceId;
     }
@@ -207,34 +217,14 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
      ####################################
     */
 
-    /*
-     * @dev The `asset` function is used to return the address of the underlying
-     * @return address of the underlying asset.
-     */
     function asset() public view returns (address) {
         return address(_asset);
     }
 
-    /**
-     * @dev See {IERC4626-convertToShares}.
-     * @notice The `convertToShares` function is used to calculate shares amount
-     * received in exchange of the specified underlying assets amount.
-     * @param assets The underlying assets amount to be converted into shares.
-     * @return Amount of shares received in exchange of the specified underlying
-     * assets amount.
-     */
     function convertToShares(uint256 assets) public view returns (uint256) {
         return _convertToShares(assets, Math.Rounding.Floor);
     }
 
-    /**
-     * @dev See {IERC4626-convertToAssets}.
-     * @notice The `convertToAssets` function is used to calculate underlying
-     * assets amount received in exchange of the specified amount of shares.
-     * @param shares The shares amount to be converted into underlying assets.
-     * @return Amount of assets received in exchange of the specified shares
-     * amount.
-     */
     function convertToAssets(uint256 shares) public view returns (uint256) {
         return _convertToAssets(shares, Math.Rounding.Floor);
     }
@@ -257,13 +247,6 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         return withdrawRequestLP.balanceOf(owner, epochNonce - 1);
     }
 
-    /**
-     * @dev The `previewDeposit` function is used to calculate shares amount
-     * received in exchange of the specified underlying amount.
-     * @param assets The underlying assets amount to be converted into shares.
-     * @return Amount of shares received in exchange of the specified underlying
-     * assets amount.
-     */
     function previewDeposit(uint256 assets) public view returns (uint256) {
         return _convertDepositLPToShares(epochNonce - 1, assets, Math.Rounding.Floor);
     }
@@ -282,13 +265,6 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         return 0;
     }
 
-    /**
-     * @dev The `previewRedeem` function is used to calculate the underlying
-     * assets amount received in exchange of the specified amount of shares.
-     * @param shares The shares amount to be converted into underlying assets.
-     * @return Amount of underlying assets received in exchange of the specified
-     * amount of shares.
-     */
     function previewRedeem(uint256 shares) public view returns (uint256) {
         return _convertWithdrawLPToAssets(epochNonce - 1, shares, Math.Rounding.Floor);
     }
@@ -337,16 +313,6 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         return 0;
     }
 
-    /**
-     * @dev The `redeem` function is used to redeem the specified amount of
-     * shares in exchange of the corresponding underlying assets amount from
-     * owner.
-     * @param shares The shares amount to be converted into underlying assets.
-     * @param receiver The address of the shares receiver.
-     * @param owner The address of the owner.
-     * @return Amount of underlying assets received in exchange of the specified
-     * amount of shares.
-     */
     function redeem(uint256 shares, address receiver, address owner)
         external
         whenNotPaused
@@ -373,14 +339,6 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         return assetsAmount;
     }
 
-    /**
-     * @dev Internal conversion function (from assets to shares) with support
-     * for rounding direction.
-     * @param assets Theunderlying assets amount to be converted into shares.
-     * @param rounding The rounding direction.
-     * @return Amount of shares received in exchange of the specified underlying
-     * assets amount.
-     */
     function _convertToShares(uint256 assets, Math.Rounding rounding)
         internal
         view
@@ -411,14 +369,6 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         );
     }
 
-    /**
-     * @dev Internal conversion function (from shares to assets) with support
-     * for rounding direction.
-     * @param shares The shares amount to be converted into underlying assets.
-     * @param rounding The rounding direction.
-     * @return Amount of underlying assets received in exchange of the
-     * specified amount of shares.
-     */
     function _convertToAssets(uint256 shares, Math.Rounding rounding)
         internal
         view
@@ -542,14 +492,10 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     // Pausability
     function pause() public onlyOwner {
         _pause();
-        // depositRequestLP.pause();
-        // withdrawRequestLP.pause();
     }
 
     function unpause() public onlyOwner {
         _unpause();
-        // depositRequestLP.unpause();
-        // withdrawRequestLP.unpause();
     }
 
     function _update(address from, address to, uint256 value) internal virtual override(ERC20, ERC20Pausable) whenNotPaused {
