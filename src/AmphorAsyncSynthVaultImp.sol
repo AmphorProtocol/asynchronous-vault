@@ -1,26 +1,31 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
+// check before the engage new requests or implement batched version of deposits/redeem claims
+// TODO: imp a permit vault
+// TODO: imp a permit2 vault
+// TODO: imp upgradability
+
 import {IERC7540, IERC165, IERC7540Redeem} from "./interfaces/IERC7540.sol";
 import {
     Ownable,
     Ownable2Step
 } from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {
-    ERC20,
     IERC20,
     IERC20Metadata
 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {
+    ERC20Pausable,
+    Pausable,
+    ERC20
+} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-import {SafeERC20} from
-    "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ERC20Permit} from
     "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
-import {AmphorAsyncSynthVaultRequestLPImp} from "./AmphorAsyncSynthVaultRequestLPImp.sol";
+import {AmphorAsyncSynthVaultPendingRequestLPImp, SafeERC20} from "./AmphorAsyncSynthVaultPendingRequestLPImp.sol";
 
-
-contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step, Pausable {
+contract AmphorAsyncSynthVaultImp is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
 
     /*
      ######
@@ -169,79 +174,76 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
     */
 
     /**
-     * @dev The total underlying assets amount just before the lock period.
-     * @return Amount of the total underlying assets just before the last vault
-     * locking.
-     */
-    uint256 public lastSavedBalance;
-
-    /**
      * @dev The perf fees applied on the positive yield.
      * @return Amount of the perf fees applied on the positive yield.
      */
     uint16 public feesInBps;
 
-    /**
-     * @dev The locking status of the vault.
-     * @return `true` if the vault is open for deposits, `false` otherwise.
-     */
-    bool public vaultIsOpen;
-
     IERC20 public immutable _asset;
     uint256 public epochNonce;
-    uint256 public totalSharesWidrawRequest;
-    uint256 public totalDepositRequest;
-    uint256[] public bigShares;
-    AmphorAsyncSynthVaultRequestLPImp public immutable depositRequestLP;
-    AmphorAsyncSynthVaultRequestLPImp public immutable withdrawRequestLP;
+    uint256[] public bigAssets; // pending withdrawals requests that has been processed && waiting for claim/deposit
+    uint256[] public bigShares; // pending deposits requests that has been processed && waiting for claim/withdraw
+    uint256 public totalAssets; // total working assets (in the strategy), not including pending withdrawals money
+
+    AmphorAsyncSynthVaultPendingRequestLPImp public depositRequestLP;
+    AmphorAsyncSynthVaultPendingRequestLPImp public withdrawRequestLP;
+
 
     constructor(
-        IERC20 underlying,
+        ERC20 underlying,
         string memory name,
-        string memory symbol
-    ) ERC20(name, symbol) ERC20Permit(name) Ownable(_msgSender()) {
-        _asset = underlying;
-        depositRequestLP = new AmphorAsyncSynthVaultRequestLPImp();
-        withdrawRequestLP = new AmphorAsyncSynthVaultRequestLPImp();
+        string memory symbol,
+        string memory depositRequestLPName,
+        string memory depositRequestLPSymbol,
+        string memory withdrawRequestLPName,
+        string memory withdrawRequestLPSymbol
+    ) ERC20(name, symbol) Ownable(_msgSender()) ERC20Permit(name) {
+        _asset = IERC20(underlying);
+        depositRequestLP = new AmphorAsyncSynthVaultPendingRequestLPImp(underlying, depositRequestLPName, depositRequestLPSymbol);
+        withdrawRequestLP = new AmphorAsyncSynthVaultPendingRequestLPImp(underlying, withdrawRequestLPName, withdrawRequestLPSymbol);
+        epochNonce++; // in order to start at epoch 1, otherwise users might try to claim epoch -1 requests
     }
 
-    function nextEpoch(uint256 returnedUnderlyingAmount) external onlyOwner returns (uint256) {
-        // end + start epochs
-        returnedUnderlyingAmount; // tired of warning
-        return ++epochNonce;
-    }
+    function requestDeposit(uint256 assets, address receiver, address owner) external whenNotPaused {
+        // Claim not claimed request
+        uint256 lastRequestId = depositRequestLP.lastRequestId(owner);
+        uint256 lastRequestBalance = depositRequestLP.balanceOf(owner, lastRequestId);
+        if (lastRequestBalance > 0 && lastRequestId != epochNonce) // We don't want to call _deposit for nothing and we don't want to cancel a current request if the user just want to increase it.
+            _deposit(owner, receiver, lastRequestId, lastRequestBalance);
 
-    function requestDeposit(uint256 assets, address operator) external whenNotPaused {
-        totalDepositRequest += assets;
-        _asset.safeTransferFrom(_msgSender(), address(this), assets);
-        depositRequestLP.mint(operator, epochNonce, assets);
+        // Create a new request
+        depositRequestLP.deposit(epochNonce, assets, receiver, owner);
+        depositRequestLP.setLastRequest(owner, epochNonce);
+
+        //TODO emit event ?
     }
-    function withdrawDepositRequest(uint256 assets, address operator) external whenNotPaused {
-        totalDepositRequest -= assets;
-        depositRequestLP.burn(operator, epochNonce, assets);
-        _asset.safeTransfer(_msgSender(), assets);
+    function withdrawDepositRequest(uint256 assets, address receiver, address owner) external whenNotPaused {
+        depositRequestLP.withdraw(epochNonce, assets, receiver, owner);
+        //TODO emit event ?
     }
-    function pendingDepositRequest(address operator) external view returns (uint256 assets) {
-        return depositRequestLP.balanceOf(operator, epochNonce);
+    function pendingDepositRequest(address owner) external view returns (uint256 assets) {
+        return depositRequestLP.balanceOf(owner, epochNonce);
     }
-    function requestRedeem(uint256 shares, address operator, address owner) external whenNotPaused {
-        totalSharesWidrawRequest += shares;
-        IERC20(this).transferFrom(operator, address(this), shares);
-        withdrawRequestLP.mint(owner, epochNonce, shares);
+    function requestRedeem(uint256 shares, address receiver, address owner, bytes memory) external whenNotPaused {
+        // Claim not claimed request
+        uint256 lastRequestId = depositRequestLP.lastRequestId(owner);
+        uint256 lastRequestBalance = depositRequestLP.balanceOf(owner, lastRequestId);
+        if (lastRequestBalance > 0 && lastRequestId != epochNonce) // We don't want to call _redeem for nothing and we don't want to cancel a current request if the user just want to increase it.
+            _redeem(owner, receiver, lastRequestId, lastRequestBalance);
+
+        withdrawRequestLP.deposit(epochNonce, shares, receiver, owner);
+        //TODO emit event ?
     }
-    function withdrawRedeemRequest(uint256 shares, address operator, address owner) external whenNotPaused {
-        totalSharesWidrawRequest -= shares;
-        withdrawRequestLP.burn(operator, epochNonce, shares);
-        IERC20(this).transfer(owner, shares);
+    function withdrawRedeemRequest(uint256 shares, address receiver, address owner) external whenNotPaused {
+        withdrawRequestLP.withdraw(epochNonce, shares, receiver, owner);
+        //TODO emit event ?
     }
-    function pendingRedeemRequest(address operator) external view returns (uint256 shares) {
-        return withdrawRequestLP.balanceOf(operator, epochNonce);
+    function pendingRedeemRequest(address owner) external view returns (uint256 shares) {
+        return withdrawRequestLP.balanceOf(owner, epochNonce);
     }
     function supportsInterface(bytes4 interfaceId) public pure returns (bool) {
         return interfaceId == type(IERC165).interfaceId || interfaceId == type(IERC7540Redeem).interfaceId;
     }
-
-    // TODO: implement claimBatchedAssets
 
     /*
      ####################################
@@ -255,20 +257,6 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
      */
     function asset() public view returns (address) {
         return address(_asset);
-    }
-
-    /**
-     * @dev The `totalAssets` function is used to calculate the theoretical
-     * total underlying assets owned by the vault.
-     * If the vault is locked, the last saved balance is added to the current
-     * balance.
-     * @notice The `totalAssets` function is used to know what is the
-     * theoretical TVL of the vault.
-     * @return Amount of the total underlying assets in the vault.
-     */
-    function totalAssets() public view returns (uint256) {
-        if (vaultIsOpen) return _totalAssets();
-        return _totalAssets() + lastSavedBalance;
     }
 
     /**
@@ -295,52 +283,22 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         return _convertToAssets(shares, Math.Rounding.Floor);
     }
 
-    /**
-     * @dev The `maxDeposit` function is used to calculate the maximum deposit.
-     * @notice If the vault is locked or paused, users are not allowed to mint,
-     * the maxMint is 0.
-     * @ param _ The address of the receiver.
-     * @return Amount of the maximum underlying assets deposit amount.
-     */
-    function maxDeposit(address) public view returns (uint256) {
-        return !vaultIsOpen || paused() ? 0 : type(uint256).max;
+    function maxDeposit(address owner) public view returns (uint256) {
+        return depositRequestLP.balanceOf(owner, epochNonce - 1);
     }
 
-    /**
-     * @dev The `maxMint` function is used to calculate the maximum amount of
-     * shares you can mint.
-     * @notice If the vault is locked or paused, the maxMint is 0.
-     * @ param _ The address of the receiver.
-     * @return Amount of the maximum shares mintable for the specified address.
-     */
-    function maxMint(address) public view returns (uint256) {
-        return !vaultIsOpen || paused() ? 0 : type(uint256).max;
+    // TODO: implement this correclty if possible
+    function maxMint(address) public pure returns (uint256) {
+        return 0;
     }
 
-    /**
-     * @dev The `maxWithdraw` function is used to calculate the maximum amount
-     * of withdrawable underlying assets.
-     * @notice If the function is called during the lock period the maxWithdraw
-     * is `0`.
-     * @param owner The address of the owner.
-     * @return Amount of the maximum number of withdrawable underlying assets.
-     */
-    function maxWithdraw(address owner) public view returns (uint256) {
-        return vaultIsOpen
-            ? _convertToAssets(balanceOf(owner), Math.Rounding.Floor)
-            : 0;
+    // TODO: implement this correclty if possible
+    function maxWithdraw(address) public pure returns (uint256) {
+        return 0; // check if the rounding is correct
     }
 
-    /**
-     * @dev The `maxRedemm` function is used to calculate the maximum amount of
-     * redeemable shares.
-     * @notice If the function is called during the lock period the maxRedeem is
-     * `0`.
-     * @param owner The address of the owner.
-     * @return Amount of the maximum number of redeemable shares.
-     */
     function maxRedeem(address owner) public view returns (uint256) {
-        return vaultIsOpen ? balanceOf(owner) : 0;
+        return withdrawRequestLP.balanceOf(owner, epochNonce - 1);
     }
 
     /**
@@ -351,29 +309,21 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
      * assets amount.
      */
     function previewDeposit(uint256 assets) public view returns (uint256) {
-        return _convertToShares(assets, Math.Rounding.Floor);
+        return _convertDepositLPToShares(epochNonce - 1, assets, Math.Rounding.Floor);
     }
 
-    /**
-     * @dev The `previewMint` function is used to calculate the underlying asset
-     * amount received in exchange of the specified amount of shares.
-     * @param shares The shares amount to be converted into underlying assets.
-     * @return Amount of underlying assets received in exchange of the specified
-     * amount of shares.
-     */
-    function previewMint(uint256 shares) public view returns (uint256) {
-        return _convertToAssets(shares, Math.Rounding.Ceil);
+    function previewDeposit(uint256 epochId, uint256 assets) public view returns (uint256) {
+        return _convertDepositLPToShares(epochId, assets, Math.Rounding.Floor);
     }
 
-    /**
-     * @dev The `previewWithdraw` function is used to calculate the shares
-     * amount received in exchange of the specified underlying amount.
-     * @param assets The underlying assets amount to be converted into shares.
-     * @return Amount of shares received in exchange of the specified underlying
-     * assets amount.
-     */
-    function previewWithdraw(uint256 assets) public view returns (uint256) {
-        return _convertToShares(assets, Math.Rounding.Ceil);
+    // TODO implement this correctly if possible
+    function previewMint(uint256) public pure returns (uint256) {
+        return 0;
+    }
+
+    //TODO implement this correctly if possible
+    function previewWithdraw(uint256) public pure returns (uint256) {
+        return 0;
     }
 
     /**
@@ -384,125 +334,51 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
      * amount of shares.
      */
     function previewRedeem(uint256 shares) public view returns (uint256) {
-        return _convertToAssets(shares, Math.Rounding.Floor);
+        return _convertWithdrawLPToAssets(epochNonce - 1, shares, Math.Rounding.Floor);
     }
 
-    /**
-     * @dev The `deposit` function is used to deposit underlying assets into the
-     * vault.
-     * @notice The `deposit` function is used to deposit underlying assets into
-     * the vault.
-     * @param assets The underlying assets amount to be converted into shares.
-     * @param receiver The address of the shares receiver.
-     * @return Amount of shares received in exchange of the
-     * specified underlying assets amount.
-     */
     function deposit(uint256 assets, address receiver)
         public
+        whenNotPaused
         returns (uint256)
     {
-        // uint256 maxAssets = maxDeposit(receiver);
-        // if (assets > maxAssets) {
-        //     revert ERC4626ExceededMaxDeposit(receiver, assets, maxAssets);
-        // }
+        return _deposit(_msgSender(), receiver, epochNonce - 1, assets);
+    }
 
+    // assets = pending lp balance
+    // shares = shares to mint
+    function _deposit(address owner, address receiver, uint256 requestId, uint256 assets)
+        internal
+        returns (uint256)
+    {
+        uint256 maxAssets = maxDeposit(owner); // what he can claim from the last epoch request 
+        if (assets > maxAssets) { // he is trying to claim more than he can by saying he has more pending lp that he has in reality
+            revert ERC4626ExceededMaxDeposit(owner, assets, maxAssets);
+        }
 
+        uint256 sharesAmount = previewDeposit(requestId, assets);
+        depositRequestLP.burn(owner, requestId, assets);
+        // _mint(receiver, sharesAmount); // actually the shares have already been minted into the nextEpoch function
+        IERC20(address(this)).safeTransfer(receiver, sharesAmount); // transfer the vault shares to the receiver
+        bigShares[requestId] += sharesAmount; // decrease the bigShares
 
+        emit Deposit(owner, receiver, assets, sharesAmount);
 
-        // TODO: finish this
-        // for (uint256 i = 0; i < epochNonce; i++) {
-        //     uint256 amount = depositRequestLP.balanceOf(operator, epochNonce);
-        //     if (amount > 0) {
-        //         depositRequestLP.burn(operator, epochNonce, amount);
-        //         IERC20(this).transfer(receiver, amount);
-        //     }
-        // }
+        return sharesAmount;
+    }
 
-        // uint256 sharesAmount = previewDeposit(assets);
-        // _deposit(_msgSender(), receiver, assets, sharesAmount);
-
-        // return sharesAmount;
+    // TODO: implement this correclty if possible
+    function mint(uint256, address) public pure returns (uint256) {
         return 0;
     }
 
-    function _claimDeposit(uint256 id, uint256 pendingShares, address owner) internal {
-        uint256 amount = depositRequestLP.balanceOf(owner, id);
-        if (amount > 0) {
-            depositRequestLP.burn(owner, id, amount);
-            IERC20(this).transfer(owner, amount);
-        }
-        uint256 shares = amount.mulDiv(
-            depositRequestLP.totalSupply(id) + 1, totalAssets() + 1, Math.Rounding.Floor
-        );
-    }
-
-    /**
-     * @dev The `mint` function is used to mint the specified amount of shares in
-     * exchange of the corresponding assets amount from owner.
-     * @param shares The shares amount to be converted into underlying assets.
-     * @param receiver The address of the shares receiver.
-     * @return Amount of underlying assets deposited in exchange of the specified
-     * amount of shares.
-     */
-    function mint(uint256 shares, address receiver) public whenNotPaused returns (uint256) {
-        uint256 maxShares = maxMint(receiver);
-        if (shares > maxShares) {
-            revert ERC4626ExceededMaxMint(receiver, shares, maxShares);
-        }
-
-        uint256 assetsAmount = previewMint(shares);
-        _deposit(_msgSender(), receiver, assetsAmount, shares);
-
-        return assetsAmount;
-    }
-
-    /**
-     * @dev The `mintMaxAssets` function is used to mint the specified amount of
-     * shares in exchange of the corresponding underlying assets amount from
-     * owner. It also checks that the amount of assets deposited is less or equal
-     * to the specified maximum amount.
-     * @param shares The shares amount to be converted into underlying assets.
-     * @param receiver The address of the shares receiver.
-     * @param maxAssets The maximum amount of assets to be deposited.
-     * @return Amount of underlying assets deposited in exchange of the specified
-     * amount of shares.
-     */
-    function mintMaxAssets(uint256 shares, address receiver, uint256 maxAssets)
-        public
-        returns (uint256)
-    {
-        uint256 assetsAmount = mint(shares, receiver);
-        if (assetsAmount > maxAssets) {
-            revert ERC4626TooMuchAssetsDeposited(
-                receiver, assetsAmount, maxAssets
-            );
-        }
-
-        return assetsAmount;
-    }
-
-    /**
-     * @dev The `withdraw` function is used to withdraw the specified underlying
-     * assets amount in exchange of a proportional amount of shares.
-     * @param assets The underlying assets amount to be converted into shares.
-     * @param receiver The address of the shares receiver.
-     * @param owner The address of the owner.
-     * @return Amount of shares received in exchange of the specified underlying
-     * assets amount.
-     */
-    function withdraw(uint256 assets, address receiver, address owner)
+    // TODO: implement this correclty if possible
+    function withdraw(uint256, address, address)
         external
+        pure
         returns (uint256)
     {
-        uint256 maxAssets = maxWithdraw(owner);
-        if (assets > maxAssets) {
-            revert ERC4626ExceededMaxWithdraw(owner, assets, maxAssets);
-        }
-
-        uint256 sharesAmount = previewWithdraw(assets);
-        _withdraw(receiver, owner, assets, sharesAmount);
-
-        return sharesAmount;
+        return 0;
     }
 
     /**
@@ -517,30 +393,28 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
      */
     function redeem(uint256 shares, address receiver, address owner)
         external
+        whenNotPaused
+        returns (uint256)
+    {
+        return _redeem(owner, receiver, epochNonce - 1, shares);
+    }
+    
+    function _redeem(address owner, address receiver, uint256 requestId, uint256 shares)
+        internal
         returns (uint256)
     {
         uint256 maxShares = maxRedeem(owner);
-        if (shares > maxShares) {
-            revert ERC4626ExceededMaxRedeem(owner, shares, maxShares);
-        }
+        if (shares > maxShares) revert ERC4626ExceededMaxRedeem(owner, shares, maxShares);
 
         uint256 assetsAmount = previewRedeem(shares);
-        _withdraw(receiver, owner, assetsAmount, shares);
+        withdrawRequestLP.burn(owner, requestId, shares);
+
+        _asset.safeTransfer(receiver, assetsAmount);
+        bigAssets[requestId] -= assetsAmount; // decrease the bigAssets
+
+        emit Withdraw(_msgSender(), receiver, owner, assetsAmount, shares);
 
         return assetsAmount;
-    }
-
-    /**
-     * @dev The `_totalAssets` function is used to return the current assets
-     * balance of the vault contract.
-     * @notice The `_totalAssets` is used to know the balance of underlying of
-     * the vault contract without
-     * taking care of any theoretical external funds of the vault.
-     * @return Amount of underlying assets balance actually contained into the
-     * vault contract.
-     */
-    function _totalAssets() internal view returns (uint256) {
-        return _asset.balanceOf(address(this));
     }
 
     /**
@@ -557,7 +431,27 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         returns (uint256)
     {
         return assets.mulDiv(
-            totalSupply() + 1, totalAssets() + 1, rounding
+            totalSupply() + 1, totalAssets + 1, rounding
+        );
+    }
+
+    function _convertDepositLPToShares(uint256 epochId, uint256 assets, Math.Rounding rounding)
+        internal
+        view
+        returns (uint256)
+    {
+        return assets.mulDiv(
+            bigShares[epochId] + 1, depositRequestLP.totalSupply(epochId) + 1, rounding
+        );
+    }
+
+    function _convertWithdrawLPToAssets(uint256 epochId, uint256 pendingLPs, Math.Rounding rounding)
+        internal
+        view
+        returns (uint256)
+    {
+        return pendingLPs.mulDiv(
+            bigAssets[epochId] + 1, withdrawRequestLP.totalSupply(epochId) + 1, rounding
         );
     }
 
@@ -575,64 +469,8 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         returns (uint256)
     {
         return shares.mulDiv(
-            totalAssets() + 1, totalSupply() + 1, rounding
+            totalAssets + 1, totalSupply() + 1, rounding
         );
-    }
-
-    /**
-     * @dev The `_deposit` function is used to deposit the specified underlying
-     * assets amount in exchange of a proportionnal amount of shares.
-     * @param caller The address of the caller.
-     * @param receiver The address of the shares receiver.
-     * @param assets The underlying assets amount to be converted into shares.
-     * @param shares The shares amount to be converted into underlying assets.
-     */
-    function _deposit(
-        address caller,
-        address receiver,
-        uint256 assets,
-        uint256 shares
-    ) internal {
-        // If _asset is ERC777, transferFrom can trigger a reentrancy BEFORE the
-        // transfer happens through the tokensToSend hook. On the other hand,
-        // the tokenReceived hook, that is triggered after the transfer,calls
-        // the vault, which is assumed not malicious.
-        //
-        // Conclusion: we need to do the transfer before we mint so that any
-        // reentrancy would happen before the assets are transferred and before
-        // the shares are minted, which is a valid state.
-        // slither-disable-next-line reentrancy-no-eth
-        SafeERC20.safeTransferFrom(_asset, caller, address(this), assets);
-        _mint(receiver, shares);
-
-        emit Deposit(caller, receiver, assets, shares);
-    }
-
-    /**
-     * @dev The function `_withdraw` is used to withdraw the specified
-     * underlying assets amount in exchange of a proportionnal amount of shares by
-     * specifying all the params.
-     * @notice The `withdraw` function is used to withdraw the specified
-     * underlying assets amount in exchange of a proportionnal amount of shares.
-     * @param receiver The address of the shares receiver.
-     * @param owner The address of the owner.
-     * @param assets The underlying assets amount to be converted into shares.
-     * @param shares The shares amount to be converted into underlying assets.
-     */
-    function _withdraw(
-        address receiver,
-        address owner,
-        uint256 assets,
-        uint256 shares
-    ) internal {
-        if (_msgSender() != owner) {
-            _spendAllowance(owner, _msgSender(), shares);
-        }
-
-        _burn(owner, shares);
-        SafeERC20.safeTransfer(_asset, receiver, assets);
-
-        emit Withdraw(_msgSender(), receiver, owner, assets, shares);
     }
 
     /*
@@ -641,71 +479,82 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
      ####################################
     */
 
-    /**
-     * @dev The `start` function is used to start the lock period of the vault.
-     * It is the only way to lock the vault. It can only be called by the owner
-     * of the contract (`onlyOwner` modifier).
-     */
-    // function start() external onlyOwner {
-    //     if (!vaultIsOpen) revert VaultIsLocked();
+    // TODO: implement this
+    function nextEpoch(uint256 returnedUnderlyingAmount) public onlyOwner returns (uint256) {
+        // (end + start epochs)
 
-    //     lastSavedBalance = _totalAssets();
-    //     vaultIsOpen = false;
-    //     _asset.safeTransfer(owner(), lastSavedBalance);
+        // TODO
+        // 1. take fees from returnedUnderlyingAmount
+        // 7. we update the totalAssets
+        // 2. with the resting amount we know how much cost a share
+        // 3. we can take the pending deposits underlying (same as this vault underlying) and mint shares
+        // 4. we update the bigShares array for the appropriate epoch (epoch 0 request is a deposit into epoch 1...)
+        // 5. we can take the pending withdraws shares and redeem underlying (which are shares of this vault) against this vault underlying
+        // 6. we update the bigAssets array for the appropriate epoch (epoch 0 request is a withdraw at the end of the epoch 0...)
 
-    //     emit EpochStart(block.timestamp, lastSavedBalance, totalSupply());
-    // }
+        ///////////////////////
+        // Ending current epoch
+        ///////////////////////
+        uint256 fees;
 
-    /**
-     * @dev The `end` function is used to end the lock period of the vault.
-     * @notice The `end` function is used to end the lock period of the vault.
-     * It can only be called by the owner of the contract (`onlyOwner` modifier)
-     * and only when the vault is locked.
-     * If there are profits, the performance fees are taken and sent to the
-     * owner of the contract.
-     * @param assetReturned The underlying assets amount to be deposited into
-     * the vault.
-     */
-    // function end(uint256 assetReturned) external onlyOwner {
-    //     if (vaultIsOpen) revert VaultIsOpen();
+        if (returnedUnderlyingAmount > totalAssets && feesInBps > 0) {
+            uint256 profits;
+            unchecked {
+                profits = returnedUnderlyingAmount - totalAssets;
+            }
+            fees = (profits).mulDiv(feesInBps, 10000, Math.Rounding.Ceil);
+        }
 
-    //     uint256 fees;
+        totalAssets = returnedUnderlyingAmount - fees;
 
-    //     if (assetReturned > lastSavedBalance && feesInBps > 0) {
-    //         uint256 profits;
-    //         unchecked {
-    //             profits = assetReturned - lastSavedBalance;
-    //         }
-    //         fees = (profits).mulDiv(feesInBps, 10000, Math.Rounding.Ceil);
-    //     }
+        // Can be done in one time at the end
+        SafeERC20.safeTransferFrom(
+            _asset, _msgSender(), address(this), returnedUnderlyingAmount - fees
+        );
 
-    //     SafeERC20.safeTransferFrom(
-    //         _asset, _msgSender(), address(this), assetReturned - fees
-    //     );
+        emit EpochEnd(
+            block.timestamp,
+            totalAssets,
+            returnedUnderlyingAmount,
+            fees,
+            totalSupply()
+        );
 
-    //     vaultIsOpen = true;
+        ///////////////////
+        // Pending deposits
+        ///////////////////
+        uint256 pendingDeposit = depositRequestLP.nextEpoch(epochNonce); // get the underlying of the pending deposits
+        // Updating the bigShares array
+        bigShares.push(pendingDeposit.mulDiv(
+            totalSupply() + 1, totalAssets + 1, Math.Rounding.Floor
+        ));
+        // Minting the shares
+        _mint(address(this), bigShares[epochNonce]); // mint the shares into the vault
+        // Update the totalAssets
+        totalAssets += pendingDeposit;
 
-    //     emit EpochEnd(
-    //         block.timestamp,
-    //         lastSavedBalance,
-    //         assetReturned,
-    //         fees,
-    //         totalSupply()
-    //     );
+        /////////////////
+        // Pending redeem
+        /////////////////
+        uint256 pendingRedeem = withdrawRequestLP.nextEpoch(epochNonce); // get the shares of the pending withdraws
+        // Updating the bigAssets array
+        bigAssets.push(pendingRedeem.mulDiv(
+            totalAssets + 1, totalSupply() + 1, Math.Rounding.Floor
+        ));
+        // Burn the vault shares
+        _burn(address(this), pendingRedeem); // burn the shares from the vault
+        // Update the totalAssets
+        totalAssets -= bigAssets[epochNonce];
 
-    //     lastSavedBalance = 0;
-    // }
+        //////////////////
+        // Start new epoch
+        //////////////////
+        _asset.safeTransfer(owner(), totalAssets);
 
-    // function restruct(uint256 virtualReturnedAsset) external onlyOwner {
-    //     emit EpochEnd(
-    //         block.timestamp,
-    //         lastSavedBalance,
-    //         virtualReturnedAsset,
-    //         0,
-    //         totalSupply()
-    //     );
-    //     emit EpochStart(block.timestamp, lastSavedBalance, totalSupply());
-    // }
+        emit EpochStart(block.timestamp, totalAssets, totalSupply());
+
+        return ++epochNonce;
+    }
 
     /**
      * @dev The `setFees` function is used to modify the protocol fees.
@@ -720,6 +569,7 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
         emit FeesChanged(feesInBps, newFees);
     }
 
+    // TODO: implement this correclty
     /**
      * @dev The `claimToken` function is used to claim other tokens that have
      * been sent to the vault.
@@ -731,5 +581,22 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20, ERC20Permit, Ownable2Step,
     function claimToken(IERC20 token) external onlyOwner {
         if (token == _asset) {/*TODO: get the discrepancy between returned assets and pending deposits*/}
         token.safeTransfer(_msgSender(), token.balanceOf(address(this)));
+    }
+
+    // Pausability
+    function pause() public onlyOwner {
+        _pause();
+        // depositRequestLP.pause();
+        // withdrawRequestLP.pause();
+    }
+
+    function unpause() public onlyOwner {
+        _unpause();
+        // depositRequestLP.unpause();
+        // withdrawRequestLP.unpause();
+    }
+
+    function _update(address from, address to, uint256 value) internal virtual override(ERC20, ERC20Pausable) whenNotPaused {
+        super._update(from, to, value);
     }
 }
