@@ -7,14 +7,11 @@ import {
 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import {SafeERC20} from
     "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-// import {
-//     Pausable
-// } from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
 import {
     Ownable
 } from "@openzeppelin/contracts/access/Ownable.sol";
 
-contract AmphorAsyncSynthVaultPendingRequestLPImp is ERC6909ib, Ownable/*, Pausable*/ {
+contract AsyncVaultPendingLPImp is ERC6909ib, Ownable/*, Pausable*/ {
 
     using SafeERC20 for ERC20;
 
@@ -108,11 +105,4 @@ contract AmphorAsyncSynthVaultPendingRequestLPImp is ERC6909ib, Ownable/*, Pausa
         underyling.safeTransfer(owner(), returnedUnderlying);
     }
 
-    // function pause() public onlyOwner {
-    //     _pause();
-    // }
-
-    // function unpause() public onlyOwner {
-    //     _unpause();
-    // }
 }

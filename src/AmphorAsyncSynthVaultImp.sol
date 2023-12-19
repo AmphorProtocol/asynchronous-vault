@@ -2,8 +2,7 @@
 pragma solidity 0.8.21;
 
 // check before the engage new requests or implement batched version of deposits/redeem claims
-// TODO: imp a permit vault
-// TODO: imp a permit2 vault
+// TODO: imp an approveFrom for the pendingLP
 // TODO: imp upgradability
 
 import {IERC7540, IERC165, IERC7540Redeem} from "./interfaces/IERC7540.sol";
@@ -23,7 +22,7 @@ import {
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ERC20Permit} from
     "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
-import {AmphorAsyncSynthVaultPendingRequestLPImp, SafeERC20} from "./AmphorAsyncSynthVaultPendingRequestLPImp.sol";
+import {AsyncVaultPendingLPImp, SafeERC20} from "./AsyncVaultPendingLPImp.sol";
 
 contract AmphorAsyncSynthVaultImp is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
 
@@ -91,26 +90,9 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20Pausable, Ownable2Step, ERC2
     */
 
     /**
-     * @dev The vault is in locked state. Emitted if the tx cannot happen in
-     * this state.
-     */
-    error VaultIsLocked();
-
-    /**
-     * @dev The vault is in open state. Emitted if the tx cannot happen in this
-     * state.
-     */
-    error VaultIsOpen();
-
-    /**
      * @dev The rules doesn't allow the perf fees to be higher than 30.00%.
      */
     error FeesTooHigh();
-
-    /**
-     * @dev Claiming the underlying assets is not allowed.
-     */
-    error CannotClaimAsset();
 
     /**
      * @dev Attempted to deposit more underlying assets than the max amount for
@@ -121,50 +103,9 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20Pausable, Ownable2Step, ERC2
     );
 
     /**
-     * @dev Attempted to mint more shares than the max amount for `receiver`.
-     */
-    error ERC4626ExceededMaxMint(address receiver, uint256 shares, uint256 max);
-
-    /**
-     * @dev Attempted to withdraw more underlying assets than the max amount for
-     * `receiver`.
-     */
-    error ERC4626ExceededMaxWithdraw(address owner, uint256 assets, uint256 max);
-
-    /**
      * @dev Attempted to redeem more shares than the max amount for `receiver`.
      */
     error ERC4626ExceededMaxRedeem(address owner, uint256 shares, uint256 max);
-
-    /**
-     * @dev Attempted to mint less shares than the min amount for `receiver`.
-     * This error is only thrown when the `depositMinShares` function is used.
-     * @notice The `depositMinShares` function is used to deposit underlying
-     * assets into the vault. It also checks that the amount of shares minted is
-     * greater or equal to the specified minimum amount.
-     * @param owner The address of the owner.
-     * @param shares The shares amount to be converted into underlying assets.
-     * @param minShares The minimum amount of shares to be minted.
-     */
-    error ERC4626NotEnoughSharesMinted(
-        address owner, uint256 shares, uint256 minShares
-    );
-
-    /**
-     * @dev Attempted to withdraw more underlying assets than the max amount for
-     * `receiver`.
-     * This error is only thrown when the `mintMaxAssets` function is used.
-     * @notice The `mintMaxAssets` function is used to mint the specified amount
-     * of shares in exchange of the corresponding underlying assets amount from
-     * owner. It also checks that the amount of assets deposited is less or
-     * equal to the specified maximum amount.
-     * @param owner The address of the owner.
-     * @param assets The underlying assets amount to be converted into shares.
-     * @param maxAssets The maximum amount of assets to be deposited.
-     */
-    error ERC4626TooMuchAssetsDeposited(
-        address owner, uint256 assets, uint256 maxAssets
-    );
 
 
     /*
@@ -180,13 +121,13 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20Pausable, Ownable2Step, ERC2
     uint16 public feesInBps;
 
     IERC20 public immutable _asset;
-    uint256 public epochNonce;
+    uint256 public epochNonce = 1; // in order to start at epoch 1, otherwise users might try to claim epoch -1 requests
     uint256[] public bigAssets; // pending withdrawals requests that has been processed && waiting for claim/deposit
     uint256[] public bigShares; // pending deposits requests that has been processed && waiting for claim/withdraw
     uint256 public totalAssets; // total working assets (in the strategy), not including pending withdrawals money
 
-    AmphorAsyncSynthVaultPendingRequestLPImp public depositRequestLP;
-    AmphorAsyncSynthVaultPendingRequestLPImp public withdrawRequestLP;
+    AsyncVaultPendingLPImp public depositRequestLP;
+    AsyncVaultPendingLPImp public withdrawRequestLP;
 
 
     constructor(
@@ -199,12 +140,11 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20Pausable, Ownable2Step, ERC2
         string memory withdrawRequestLPSymbol
     ) ERC20(name, symbol) Ownable(_msgSender()) ERC20Permit(name) {
         _asset = IERC20(underlying);
-        depositRequestLP = new AmphorAsyncSynthVaultPendingRequestLPImp(underlying, depositRequestLPName, depositRequestLPSymbol);
-        withdrawRequestLP = new AmphorAsyncSynthVaultPendingRequestLPImp(underlying, withdrawRequestLPName, withdrawRequestLPSymbol);
-        epochNonce++; // in order to start at epoch 1, otherwise users might try to claim epoch -1 requests
+        depositRequestLP = new AsyncVaultPendingLPImp(underlying, depositRequestLPName, depositRequestLPSymbol);
+        withdrawRequestLP = new AsyncVaultPendingLPImp(underlying, withdrawRequestLPName, withdrawRequestLPSymbol);
     }
 
-    function requestDeposit(uint256 assets, address receiver, address owner) external whenNotPaused {
+    function requestDeposit(uint256 assets, address receiver, address owner) public whenNotPaused {
         // Claim not claimed request
         uint256 lastRequestId = depositRequestLP.lastRequestId(owner);
         uint256 lastRequestBalance = depositRequestLP.balanceOf(owner, lastRequestId);
