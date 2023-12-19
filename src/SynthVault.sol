@@ -20,7 +20,7 @@ import {
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ERC20Permit} from
     "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
-import {AsyncVaultPendingLPImp, SafeERC20} from "./AsyncVaultPendingLPImp.sol";
+import {SynthVaultPendingLP, SafeERC20} from "./SynthVaultPendingLP.sol";
 import {IPermit2, ISignatureTransfer} from "permit2/src/interfaces/IPermit2.sol";
 
 struct Permit2Params {
@@ -31,7 +31,7 @@ struct Permit2Params {
     bytes signature;
 }
 
-contract AmphorAsyncSynthVaultImp is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
+contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
 
     /*
      ######
@@ -141,8 +141,8 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20Pausable, Ownable2Step, ERC2
     uint256[] public bigShares; // pending deposits requests that has been processed && waiting for claim/withdraw
     uint256 public totalAssets; // total working assets (in the strategy), not including pending withdrawals money
 
-    AsyncVaultPendingLPImp public depositRequestLP;
-    AsyncVaultPendingLPImp public withdrawRequestLP;
+    SynthVaultPendingLP public depositRequestLP;
+    SynthVaultPendingLP public withdrawRequestLP;
 
     constructor(
         ERC20 underlying,
@@ -156,8 +156,8 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20Pausable, Ownable2Step, ERC2
     ) ERC20(name, symbol) Ownable(_msgSender()) ERC20Permit(name) {
         _asset = IERC20(underlying);
         permit2 = _permit2;
-        depositRequestLP = new AsyncVaultPendingLPImp(underlying, depositRequestLPName, depositRequestLPSymbol);
-        withdrawRequestLP = new AsyncVaultPendingLPImp(underlying, withdrawRequestLPName, withdrawRequestLPSymbol);
+        depositRequestLP = new SynthVaultPendingLP(underlying, depositRequestLPName, depositRequestLPSymbol);
+        withdrawRequestLP = new SynthVaultPendingLP(underlying, withdrawRequestLPName, withdrawRequestLPSymbol);
     }
 
     function requestDeposit(uint256 assets, address receiver, address owner) public whenNotPaused {

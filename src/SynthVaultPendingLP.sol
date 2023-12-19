@@ -11,7 +11,7 @@ import {
     Ownable
 } from "@openzeppelin/contracts/access/Ownable.sol";
 
-contract AsyncVaultPendingLPImp is ERC6909ib, Ownable/*, Pausable*/ {
+contract SynthVaultPendingLP is ERC6909ib, Ownable {
 
     using SafeERC20 for ERC20;
 
