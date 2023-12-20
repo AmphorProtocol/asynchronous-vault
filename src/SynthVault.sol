@@ -1,11 +1,6 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-// check before the engage new requests or implement batched version of deposits/redeem claims
-// TODO: imp a permit vault
-// TODO: imp a permit2 vault
-// TODO: imp upgradability
-
 import {IERC7540, IERC165, IERC7540Redeem} from "./interfaces/IERC7540.sol";
 import {
     Ownable,
@@ -23,9 +18,18 @@ import {
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ERC20Permit} from
     "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
-import {AmphorAsyncSynthVaultPendingRequestLPImp, SafeERC20} from "./AmphorAsyncSynthVaultPendingRequestLPImp.sol";
+import {SynthVaultPendingLP, SafeERC20} from "./SynthVaultPendingLP.sol";
+import {IPermit2, ISignatureTransfer} from "permit2/src/interfaces/IPermit2.sol";
 
-contract AmphorAsyncSynthVaultImp is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
+struct Permit2Params {
+    uint256 amount;
+    uint256 nonce;
+    uint256 deadline;
+    address token;
+    bytes signature;
+}
+
+contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
 
     /*
      ######
@@ -91,26 +95,9 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20Pausable, Ownable2Step, ERC2
     */
 
     /**
-     * @dev The vault is in locked state. Emitted if the tx cannot happen in
-     * this state.
-     */
-    error VaultIsLocked();
-
-    /**
-     * @dev The vault is in open state. Emitted if the tx cannot happen in this
-     * state.
-     */
-    error VaultIsOpen();
-
-    /**
      * @dev The rules doesn't allow the perf fees to be higher than 30.00%.
      */
     error FeesTooHigh();
-
-    /**
-     * @dev Claiming the underlying assets is not allowed.
-     */
-    error CannotClaimAsset();
 
     /**
      * @dev Attempted to deposit more underlying assets than the max amount for
@@ -121,51 +108,18 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20Pausable, Ownable2Step, ERC2
     );
 
     /**
-     * @dev Attempted to mint more shares than the max amount for `receiver`.
-     */
-    error ERC4626ExceededMaxMint(address receiver, uint256 shares, uint256 max);
-
-    /**
-     * @dev Attempted to withdraw more underlying assets than the max amount for
-     * `receiver`.
-     */
-    error ERC4626ExceededMaxWithdraw(address owner, uint256 assets, uint256 max);
-
-    /**
      * @dev Attempted to redeem more shares than the max amount for `receiver`.
      */
     error ERC4626ExceededMaxRedeem(address owner, uint256 shares, uint256 max);
 
-    /**
-     * @dev Attempted to mint less shares than the min amount for `receiver`.
-     * This error is only thrown when the `depositMinShares` function is used.
-     * @notice The `depositMinShares` function is used to deposit underlying
-     * assets into the vault. It also checks that the amount of shares minted is
-     * greater or equal to the specified minimum amount.
-     * @param owner The address of the owner.
-     * @param shares The shares amount to be converted into underlying assets.
-     * @param minShares The minimum amount of shares to be minted.
-     */
-    error ERC4626NotEnoughSharesMinted(
-        address owner, uint256 shares, uint256 minShares
-    );
+    /*
+     ####################################
+      GENERAL PERMIT2 RELATED ATTRIBUTES
+     ####################################
+    */
 
-    /**
-     * @dev Attempted to withdraw more underlying assets than the max amount for
-     * `receiver`.
-     * This error is only thrown when the `mintMaxAssets` function is used.
-     * @notice The `mintMaxAssets` function is used to mint the specified amount
-     * of shares in exchange of the corresponding underlying assets amount from
-     * owner. It also checks that the amount of assets deposited is less or
-     * equal to the specified maximum amount.
-     * @param owner The address of the owner.
-     * @param assets The underlying assets amount to be converted into shares.
-     * @param maxAssets The maximum amount of assets to be deposited.
-     */
-    error ERC4626TooMuchAssetsDeposited(
-        address owner, uint256 assets, uint256 maxAssets
-    );
-
+    // The canonical permit2 contract.
+    IPermit2 public immutable permit2;
 
     /*
      #####################################
@@ -180,14 +134,19 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20Pausable, Ownable2Step, ERC2
     uint16 public feesInBps;
 
     IERC20 public immutable _asset;
-    uint256 public epochNonce;
+    uint256 public epochNonce = 1; // in order to start at epoch 1, otherwise users might try to claim epoch -1 requests
     uint256[] public bigAssets; // pending withdrawals requests that has been processed && waiting for claim/deposit
     uint256[] public bigShares; // pending deposits requests that has been processed && waiting for claim/withdraw
     uint256 public totalAssets; // total working assets (in the strategy), not including pending withdrawals money
 
-    AmphorAsyncSynthVaultPendingRequestLPImp public depositRequestLP;
-    AmphorAsyncSynthVaultPendingRequestLPImp public withdrawRequestLP;
+    SynthVaultPendingLP public depositRequestLP;
+    SynthVaultPendingLP public withdrawRequestLP;
 
+    /*
+     ############################
+      AMPHOR SYNTHETIC FUNCTIONS
+     ############################
+    */
 
     constructor(
         ERC20 underlying,
@@ -196,15 +155,16 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20Pausable, Ownable2Step, ERC2
         string memory depositRequestLPName,
         string memory depositRequestLPSymbol,
         string memory withdrawRequestLPName,
-        string memory withdrawRequestLPSymbol
+        string memory withdrawRequestLPSymbol,
+        IPermit2 _permit2
     ) ERC20(name, symbol) Ownable(_msgSender()) ERC20Permit(name) {
         _asset = IERC20(underlying);
-        depositRequestLP = new AmphorAsyncSynthVaultPendingRequestLPImp(underlying, depositRequestLPName, depositRequestLPSymbol);
-        withdrawRequestLP = new AmphorAsyncSynthVaultPendingRequestLPImp(underlying, withdrawRequestLPName, withdrawRequestLPSymbol);
-        epochNonce++; // in order to start at epoch 1, otherwise users might try to claim epoch -1 requests
+        permit2 = _permit2;
+        depositRequestLP = new SynthVaultPendingLP(underlying, depositRequestLPName, depositRequestLPSymbol);
+        withdrawRequestLP = new SynthVaultPendingLP(underlying, withdrawRequestLPName, withdrawRequestLPSymbol);
     }
 
-    function requestDeposit(uint256 assets, address receiver, address owner) external whenNotPaused {
+    function requestDeposit(uint256 assets, address receiver, address owner) public whenNotPaused {
         // Claim not claimed request
         uint256 lastRequestId = depositRequestLP.lastRequestId(owner);
         uint256 lastRequestBalance = depositRequestLP.balanceOf(owner, lastRequestId);
@@ -217,13 +177,16 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20Pausable, Ownable2Step, ERC2
 
         //TODO emit event ?
     }
+
     function withdrawDepositRequest(uint256 assets, address receiver, address owner) external whenNotPaused {
         depositRequestLP.withdraw(epochNonce, assets, receiver, owner);
         //TODO emit event ?
     }
+
     function pendingDepositRequest(address owner) external view returns (uint256 assets) {
         return depositRequestLP.balanceOf(owner, epochNonce);
     }
+
     function requestRedeem(uint256 shares, address receiver, address owner, bytes memory) external whenNotPaused {
         // Claim not claimed request
         uint256 lastRequestId = depositRequestLP.lastRequestId(owner);
@@ -234,13 +197,16 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20Pausable, Ownable2Step, ERC2
         withdrawRequestLP.deposit(epochNonce, shares, receiver, owner);
         //TODO emit event ?
     }
+
     function withdrawRedeemRequest(uint256 shares, address receiver, address owner) external whenNotPaused {
         withdrawRequestLP.withdraw(epochNonce, shares, receiver, owner);
         //TODO emit event ?
     }
+
     function pendingRedeemRequest(address owner) external view returns (uint256 shares) {
         return withdrawRequestLP.balanceOf(owner, epochNonce);
     }
+
     function supportsInterface(bytes4 interfaceId) public pure returns (bool) {
         return interfaceId == type(IERC165).interfaceId || interfaceId == type(IERC7540Redeem).interfaceId;
     }
@@ -251,34 +217,14 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20Pausable, Ownable2Step, ERC2
      ####################################
     */
 
-    /*
-     * @dev The `asset` function is used to return the address of the underlying
-     * @return address of the underlying asset.
-     */
     function asset() public view returns (address) {
         return address(_asset);
     }
 
-    /**
-     * @dev See {IERC4626-convertToShares}.
-     * @notice The `convertToShares` function is used to calculate shares amount
-     * received in exchange of the specified underlying assets amount.
-     * @param assets The underlying assets amount to be converted into shares.
-     * @return Amount of shares received in exchange of the specified underlying
-     * assets amount.
-     */
     function convertToShares(uint256 assets) public view returns (uint256) {
         return _convertToShares(assets, Math.Rounding.Floor);
     }
 
-    /**
-     * @dev See {IERC4626-convertToAssets}.
-     * @notice The `convertToAssets` function is used to calculate underlying
-     * assets amount received in exchange of the specified amount of shares.
-     * @param shares The shares amount to be converted into underlying assets.
-     * @return Amount of assets received in exchange of the specified shares
-     * amount.
-     */
     function convertToAssets(uint256 shares) public view returns (uint256) {
         return _convertToAssets(shares, Math.Rounding.Floor);
     }
@@ -301,13 +247,6 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20Pausable, Ownable2Step, ERC2
         return withdrawRequestLP.balanceOf(owner, epochNonce - 1);
     }
 
-    /**
-     * @dev The `previewDeposit` function is used to calculate shares amount
-     * received in exchange of the specified underlying amount.
-     * @param assets The underlying assets amount to be converted into shares.
-     * @return Amount of shares received in exchange of the specified underlying
-     * assets amount.
-     */
     function previewDeposit(uint256 assets) public view returns (uint256) {
         return _convertDepositLPToShares(epochNonce - 1, assets, Math.Rounding.Floor);
     }
@@ -326,13 +265,6 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20Pausable, Ownable2Step, ERC2
         return 0;
     }
 
-    /**
-     * @dev The `previewRedeem` function is used to calculate the underlying
-     * assets amount received in exchange of the specified amount of shares.
-     * @param shares The shares amount to be converted into underlying assets.
-     * @return Amount of underlying assets received in exchange of the specified
-     * amount of shares.
-     */
     function previewRedeem(uint256 shares) public view returns (uint256) {
         return _convertWithdrawLPToAssets(epochNonce - 1, shares, Math.Rounding.Floor);
     }
@@ -381,16 +313,6 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20Pausable, Ownable2Step, ERC2
         return 0;
     }
 
-    /**
-     * @dev The `redeem` function is used to redeem the specified amount of
-     * shares in exchange of the corresponding underlying assets amount from
-     * owner.
-     * @param shares The shares amount to be converted into underlying assets.
-     * @param receiver The address of the shares receiver.
-     * @param owner The address of the owner.
-     * @return Amount of underlying assets received in exchange of the specified
-     * amount of shares.
-     */
     function redeem(uint256 shares, address receiver, address owner)
         external
         whenNotPaused
@@ -417,14 +339,6 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20Pausable, Ownable2Step, ERC2
         return assetsAmount;
     }
 
-    /**
-     * @dev Internal conversion function (from assets to shares) with support
-     * for rounding direction.
-     * @param assets Theunderlying assets amount to be converted into shares.
-     * @param rounding The rounding direction.
-     * @return Amount of shares received in exchange of the specified underlying
-     * assets amount.
-     */
     function _convertToShares(uint256 assets, Math.Rounding rounding)
         internal
         view
@@ -455,14 +369,6 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20Pausable, Ownable2Step, ERC2
         );
     }
 
-    /**
-     * @dev Internal conversion function (from shares to assets) with support
-     * for rounding direction.
-     * @param shares The shares amount to be converted into underlying assets.
-     * @param rounding The rounding direction.
-     * @return Amount of underlying assets received in exchange of the
-     * specified amount of shares.
-     */
     function _convertToAssets(uint256 shares, Math.Rounding rounding)
         internal
         view
@@ -586,17 +492,61 @@ contract AmphorAsyncSynthVaultImp is IERC7540, ERC20Pausable, Ownable2Step, ERC2
     // Pausability
     function pause() public onlyOwner {
         _pause();
-        // depositRequestLP.pause();
-        // withdrawRequestLP.pause();
     }
 
     function unpause() public onlyOwner {
         _unpause();
-        // depositRequestLP.unpause();
-        // withdrawRequestLP.unpause();
     }
 
     function _update(address from, address to, uint256 value) internal virtual override(ERC20, ERC20Pausable) whenNotPaused {
         super._update(from, to, value);
+    }
+
+    /*
+     ##################
+      PERMIT2 FUNCTION
+     ##################
+    */
+
+    // Deposit some amount of an ERC20 token into this contract
+    // using Permit2.
+    function execPermit2(
+        Permit2Params calldata permit2Params
+    ) internal {
+        // Transfer tokens from the caller to ourselves.
+        permit2.permitTransferFrom(
+            // The permit message.
+            ISignatureTransfer.PermitTransferFrom({
+                permitted: ISignatureTransfer.TokenPermissions({
+                    token: permit2Params.token,
+                    amount: permit2Params.amount
+                }),
+                nonce: permit2Params.nonce,
+                deadline: permit2Params.deadline
+            }),
+            // The transfer recipient and amount.
+            ISignatureTransfer.SignatureTransferDetails({
+                to: address(this),
+                requestedAmount: permit2Params.amount
+            }),
+            // The owner of the tokens, which must also be
+            // the signer of the message, otherwise this call
+            // will fail.
+            _msgSender(),
+            // The packed signature that was the result of signing
+            // the EIP712 hash of `permit`.
+            permit2Params.signature
+        );
+    }
+
+    function requestDepositWithPermit2(
+        uint256 assets,
+        address receiver,
+        address owner,
+        Permit2Params calldata permit2Params
+    ) external {
+        if (_asset.allowance(owner, address(this)) < assets)
+            execPermit2(permit2Params);
+        return requestDeposit(assets, receiver, owner);
     }
 }
