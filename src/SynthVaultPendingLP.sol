@@ -15,7 +15,7 @@ contract SynthVaultPendingLP is ERC6909ib, Ownable {
 
     using SafeERC20 for ERC20;
 
-    ERC20 private immutable underyling; // usdc for deposits, shares for withdraws
+    ERC20 private immutable underlying; // usdc for deposits, shares for withdraws
     mapping(address => uint256) public lastRequestId;
 
     constructor(
@@ -23,19 +23,19 @@ contract SynthVaultPendingLP is ERC6909ib, Ownable {
         string memory name,
         string memory symbol
     ) ERC6909ib(name, symbol) Ownable(_msgSender()) {
-        underyling = _underlying;
+        underlying = _underlying;
     }
 
     function asset(uint256) public view virtual override returns (ERC20) {
-        return underyling;
+        return underlying;
     }
 
     function totalAssets(uint256) public view virtual override returns (uint256) {
-        return underyling.balanceOf(address(this)); // This contract holds the underlying asset of only one epoch
+        return underlying.balanceOf(address(this)); // This contract holds the underlying asset of only one epoch
     }
 
     function decimals(uint256) public view virtual override returns (uint8) {
-        return underyling.decimals();
+        return underlying.decimals();
     }
 
     function deposit(uint256 epochNonce, uint256 assets, address receiver)
@@ -92,6 +92,14 @@ contract SynthVaultPendingLP is ERC6909ib, Ownable {
         return super.redeem(epochNonce, shares, receiver, owner);
     }
 
+    function transfer(address, uint256, uint256) public pure override returns (bool) {
+        return false;
+    }
+
+    function transferFrom(address, address, uint256, uint256) public pure override returns (bool) {
+        return false;
+    }
+
     function burn(address account, uint256 tokenId, uint256 shares) external onlyOwner {
         if (balanceOf[account][tokenId] >= shares) _burn(account, tokenId, shares);
     }
@@ -102,7 +110,7 @@ contract SynthVaultPendingLP is ERC6909ib, Ownable {
 
     function nextEpoch(uint256 currentEpochNonce) external onlyOwner returns (uint256 returnedUnderlying) {
         returnedUnderlying = totalAssets(currentEpochNonce);
-        underyling.safeTransfer(owner(), returnedUnderlying);
+        underlying.safeTransfer(owner(), returnedUnderlying);
     }
 
 }

@@ -23,7 +23,7 @@ contract ERC6909 is IERC6909 {
     /// @param receiver The address of the receiver.
     /// @param id The id of the token.
     /// @param amount The amount of the token.
-    function transfer(address receiver, uint256 id, uint256 amount) public returns (bool) {
+    function transfer(address receiver, uint256 id, uint256 amount) public virtual returns (bool) {
         if (balanceOf[msg.sender][id] < amount) revert InsufficientBalance();
         balanceOf[msg.sender][id] -= amount;
         balanceOf[receiver][id] += amount;
@@ -36,7 +36,7 @@ contract ERC6909 is IERC6909 {
     /// @param receiver The address of the receiver.
     /// @param id The id of the token.
     /// @param amount The amount of the token.
-    function transferFrom(address sender, address receiver, uint256 id, uint256 amount) public returns (bool) {
+    function transferFrom(address sender, address receiver, uint256 id, uint256 amount) public virtual returns (bool) {
         if (sender != msg.sender && !isOperator[sender][msg.sender]) {
             uint256 senderAllowance = allowance[sender][msg.sender][id];
             if (senderAllowance < amount) revert InsufficientPermission();
