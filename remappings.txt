@@ -9,3 +9,4 @@ openzeppelin-contracts/=lib/openzeppelin-contracts/
 permit2/=lib/permit2/
 solmate/=lib/solmate/src/
 ERC-6909/=lib/ERC-6909/src/
+ERC-7540-Reference/=lib/ERC-7540-Reference/src/
