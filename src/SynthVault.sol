@@ -94,6 +94,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     uint256 public pendingShares;
     mapping(address owner => uint256) public lastRequestWithdrawId;
 
+    // used to determine the price per share at the beginning of the epoch
     uint256[] public totalAssetsAtEpoch; //maybe a mapping would be better
     uint256[] public totalSharesAtEpoch; //maybe a mapping would be better
 
