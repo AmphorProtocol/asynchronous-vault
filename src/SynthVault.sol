@@ -57,10 +57,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         uint256 totalShares
     );
 
-    
-    // @dev Emitted when fees are changed.
-    // @param oldFees The old fees.
-    // @param newFees The new fees.
+
     event FeesChanged(uint16 oldFees, uint16 newFees);
 
     // @dev The rules doesn't allow the perf fees to be higher than 30.00%.
@@ -87,21 +84,23 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     uint256 public epochNonce = 1; // in order to start at epoch 1, otherwise users might try to claim epoch -1 requests
     uint256 public totalAssets; // total working assets (in the strategy), not including pending withdrawals money
 
-    mapping(address owner => mapping(uint256 id => uint256 amount)) public requestDepositbalanceOf;
-    uint256 public pendingAssets;
+    // to manage the pending deposits
+    mapping(address owner => mapping(uint256 id => uint256 amount)) public requestDepositBalanceOf;
+    uint256 public currentPendingAssets;
     mapping(address owner => uint256) public lastRequestDepositId;
 
-    uint256[] public totalAssetsAtEpoch;
-    uint256[] public totalSharesAtEpoch;
+    // to manage the pending withdraws
+    mapping(address owner => mapping(uint256 id => uint256 amount)) public requestWithdrawBalanceOf;
+    uint256 public pendingShares;
+    mapping(address owner => uint256) public lastRequestWithdrawId;
+
+    uint256[] public totalAssetsAtEpoch; //maybe a mapping would be better
+    uint256[] public totalSharesAtEpoch; //maybe a mapping would be better
 
     constructor(
         ERC20 underlying,
         string memory name,
-        string memory symbol,
-        string memory depositRequestLPName,
-        string memory depositRequestLPSymbol,
-        string memory withdrawRequestLPName,
-        string memory withdrawRequestLPSymbol
+        string memory symbol
         // IPermit2 _permit2
     ) ERC20(name, symbol) Ownable(_msgSender()) ERC20Permit(name) {
         _asset = IERC20(underlying);
@@ -111,26 +110,25 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     function requestDeposit(uint256 assets, address receiver, address owner) public whenNotPaused {
         uint256 _lastRequestDepositId = lastRequestDepositId[owner];
         if (_lastRequestDepositId != 0 && _lastRequestDepositId != epochNonce) {
-            _deposit(owner, receiver, _lastRequestDepositId, requestDepositbalanceOf[owner][_lastRequestDepositId]);
+            _deposit(owner, receiver, _lastRequestDepositId, requestDepositBalanceOf[owner][_lastRequestDepositId]);
         }
         uint256 _epochNonce = epochNonce;
         // safeTransferFrom(_asset, owner, address(this), assets);
-        _asset.transferFrom(owner, address(this), assets);
-         requestDepositbalanceOf[owner][_epochNonce] += assets;
+        _asset.safeTransferFrom(owner, address(this), assets);
+        requestDepositBalanceOf[owner][_epochNonce] += assets;
         
         lastRequestDepositId[owner] = _epochNonce;
-        pendingAssets += assets;
+        currentPendingAssets += assets;
     }
 
     function cancelDepositRequest(uint256 assets, address receiver, address owner) external whenNotPaused {
-        requestDepositbalanceOf[owner][epochNonce] -= assets;
-        pendingAssets -= assets;
+        requestDepositBalanceOf[owner][epochNonce] -= assets;
+        currentPendingAssets -= assets;
         _asset.safeTransfer(receiver, assets);
-
     }
 
     function pendingDepositRequest(address owner) external view returns (uint256 assets) {
-        return requestDepositbalanceOf[owner][lastRequestDepositId[owner]];
+        return requestDepositBalanceOf[owner][lastRequestDepositId[owner]];
     }
 
     function requestRedeem(uint256 shares, address receiver, address owner, bytes memory) external whenNotPaused {
@@ -174,7 +172,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         
         uint256 _lastRequestDepositId = lastRequestDepositId[owner];
         if (_lastRequestDepositId == 0 || _lastRequestDepositId == epochNonce) return 0;
-        return requestDepositbalanceOf[owner][_lastRequestDepositId];
+        return requestDepositBalanceOf[owner][_lastRequestDepositId];
     }
 
     // // TODO: implement this correclty if possible
@@ -249,7 +247,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         }
 
         uint256 sharesAmount = previewDeposit(requestId, assets);
-        requestDepositbalanceOf[owner][requestId] -= assets; // decrease the pendingAssets
+        requestDepositBalanceOf[owner][requestId] -= assets; // decrease the currentPendingAssets
         IERC20(address(this)).transfer(receiver, sharesAmount); // transfer the vault shares to the receiver
 
         emit Deposit(owner, receiver, assets, sharesAmount);
@@ -291,7 +289,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     //     withdrawRequestLP.burn(owner, requestId, shares);
 
     //     _asset.safeTransfer(receiver, assetsAmount);
-    //     pendingAssets[requestId] -= assetsAmount; // decrease the pendingAssets
+    //     pendingAssets[requestId] -= assetsAmount; // decrease the currentPendingAssets
 
     //     emit Withdraw(_msgSender(), receiver, owner, assetsAmount, shares);
 
@@ -362,16 +360,16 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         totalSharesAtEpoch.push(totalSupply());
         totalAssetsAtEpoch.push(totalAssets);
 
-        uint256 toMint = previewDeposit(epochNonce, pendingAssets); // get the shares of the pending deposits
+        uint256 toMint = previewDeposit(epochNonce, currentPendingAssets); // get the shares of the pending deposits
 
 
    
     // Minting the shares
         _mint(address(this), toMint ); // mint the shares into the vault
     // Update the totalAssets
-        totalAssets += pendingAssets;
+        totalAssets += currentPendingAssets;
 
-        pendingAssets = 0;
+        currentPendingAssets = 0;
     // Burn the vault shares
         // _burn(address(this), pendingRedeem); // burn the shares from the vault
     // Update the totalAssets
@@ -384,17 +382,11 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         return ++epochNonce;
     }
 
-    
-    // @dev The `setFees` function is used to modify the protocol fees.
-    // @notice The `setFees` function is used to modify the perf fees.
-    // It can only be called by the owner of the contract (`onlyOwner` modifier).
-    // It can't exceed 30% (3000 in BPS).
-    // @param newFees The new perf fees to be applied.
-    // function setFees(uint16 newFees) external onlyOwner {
-    //     if (newFees > 3000) revert FeesTooHigh();
-    //     feesInBps = newFees;
-    //     emit FeesChanged(feesInBps, newFees);
-    // }
+    function setFees(uint16 newFees) external onlyOwner {
+        if (newFees > 3000) revert FeesTooHigh(); // hard cap at 30%
+        feesInBps = newFees;
+        emit FeesChanged(feesInBps, newFees);
+    }
 
     // TODO: implement this correclty
     
