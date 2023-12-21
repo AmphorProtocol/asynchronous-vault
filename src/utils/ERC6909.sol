@@ -11,10 +11,14 @@ contract ERC6909 is IERC6909 {
     error InsufficientPermission();
 
     /// @notice Owner balance of an id.
-    mapping(address owner => mapping(uint256 id => uint256 amount)) public balanceOf;
+    mapping(address owner => mapping(uint256 id => uint256 amount)) public
+        balanceOf;
 
     /// @notice Spender allowance of an id.
-    mapping(address owner => mapping(address spender => mapping(uint256 id => uint256 amount))) public allowance;
+    mapping(
+        address owner
+            => mapping(address spender => mapping(uint256 id => uint256 amount))
+    ) public allowance;
 
     /// @notice Checks if a spender is approved by an owner as an operator.
     mapping(address owner => mapping(address spender => bool)) public isOperator;
@@ -23,7 +27,10 @@ contract ERC6909 is IERC6909 {
     /// @param receiver The address of the receiver.
     /// @param id The id of the token.
     /// @param amount The amount of the token.
-    function transfer(address receiver, uint256 id, uint256 amount) public returns (bool) {
+    function transfer(address receiver, uint256 id, uint256 amount)
+        public
+        returns (bool)
+    {
         if (balanceOf[msg.sender][id] < amount) revert InsufficientBalance();
         balanceOf[msg.sender][id] -= amount;
         balanceOf[receiver][id] += amount;
@@ -36,7 +43,12 @@ contract ERC6909 is IERC6909 {
     /// @param receiver The address of the receiver.
     /// @param id The id of the token.
     /// @param amount The amount of the token.
-    function transferFrom(address sender, address receiver, uint256 id, uint256 amount) public returns (bool) {
+    function transferFrom(
+        address sender,
+        address receiver,
+        uint256 id,
+        uint256 amount
+    ) public returns (bool) {
         if (sender != msg.sender && !isOperator[sender][msg.sender]) {
             uint256 senderAllowance = allowance[sender][msg.sender][id];
             if (senderAllowance < amount) revert InsufficientPermission();
@@ -55,7 +67,10 @@ contract ERC6909 is IERC6909 {
     /// @param spender The address of the spender.
     /// @param id The id of the token.
     /// @param amount The amount of the token.
-    function approve(address spender, uint256 id, uint256 amount) public returns (bool) {
+    function approve(address spender, uint256 id, uint256 amount)
+        public
+        returns (bool)
+    {
         allowance[msg.sender][spender][id] = amount;
         emit Approval(msg.sender, spender, id, amount);
         return true;
@@ -64,7 +79,10 @@ contract ERC6909 is IERC6909 {
     /// @notice Sets or unsets a spender as an operator for the caller.
     /// @param spender The address of the spender.
     /// @param approved The approval status.
-    function setOperator(address spender, bool approved) public returns (bool) {
+    function setOperator(address spender, bool approved)
+        public
+        returns (bool)
+    {
         isOperator[msg.sender][spender] = approved;
         emit OperatorSet(msg.sender, spender, approved);
         return true;
@@ -73,7 +91,12 @@ contract ERC6909 is IERC6909 {
     /// @notice Checks if a contract implements an interface.
     /// @param interfaceId The interface identifier, as specified in ERC-165.
     /// @return supported True if the contract implements `interfaceId` and
-    function supportsInterface(bytes4 interfaceId) public pure returns (bool supported) {
-        return interfaceId == type(IERC6909).interfaceId || interfaceId == type(IERC165).interfaceId;
+    function supportsInterface(bytes4 interfaceId)
+        public
+        pure
+        returns (bool supported)
+    {
+        return interfaceId == type(IERC6909).interfaceId
+            || interfaceId == type(IERC165).interfaceId;
     }
 }

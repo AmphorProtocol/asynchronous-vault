@@ -1,8 +1,10 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import {Ownable, Ownable2Step} from
-    "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {
+    Ownable,
+    Ownable2Step
+} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {SafeERC20} from
     "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";

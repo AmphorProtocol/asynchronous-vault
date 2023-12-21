@@ -19,11 +19,16 @@ interface IERC165 {
      *
      * This function call must use less than 30 000 gas.
      */
-    function supportsInterface(bytes4 interfaceId) external view returns (bool);
+    function supportsInterface(bytes4 interfaceId)
+        external
+        view
+        returns (bool);
 }
 
 interface IERC7540Deposit {
-    event DepositRequest(address indexed sender, address indexed operator, uint256 assets);
+    event DepositRequest(
+        address indexed sender, address indexed operator, uint256 assets
+    );
 
     /**
      * @dev Transfers assets from msg.sender into the Vault and submits a Request for asynchronous deposit/mint.
@@ -33,7 +38,8 @@ interface IERC7540Deposit {
      *
      * NOTE: most implementations will require pre-approval of the Vault with the Vault's underlying asset token.
      */
-    function requestDeposit(uint256 assets, address receiver, address owner) external;
+    function requestDeposit(uint256 assets, address receiver, address owner)
+        external;
 
     /**
      * @dev Returns the amount of requested assets in Pending state for the operator to deposit or mint.
@@ -42,11 +48,19 @@ interface IERC7540Deposit {
      * - MUST NOT show any variations depending on the caller.
      * - MUST NOT revert unless due to integer overflow caused by an unreasonably large input.
      */
-    function pendingDepositRequest(address owner) external view returns (uint256 assets);
+    function pendingDepositRequest(address owner)
+        external
+        view
+        returns (uint256 assets);
 }
 
 interface IERC7540Redeem {
-    event RedeemRequest(address indexed sender, address indexed operator, address indexed owner, uint256 shares);
+    event RedeemRequest(
+        address indexed sender,
+        address indexed operator,
+        address indexed owner,
+        uint256 shares
+    );
 
     /**
      * @dev Assumes control of shares from owner and submits a Request for asynchronous redeem/withdraw.
@@ -55,7 +69,12 @@ interface IERC7540Redeem {
      *   where msg.sender has ERC-20 approval over the shares of owner.
      * - MUST revert if all of shares cannot be requested for redeem / withdraw.
      */
-    function requestRedeem(uint256 shares, address operator, address owner, bytes memory data) external;
+    function requestRedeem(
+        uint256 shares,
+        address operator,
+        address owner,
+        bytes memory data
+    ) external;
 
     /**
      * @dev Returns the amount of requested shares in Pending state for the operator to redeem or withdraw.
@@ -64,7 +83,10 @@ interface IERC7540Redeem {
      * - MUST NOT show any variations depending on the caller.
      * - MUST NOT revert unless due to integer overflow caused by an unreasonably large input.
      */
-    function pendingRedeemRequest(address owner) external view returns (uint256 shares);
+    function pendingRedeemRequest(address owner)
+        external
+        view
+        returns (uint256 shares);
 }
 
 /**

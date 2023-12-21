@@ -23,7 +23,9 @@ pragma solidity 0.8.21;
 import "./AmphorSyntheticVaultImp.sol";
 import {ERC20Permit} from
     "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
-import {IPermit2, ISignatureTransfer} from "permit2/src/interfaces/IPermit2.sol";
+import {
+    IPermit2, ISignatureTransfer
+} from "permit2/src/interfaces/IPermit2.sol";
 
 struct Permit2Params {
     uint256 amount;
@@ -59,7 +61,16 @@ contract AmphorSyntheticVaultPermit2Imp is AmphorSyntheticVaultImp {
         uint8 _decimalsOffset,
         AmprWithdrawReceipt _amprWithdrawReceipt,
         IPermit2 _permit2
-    ) AmphorSyntheticVaultImp(underlying, oldShareToken, name, symbol, _decimalsOffset, _amprWithdrawReceipt) {
+    )
+        AmphorSyntheticVaultImp(
+            underlying,
+            oldShareToken,
+            name,
+            symbol,
+            _decimalsOffset,
+            _amprWithdrawReceipt
+        )
+    {
         permit2 = _permit2;
     }
 
@@ -71,9 +82,7 @@ contract AmphorSyntheticVaultPermit2Imp is AmphorSyntheticVaultImp {
 
     // Deposit some amount of an ERC20 token into this contract
     // using Permit2.
-    function execPermit2(
-        Permit2Params calldata permit2Params
-    ) internal {
+    function execPermit2(Permit2Params calldata permit2Params) internal {
         // Transfer tokens from the caller to ourselves.
         permit2.permitTransferFrom(
             // The permit message.
@@ -139,7 +148,7 @@ contract AmphorSyntheticVaultPermit2Imp is AmphorSyntheticVaultImp {
         execPermit2(permit2Params);
         return mint(shares, receiver);
     }
-    
+
     function mintWithPermit2MaxAssets(
         uint256 shares,
         address receiver,
@@ -161,5 +170,4 @@ contract AmphorSyntheticVaultPermit2Imp is AmphorSyntheticVaultImp {
         execPermit2(permit2Params);
         buy(buyer, receiver, sharesAmount, underlyingAmount, signatureParams);
     }
-
 }

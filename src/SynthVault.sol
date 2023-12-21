@@ -29,11 +29,15 @@ struct Permit2Params {
     bytes signature;
 }
 
-contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
+struct PendingOperation {
+    uint256 epochId;
+    uint256 amount;
+}
 
+contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     using Math for uint256;
     using SafeERC20 for IERC20;
-    
+
     // @dev Emitted when an epoch starts.
     // @param timestamp The block timestamp of the epoch start.
     // @param lastSavedBalance The `lastSavedBalance` when the vault start.
@@ -57,7 +61,6 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         uint256 totalShares
     );
 
-
     event FeesChanged(uint16 oldFees, uint16 newFees);
 
     // @dev The rules doesn't allow the perf fees to be higher than 30.00%.
@@ -75,7 +78,6 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     // The canonical permit2 contract.
     // IPermit2 public immutable permit2;
 
-    
     // @dev The perf fees applied on the positive yield.
     // @return Amount of the perf fees applied on the positive yield.
     uint16 public feesInBps;
@@ -85,76 +87,119 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     uint256 public totalAssets; // total working assets (in the strategy), not including pending withdrawals money
 
     // to manage the pending deposits
-    mapping(address owner => mapping(uint256 id => uint256 amount)) public requestDepositBalanceOf;
-    uint256 public currentPendingAssets;
+    mapping(address owner => uint256 amount) public lastRequestDepositBalanceOf;
     mapping(address owner => uint256) public lastRequestDepositId;
+     // we could make a mapping to a struct {amount, epochId}
+    // --> mapping(address owner => PendingOperation) public pendingDeposits;
+    uint256 public currentPendingAssets;
 
-    // to manage the pending withdraws
-    mapping(address owner => mapping(uint256 id => uint256 amount)) public requestWithdrawBalanceOf;
-    uint256 public pendingShares;
-    mapping(address owner => uint256) public lastRequestWithdrawId;
+    // to manage the pending redeem
+    mapping(address owner => uint256 amount) public lastRequestRedeemBalanceOf; 
+    mapping(address owner => uint256) public lastRequestRedeemId;
+     // we could make a mapping to a struct {amount, epochId}
+    // --> mapping(address owner => PendingOperation) public pendingRedeems;
+    uint256 public currentPendingShares;
 
-    // used to determine the price per share at the beginning of the epoch
+    // used to determine the price per share for each epoch, for the preview functions
     uint256[] public totalAssetsAtEpoch; //maybe a mapping would be better
     uint256[] public totalSharesAtEpoch; //maybe a mapping would be better
 
-    constructor(
-        ERC20 underlying,
-        string memory name,
-        string memory symbol
+    constructor(ERC20 underlying, string memory name, string memory symbol)
         // IPermit2 _permit2
-    ) ERC20(name, symbol) Ownable(_msgSender()) ERC20Permit(name) {
+        ERC20(name, symbol)
+        Ownable(_msgSender())
+        ERC20Permit(name)
+    {
         _asset = IERC20(underlying);
         // permit2 = _permit2;
     }
 
-    function requestDeposit(uint256 assets, address receiver, address owner) public whenNotPaused {
+    function requestDeposit(uint256 assets, address receiver, address owner)
+        public
+        whenNotPaused
+    {
         uint256 _lastRequestDepositId = lastRequestDepositId[owner];
         if (_lastRequestDepositId != 0 && _lastRequestDepositId != epochNonce) {
-            _deposit(owner, receiver, _lastRequestDepositId, requestDepositBalanceOf[owner][_lastRequestDepositId]);
+            _deposit(
+                owner,
+                receiver,
+                _lastRequestDepositId,
+                lastRequestDepositBalanceOf[owner]
+            );
         }
         uint256 _epochNonce = epochNonce;
-        // safeTransferFrom(_asset, owner, address(this), assets);
         _asset.safeTransferFrom(owner, address(this), assets);
-        requestDepositBalanceOf[owner][_epochNonce] += assets;
-        
+        lastRequestDepositBalanceOf[owner] += assets;
+
         lastRequestDepositId[owner] = _epochNonce;
         currentPendingAssets += assets;
     }
 
-    function cancelDepositRequest(uint256 assets, address receiver, address owner) external whenNotPaused {
-        requestDepositBalanceOf[owner][epochNonce] -= assets;
+    function cancelDepositRequest(
+        uint256 assets,
+        address receiver,
+        address owner
+    ) external whenNotPaused {
+        lastRequestRedeemBalanceOf[owner] -= assets;
         currentPendingAssets -= assets;
         _asset.safeTransfer(receiver, assets);
     }
 
-    function pendingDepositRequest(address owner) external view returns (uint256 assets) {
-        return requestDepositBalanceOf[owner][lastRequestDepositId[owner]];
+    function pendingDepositRequest(address owner)
+        external
+        view
+        returns (uint256 assets)
+    {
+        return lastRequestRedeemBalanceOf[owner];
     }
 
-    function requestRedeem(uint256 shares, address receiver, address owner, bytes memory) external whenNotPaused {
-       // Claim not claimed request
-    //     uint256 lastRequestId = depositRequestLP.lastRequestId(owner);
-    //     uint256 lastRequestBalance = depositRequestLP.balanceOf(owner, lastRequestId);
-    //     if (lastRequestBalance > 0 && lastRequestId != epochNonce) // We don't want to call _redeem for nothing and we don't want to cancel a current request if the user just want to increase it.
-    //         _redeem(owner, receiver, lastRequestId, lastRequestBalance);
+    function requestRedeem(
+        uint256 shares,
+        address receiver,
+        address owner,
+        bytes memory
+    ) external whenNotPaused {
+        // Claim not claimed request
+        uint256 _lastRequestRedeemId = lastRequestRedeemId[owner];
+        if (
+            _lastRequestRedeemId != 0 && _lastRequestRedeemId != epochNonce // We don't want to call _redeem for nothing and we don't want to cancel a current request if the user just want to increase it.
+        ) {
+            _redeem(
+                owner,
+                receiver,
+                _lastRequestRedeemId,
+                lastRequestRedeemBalanceOf[owner]
+            );
+        }
 
-    //     withdrawRequestLP.deposit(epochNonce, shares, receiver, owner);
-    //    //TODO emit event ?
+        uint256 _epochNonce = epochNonce;
+        IERC20(address(this)).transferFrom(owner, address(this), shares);
+        lastRequestRedeemBalanceOf[owner] += shares;
+        lastRequestRedeemId[owner] = _epochNonce;
+        currentPendingShares += shares;
     }
 
-    // function withdrawRedeemRequest(uint256 shares, address receiver, address owner) external whenNotPaused {
-    //     withdrawRequestLP.withdraw(epochNonce, shares, receiver, owner);
-    //    //TODO emit event ?
-    // }
+    function withdrawRedeemRequest(
+        uint256 shares,
+        address receiver,
+        address owner
+    ) external whenNotPaused {
+        lastRequestRedeemBalanceOf[owner] -= shares;
+        currentPendingShares -= shares;
+        IERC20(address(this)).transfer(receiver, shares);
+    }
 
-    function pendingRedeemRequest(address owner) external view returns (uint256 shares) {
-        return 0;
-        // return withdrawRequestLP.balanceOf(owner, epochNonce);
+    function pendingRedeemRequest(address owner)
+        external
+        view
+        returns (uint256 shares)
+    {
+        return lastRequestRedeemBalanceOf[owner];
     }
 
     function supportsInterface(bytes4 interfaceId) public pure returns (bool) {
-        return interfaceId == type(IERC165).interfaceId || interfaceId == type(IERC7540Redeem).interfaceId;
+        return interfaceId == type(IERC165).interfaceId
+            || interfaceId == type(IERC7540Redeem).interfaceId;
     }
 
     function asset() public view returns (address) {
@@ -170,10 +215,11 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     }
 
     function maxDeposit(address owner) public view returns (uint256) {
-        
         uint256 _lastRequestDepositId = lastRequestDepositId[owner];
-        if (_lastRequestDepositId == 0 || _lastRequestDepositId == epochNonce) return 0;
-        return requestDepositBalanceOf[owner][_lastRequestDepositId];
+        if (_lastRequestDepositId == 0 || _lastRequestDepositId == epochNonce) {
+            return 0;
+        }
+        return lastRequestRedeemBalanceOf[owner];
     }
 
     // // TODO: implement this correclty if possible
@@ -192,23 +238,30 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     }
 
     function previewDeposit(uint256 assets) public view returns (uint256) {
-        return _convertRequestDepositToShares(epochNonce - 1, assets, Math.Rounding.Floor);
+        return _convertRequestDepositToShares(
+            epochNonce - 1, assets, Math.Rounding.Floor
+        );
     }
 
-
-
-    function previewDeposit(uint256 epochId, uint256 assets) public view returns (uint256) {
-        return _convertRequestDepositToShares(epochId, assets, Math.Rounding.Floor);
-    }
-
-    function _convertRequestDepositToShares(uint256 epochId, uint256 assets, Math.Rounding rounding)
-        internal
+    function previewDeposit(uint256 epochId, uint256 assets)
+        public
         view
         returns (uint256)
     {
+        return
+            _convertRequestDepositToShares(epochId, assets, Math.Rounding.Floor);
+    }
+
+    function _convertRequestDepositToShares(
+        uint256 epochId,
+        uint256 assets,
+        Math.Rounding rounding
+    ) internal view returns (uint256) {
         if (epochId == epochNonce) return 0;
         return assets.mulDiv(
-            totalSharesAtEpoch[epochId] + 1, totalAssetsAtEpoch[epochId] + 1, rounding
+            totalSharesAtEpoch[epochId] + 1,
+            totalAssetsAtEpoch[epochId] + 1,
+            rounding
         );
     }
 
@@ -224,7 +277,30 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
 
     function previewRedeem(uint256 shares) public view returns (uint256) {
         return 0;
-        // return _convertWithdrawLPToAssets(epochNonce - 1, shares, Math.Rounding.Floor);
+        // return _convertRequestDepositToShares(epochNonce - 1, shares, Math.Rounding.Floor);
+    }
+
+    function previewRedeem(uint256 shares, uint256 epochId)
+        public
+        view
+        returns (uint256)
+    {
+        // return 0;
+        return
+            _convertRequestDepositToShares(epochId, shares, Math.Rounding.Floor);
+    }
+
+    function _convertRequestDepositToAssets(
+        uint256 epochId,
+        uint256 shares,
+        Math.Rounding rounding
+    ) internal view returns (uint256) {
+        if (epochId == epochNonce) return 0;
+        return shares.mulDiv(
+            totalAssetsAtEpoch[epochId] + 1,
+            totalSharesAtEpoch[epochId] + 1,
+            rounding
+        );
     }
 
     function deposit(uint256 assets, address receiver)
@@ -238,17 +314,20 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
 
     // assets = pending lp balance
     // shares = shares to mint
-    function _deposit(address owner, address receiver, uint256 requestId, uint256 assets)
-        internal
-        returns (uint256)
-    {
-        uint256 maxAssets = maxDeposit(owner); // what he can claim from the last epoch request 
-        if (assets > maxAssets) { // he is trying to claim more than he can by saying he has more pending lp that he has in reality
+    function _deposit(
+        address owner,
+        address receiver,
+        uint256 requestId,
+        uint256 assets
+    ) internal returns (uint256) {
+        uint256 maxAssets = maxDeposit(owner); // what he can claim from the last epoch request
+        if (assets > maxAssets) {
+            // he is trying to claim more than he can by saying he has more pending lp that he has in reality
             revert ERC4626ExceededMaxDeposit(owner, assets, maxAssets);
         }
 
         uint256 sharesAmount = previewDeposit(requestId, assets);
-        requestDepositBalanceOf[owner][requestId] -= assets; // decrease the currentPendingAssets
+        lastRequestDepositBalanceOf[owner] -= assets; // decrease the currentPendingAssets
         IERC20(address(this)).transfer(receiver, sharesAmount); // transfer the vault shares to the receiver
 
         emit Deposit(owner, receiver, assets, sharesAmount);
@@ -275,36 +354,37 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         whenNotPaused
         returns (uint256)
     {
-        return 0;
-        // return _redeem(owner, receiver, epochNonce - 1, shares);
+        // return 0;
+        return _redeem(owner, receiver, epochNonce - 1, shares);
     }
-    
-    // function _redeem(address owner, address receiver, uint256 requestId, uint256 shares)
-    //     internal
-    //     returns (uint256)
-    // {
-    //     uint256 maxShares = maxRedeem(owner);
-    //     if (shares > maxShares) revert ERC4626ExceededMaxRedeem(owner, shares, maxShares);
 
-    //     uint256 assetsAmount = previewRedeem(shares);
-    //     withdrawRequestLP.burn(owner, requestId, shares);
+    function _redeem(
+        address owner,
+        address receiver,
+        uint256 requestId,
+        uint256 shares
+    ) internal returns (uint256) {
+        uint256 maxShares = maxRedeem(owner);
+        if (shares > maxShares) {
+            revert ERC4626ExceededMaxRedeem(owner, shares, maxShares);
+        }
 
-    //     _asset.safeTransfer(receiver, assetsAmount);
-    //     pendingAssets[requestId] -= assetsAmount; // decrease the currentPendingAssets
+        uint256 _assets = previewRedeem(shares, requestId);
+        lastRequestRedeemBalanceOf[owner] -= shares;
 
-    //     emit Withdraw(_msgSender(), receiver, owner, assetsAmount, shares);
+        _asset.safeTransfer(receiver, _assets);
 
-    //     return assetsAmount;
-    // }
+        emit Withdraw(_msgSender(), receiver, owner, _assets, shares);
+
+        return _assets;
+    }
 
     function _convertToShares(uint256 assets, Math.Rounding rounding)
         internal
         view
         returns (uint256)
     {
-        return assets.mulDiv(
-            totalSupply() + 1, totalAssets + 1, rounding
-        );
+        return assets.mulDiv(totalSupply() + 1, totalAssets + 1, rounding);
     }
 
     function _convertToAssets(uint256 shares, Math.Rounding rounding)
@@ -312,27 +392,29 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         view
         returns (uint256)
     {
-        return shares.mulDiv(
-            totalAssets + 1, totalSupply() + 1, rounding
-        );
+        return shares.mulDiv(totalAssets + 1, totalSupply() + 1, rounding);
     }
 
     // TODO: implement this
-    function nextEpoch(uint256 returnedUnderlyingAmount) public onlyOwner returns (uint256) {
-    // (end + start epochs)
+    function nextEpoch(uint256 returnedUnderlyingAmount)
+        public
+        onlyOwner
+        returns (uint256)
+    {
+        // (end + start epochs)
 
-    // TODO
-    // 1. take fees from returnedUnderlyingAmount
-    // 2. we update the totalAssets
-    // 3. with the resting amount we know how much cost a share
-    // 4. we can take the pending deposits underlying (same as this vault underlying) and mint shares
-    // 5. we update the bigShares array for the appropriate epoch (epoch 0 request is a deposit into epoch 1...)
-    // 6. we can take the pending withdraws shares and redeem underlying (which are shares of this vault) against this vault underlying
-    // 7. we update the pendingAssets array for the appropriate epoch (epoch 0 request is a withdraw at the end of the epoch 0...)
+        // TODO
+        // 1. take fees from returnedUnderlyingAmount
+        // 2. we update the totalAssets
+        // 3. with the resting amount we know how much cost a share
+        // 4. we can take the pending deposits underlying (same as this vault underlying) and mint shares
+        // 5. we update the bigShares array for the appropriate epoch (epoch 0 request is a deposit into epoch 1...)
+        // 6. we can take the pending withdraws shares and redeem underlying (which are shares of this vault) against this vault underlying
+        // 7. we update the pendingAssets array for the appropriate epoch (epoch 0 request is a withdraw at the end of the epoch 0...)
 
-    ///////////////////////
-    // Ending current epoch
-    ///////////////////////
+        ///////////////////////
+        // Ending current epoch
+        ///////////////////////
         uint256 fees;
 
         if (returnedUnderlyingAmount > totalAssets && feesInBps > 0) {
@@ -345,10 +427,13 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
 
         totalAssets = returnedUnderlyingAmount - fees;
 
-    // Can be done in one time at the end
+        // Can be done in one time at the end
         SafeERC20.safeTransferFrom(
             _asset, _msgSender(), address(this), returnedUnderlyingAmount - fees
         );
+
+        totalSharesAtEpoch.push(totalSupply());
+        totalAssetsAtEpoch.push(totalAssets);
 
         emit EpochEnd(
             block.timestamp,
@@ -358,23 +443,20 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
             totalSupply()
         );
 
-        totalSharesAtEpoch.push(totalSupply());
-        totalAssetsAtEpoch.push(totalAssets);
+        /////////////////////// Starting new epoch ///////////////////////
 
-        uint256 toMint = previewDeposit(epochNonce, currentPendingAssets); // get the shares of the pending deposits
+        uint256 sharesToMint = previewDeposit(epochNonce, currentPendingAssets);
+        uint256 assetToAdd = currentPendingAssets;
+        uint256 sharesToBurn = currentPendingShares;
+        uint256 assetToRmv = previewRedeem(epochNonce, currentPendingShares);
 
+        _mint(address(this), sharesToMint);
+        _burn(address(this), sharesToBurn); // combine in one operation
 
-   
-    // Minting the shares
-        _mint(address(this), toMint ); // mint the shares into the vault
-    // Update the totalAssets
-        totalAssets += currentPendingAssets;
+        totalAssets += assetToAdd - assetToRmv;
 
         currentPendingAssets = 0;
-    // Burn the vault shares
-        // _burn(address(this), pendingRedeem); // burn the shares from the vault
-    // Update the totalAssets
-        // totalAssets -= pendingAssets;
+        currentPendingShares = 0;
 
         _asset.safeTransfer(owner(), totalAssets);
 
@@ -390,7 +472,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     }
 
     // TODO: implement this correclty
-    
+
     // @dev The `claimToken` function is used to claim other tokens that have
     // been sent to the vault.
     // @notice The `claimToken` function is used to claim other tokens that have
@@ -411,7 +493,12 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     //     _unpause();
     // }
 
-    function _update(address from, address to, uint256 value) internal virtual override(ERC20, ERC20Pausable) whenNotPaused {
+    function _update(address from, address to, uint256 value)
+        internal
+        virtual
+        override(ERC20, ERC20Pausable)
+        whenNotPaused
+    {
         super._update(from, to, value);
     }
 

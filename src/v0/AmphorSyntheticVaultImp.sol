@@ -125,7 +125,7 @@ contract AmphorSyntheticVaultImp is
      * @return True if the address is authorized to sign, false otherwise
      * @param signer The address to check
     */
-    mapping (address => bool) private _isSignerWhitelisted;
+    mapping(address => bool) private _isSignerWhitelisted;
 
     /*
      * @dev The liquidity pocket address of the early sell feature
@@ -277,7 +277,7 @@ contract AmphorSyntheticVaultImp is
      * @param symbol The symbol of the vault.
      * @param _decimalsOffset The decimal offset between the underlying asset
      * token and the share token.
-     */ 
+     */
     constructor(
         ERC20 underlying,
         ERC20 oldShareToken,
@@ -848,8 +848,21 @@ contract AmphorSyntheticVaultImp is
         uint256 underlyingAmount,
         SignatureParams calldata signatureParams
     ) public {
-        bytes32 unprovedMessage = keccak256(abi.encodePacked(buyer, sharesAmount, underlyingAmount, signatureParams.timestamp, signatureParams.nonce));
-        address recoveredSigner = ecrecover(unprovedMessage, signatureParams.v, signatureParams.r, signatureParams.s);
+        bytes32 unprovedMessage = keccak256(
+            abi.encodePacked(
+                buyer,
+                sharesAmount,
+                underlyingAmount,
+                signatureParams.timestamp,
+                signatureParams.nonce
+            )
+        );
+        address recoveredSigner = ecrecover(
+            unprovedMessage,
+            signatureParams.v,
+            signatureParams.r,
+            signatureParams.s
+        );
 
         if (!_isSignerWhitelisted[recoveredSigner]) revert BadSigner();
         if (block.timestamp > signatureParams.timestamp) revert BadTimestamp();
@@ -882,8 +895,21 @@ contract AmphorSyntheticVaultImp is
         uint256 underlyingAmount,
         SignatureParams calldata signatureParams
     ) public {
-        bytes32 unprovedMessage = keccak256(abi.encodePacked(owner, sharesAmount, underlyingAmount, signatureParams.timestamp, signatureParams.nonce));
-        address recoveredSigner = ecrecover(unprovedMessage, signatureParams.v, signatureParams.r, signatureParams.s);
+        bytes32 unprovedMessage = keccak256(
+            abi.encodePacked(
+                owner,
+                sharesAmount,
+                underlyingAmount,
+                signatureParams.timestamp,
+                signatureParams.nonce
+            )
+        );
+        address recoveredSigner = ecrecover(
+            unprovedMessage,
+            signatureParams.v,
+            signatureParams.r,
+            signatureParams.s
+        );
 
         if (!_isSignerWhitelisted[recoveredSigner]) revert BadSigner();
         if (block.timestamp > signatureParams.timestamp) revert BadTimestamp();
@@ -895,11 +921,16 @@ contract AmphorSyntheticVaultImp is
         uint256 availableLiquidity = _asset.balanceOf(_earlySellLiquidityPocket);
 
         if (availableLiquidity < underlyingAmount) {
-            underlyingAmount-= availableLiquidity;
-            _asset.transferFrom(_earlySellLiquidityPocket, recipient, availableLiquidity);
+            underlyingAmount -= availableLiquidity;
+            _asset.transferFrom(
+                _earlySellLiquidityPocket, recipient, availableLiquidity
+            );
             amprWithdrawReceipt.mintFrom(underlyingAmount, recipient);
-        } else 
-            ERC20(asset()).transferFrom(_earlySellLiquidityPocket, recipient, underlyingAmount);
+        } else {
+            ERC20(asset()).transferFrom(
+                _earlySellLiquidityPocket, recipient, underlyingAmount
+            );
+        }
     }
 
     /*
@@ -907,7 +938,12 @@ contract AmphorSyntheticVaultImp is
      * @notice The `getEarlySellLiquidityPocket()` function is used to get the address of the earlySellLiquidityPocket.
      * @return The address of the earlySellLiquidityPocket
     */
-    function getEarlySellLiquidityPocket() external view onlyOwner returns (address) {
+    function getEarlySellLiquidityPocket()
+        external
+        view
+        onlyOwner
+        returns (address)
+    {
         return _earlySellLiquidityPocket;
     }
 
@@ -916,7 +952,10 @@ contract AmphorSyntheticVaultImp is
      * @notice The `setEarlySellLiquidityPocket()` function is used to set the address of the earlySellLiquidityPocket.
      * @param _earlySellLiquidityPocket The address of the earlySellLiquidityPocket
     */
-    function setEarlySellLiquidityPocket(address earlySellLiquidityPocket) external onlyOwner {
+    function setEarlySellLiquidityPocket(address earlySellLiquidityPocket)
+        external
+        onlyOwner
+    {
         _earlySellLiquidityPocket = earlySellLiquidityPocket;
     }
 
@@ -926,7 +965,12 @@ contract AmphorSyntheticVaultImp is
      * @param signer The address of the signer
      * @return True if the signer is whitelisted, false otherwise
     */
-    function isSignerWhitelisted(address signer) external view onlyOwner returns (bool) {
+    function isSignerWhitelisted(address signer)
+        external
+        view
+        onlyOwner
+        returns (bool)
+    {
         return _isSignerWhitelisted[signer];
     }
 
@@ -949,7 +993,9 @@ contract AmphorSyntheticVaultImp is
     }
 
     function migrate(address owner) external onlyOwner {
-        _oldShareToken.transferFrom(owner, address(0), _oldShareToken.balanceOf(owner));
+        _oldShareToken.transferFrom(
+            owner, address(0), _oldShareToken.balanceOf(owner)
+        );
         _mint(owner, _oldShareToken.balanceOf(owner));
     }
 }

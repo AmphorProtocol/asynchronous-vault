@@ -54,7 +54,16 @@ contract AmphorSyntheticVaultPermitImp is AmphorSyntheticVaultImp {
         string memory symbol,
         uint8 _decimalsOffset,
         AmprWithdrawReceipt _amprWithdrawReceipt
-    ) AmphorSyntheticVaultImp(underlying, oldShareToken, name, symbol, _decimalsOffset, _amprWithdrawReceipt) {}
+    )
+        AmphorSyntheticVaultImp(
+            underlying,
+            oldShareToken,
+            name,
+            symbol,
+            _decimalsOffset,
+            _amprWithdrawReceipt
+        )
+    {}
 
     /**
      * @dev The `depositWithPermit` function is used to deposit underlying assets
@@ -71,8 +80,9 @@ contract AmphorSyntheticVaultPermitImp is AmphorSyntheticVaultImp {
         address receiver,
         PermitParams calldata permitParams
     ) external returns (uint256) {
-        if (_asset.allowance(msg.sender, address(this)) < assets)
+        if (_asset.allowance(msg.sender, address(this)) < assets) {
             execPermit(_msgSender(), address(this), permitParams);
+        }
         return deposit(assets, receiver);
     }
 
@@ -94,8 +104,9 @@ contract AmphorSyntheticVaultPermitImp is AmphorSyntheticVaultImp {
         uint256 minShares,
         PermitParams calldata permitParams
     ) external returns (uint256) {
-        if (_asset.allowance(msg.sender, address(this)) < assets)
+        if (_asset.allowance(msg.sender, address(this)) < assets) {
             execPermit(_msgSender(), address(this), permitParams);
+        }
         return depositMinShares(assets, receiver, minShares);
     }
 
@@ -114,8 +125,9 @@ contract AmphorSyntheticVaultPermitImp is AmphorSyntheticVaultImp {
         address receiver,
         PermitParams calldata permitParams
     ) external returns (uint256) {
-        if (_asset.allowance(msg.sender, address(this)) < previewMint(shares))
+        if (_asset.allowance(msg.sender, address(this)) < previewMint(shares)) {
             execPermit(_msgSender(), address(this), permitParams);
+        }
         return mint(shares, receiver);
     }
 
@@ -137,8 +149,9 @@ contract AmphorSyntheticVaultPermitImp is AmphorSyntheticVaultImp {
         uint256 maxAssets,
         PermitParams calldata permitParams
     ) external returns (uint256) {
-        if (_asset.allowance(msg.sender, address(this)) < previewMint(shares))
+        if (_asset.allowance(msg.sender, address(this)) < previewMint(shares)) {
             execPermit(_msgSender(), address(this), permitParams);
+        }
         return mintMaxAssets(shares, receiver, maxAssets);
     }
 
