@@ -31,8 +31,8 @@ The main vault is `SynthVault.sol`, and the pending requests (deposit or withdra
     However, it is entirely possible to create a contract that will receive the underlying, make the deposit/withdrawal request, store it and allow the user to claim it afterwards. However, it seems simpler to me to create a contract that just holds the receipt tokens, and lets the user retrieve them as soon as the epochId of the main vault is iterated.
     Same thing for a contract that is taking your deposit receipt for auto-request a withdrawal at the next epoch (if we add a "not renew" tick button into our UI).
 
-*** Some things I need to do to have something cleaner
-- Remove unusefuls functions for us into ERC6909ib contract.
+### Some things I need to do to have something cleaner
+- Remove un-useful functions for us into ERC6909ib contract.
 
 ## Repo specs
 The repository itself is an hybrid Foundry/Hardhat project. We made this because we want to be able to do solidity tests as well as js ones.
