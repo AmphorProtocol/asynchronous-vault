@@ -23,7 +23,7 @@ interface IERC165 {
 }
 
 interface IERC7540Deposit {
-    event DepositRequest(address indexed sender, address indexed operator, uint256 assets);
+    event DepositRequest(address indexed receiver, address indexed owner, uint256 indexed requestId, address sender, uint256 assets);
 
     /**
      * @dev Transfers assets from msg.sender into the Vault and submits a Request for asynchronous deposit/mint.
@@ -46,7 +46,7 @@ interface IERC7540Deposit {
 }
 
 interface IERC7540Redeem {
-    event RedeemRequest(address indexed sender, address indexed operator, address indexed owner, uint256 shares);
+    event RedeemRequest(address indexed receiver, address indexed owner, uint256 indexed requestId, address sender, uint256 shares);
 
     /**
      * @dev Assumes control of shares from owner and submits a Request for asynchronous redeem/withdraw.

@@ -169,7 +169,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         uint256 lastRequestId = depositRequestLP.lastRequestId(owner);
         uint256 lastRequestBalance = depositRequestLP.balanceOf(owner, lastRequestId);
         if (lastRequestBalance > 0 && lastRequestId != epochNonce) // We don't want to call _deposit for nothing and we don't want to cancel a current request if the user just want to increase it.
-            _deposit(owner, receiver, lastRequestId, lastRequestBalance);
+            deposit(owner, receiver, lastRequestId, lastRequestBalance);
 
         // Create a new request
         depositRequestLP.deposit(epochNonce, assets, receiver, owner);
@@ -192,7 +192,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         uint256 lastRequestId = depositRequestLP.lastRequestId(owner);
         uint256 lastRequestBalance = depositRequestLP.balanceOf(owner, lastRequestId);
         if (lastRequestBalance > 0 && lastRequestId != epochNonce) // We don't want to call _redeem for nothing and we don't want to cancel a current request if the user just want to increase it.
-            _redeem(owner, receiver, lastRequestId, lastRequestBalance);
+            redeem(owner, receiver, lastRequestId, lastRequestBalance);
 
         withdrawRequestLP.deposit(epochNonce, shares, receiver, owner);
         
@@ -275,13 +275,13 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         whenNotPaused
         returns (uint256)
     {
-        return _deposit(_msgSender(), receiver, epochNonce - 1, assets);
+        return deposit(_msgSender(), receiver, epochNonce - 1, assets);
     }
 
     // assets = pending lp balance
     // shares = shares to mint
-    function _deposit(address owner, address receiver, uint256 requestId, uint256 assets)
-        internal
+    function deposit(address owner, address receiver, uint256 requestId, uint256 assets)
+        public
         returns (uint256)
     {
         uint256 maxAssets = maxDeposit(owner); // what he can claim from the last epoch request 
@@ -319,11 +319,11 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         whenNotPaused
         returns (uint256)
     {
-        return _redeem(owner, receiver, epochNonce - 1, shares);
+        return redeem(owner, receiver, epochNonce - 1, shares);
     }
     
-    function _redeem(address owner, address receiver, uint256 requestId, uint256 shares)
-        internal
+    function redeem(address owner, address receiver, uint256 requestId, uint256 shares)
+        public
         returns (uint256)
     {
         uint256 maxShares = maxRedeem(owner);

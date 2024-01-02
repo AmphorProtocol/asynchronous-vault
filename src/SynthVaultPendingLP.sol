@@ -10,6 +10,7 @@ import {SafeERC20} from
 import {
     Ownable
 } from "@openzeppelin/contracts/access/Ownable.sol";
+import {SynthVault} from "./SynthVault.sol";
 
 contract SynthVaultPendingLP is ERC6909ib, Ownable {
 
@@ -90,14 +91,6 @@ contract SynthVaultPendingLP is ERC6909ib, Ownable {
         returns (uint256) 
     {
         return super.redeem(epochNonce, shares, receiver, owner);
-    }
-
-    function transfer(address, uint256, uint256) public pure override returns (bool) {
-        return false;
-    }
-
-    function transferFrom(address, address, uint256, uint256) public pure override returns (bool) {
-        return false;
     }
 
     function burn(address account, uint256 tokenId, uint256 shares) external onlyOwner {
