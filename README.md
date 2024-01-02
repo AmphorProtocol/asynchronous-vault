@@ -32,7 +32,7 @@ The main vault is `SynthVault.sol`, and the pending requests (deposit or withdra
     Same thing for a contract that is taking your deposit receipt for auto-request a withdrawal at the next epoch (if we add a "not renew" tick button into our UI).
 
 ### Some things I need to do to have something cleaner
-- Remove un-useful functions for us into ERC6909ib contract.
+- Remove un-useful functions for us into ERC6909ib contract. Indeed since our receipt tokens are working like a multi-token interest bearing vault, I used an implementation of it provided by _jtriley-eth_. But there is some functions I could remove from ERC6909ib in order to make the code liter.
 
 ## Repo specs
 The repository itself is an hybrid Foundry/Hardhat project. We made this because we want to be able to do solidity tests as well as js ones.
