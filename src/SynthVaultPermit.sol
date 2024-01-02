@@ -17,12 +17,12 @@ contract SynthVaultPermit is SynthVault {
         ERC20 underlying,
         string memory name,
         string memory symbol,
-        string memory depositRequestLPName,
-        string memory depositRequestLPSymbol,
-        string memory withdrawRequestLPName,
-        string memory withdrawRequestLPSymbol,
+        string memory depositRequestReceiptName,
+        string memory depositRequestReceiptSymbol,
+        string memory withdrawRequestReceiptName,
+        string memory withdrawRequestReceiptSymbol,
         IPermit2 _permit2
-    ) SynthVault(underlying, name, symbol, depositRequestLPName, depositRequestLPSymbol, withdrawRequestLPName, withdrawRequestLPSymbol, _permit2) {}
+    ) SynthVault(underlying, name, symbol, depositRequestReceiptName, depositRequestReceiptSymbol, withdrawRequestReceiptName, withdrawRequestReceiptSymbol, _permit2) {}
 
     function requestDepositWithPermit(
         uint256 assets,

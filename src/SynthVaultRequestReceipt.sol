@@ -12,7 +12,7 @@ import {
 } from "@openzeppelin/contracts/access/Ownable.sol";
 import {SynthVault} from "./SynthVault.sol";
 
-contract SynthVaultPendingLP is ERC6909ib, Ownable {
+contract SynthVaultRequestReceipt is ERC6909ib, Ownable {
 
     using SafeERC20 for ERC20;
 

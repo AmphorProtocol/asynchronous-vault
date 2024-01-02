@@ -18,7 +18,7 @@ import {
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ERC20Permit} from
     "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
-import {SynthVaultPendingLP, SafeERC20} from "./SynthVaultPendingLP.sol";
+import {SynthVaultRequestReceipt, SafeERC20} from "./SynthVaultRequestReceipt.sol";
 import {IPermit2, ISignatureTransfer} from "permit2/src/interfaces/IPermit2.sol";
 
 struct Permit2Params {
@@ -135,12 +135,12 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
 
     IERC20 public immutable _asset;
     uint256 public epochNonce = 1; // in order to start at epoch 1, otherwise users might try to claim epoch -1 requests
-    uint256[] public bigAssets; // pending withdrawals requests that has been processed && waiting for claim/deposit
-    uint256[] public bigShares; // pending deposits requests that has been processed && waiting for claim/withdraw
+    uint256[] public globalAssets; // pending withdrawals requests that has been processed && waiting for claim/deposit
+    uint256[] public globalShares; // pending deposits requests that has been processed && waiting for claim/withdraw
     uint256 public totalAssets; // total working assets (in the strategy), not including pending withdrawals money
 
-    SynthVaultPendingLP public depositRequestLP;
-    SynthVaultPendingLP public withdrawRequestLP;
+    SynthVaultRequestReceipt public depositRequestReceipt;
+    SynthVaultRequestReceipt public withdrawRequestReceipt;
 
     /*
      ############################
@@ -152,60 +152,60 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         ERC20 underlying,
         string memory name,
         string memory symbol,
-        string memory depositRequestLPName,
-        string memory depositRequestLPSymbol,
-        string memory withdrawRequestLPName,
-        string memory withdrawRequestLPSymbol,
+        string memory depositRequestReceiptName,
+        string memory depositRequestReceiptSymbol,
+        string memory withdrawRequestReceiptName,
+        string memory withdrawRequestReceiptSymbol,
         IPermit2 _permit2
     ) ERC20(name, symbol) Ownable(_msgSender()) ERC20Permit(name) {
         _asset = IERC20(underlying);
         permit2 = _permit2;
-        depositRequestLP = new SynthVaultPendingLP(underlying, depositRequestLPName, depositRequestLPSymbol);
-        withdrawRequestLP = new SynthVaultPendingLP(underlying, withdrawRequestLPName, withdrawRequestLPSymbol);
+        depositRequestReceipt = new SynthVaultRequestReceipt(underlying, depositRequestReceiptName, depositRequestReceiptSymbol);
+        withdrawRequestReceipt = new SynthVaultRequestReceipt(underlying, withdrawRequestReceiptName, withdrawRequestReceiptSymbol);
     }
 
     function requestDeposit(uint256 assets, address receiver, address owner) public whenNotPaused {
         // Claim not claimed request
-        uint256 lastRequestId = depositRequestLP.lastRequestId(owner);
-        uint256 lastRequestBalance = depositRequestLP.balanceOf(owner, lastRequestId);
+        uint256 lastRequestId = depositRequestReceipt.lastRequestId(owner);
+        uint256 lastRequestBalance = depositRequestReceipt.balanceOf(owner, lastRequestId);
         if (lastRequestBalance > 0 && lastRequestId != epochNonce) // We don't want to call _deposit for nothing and we don't want to cancel a current request if the user just want to increase it.
             deposit(owner, receiver, lastRequestId, lastRequestBalance);
 
         // Create a new request
-        depositRequestLP.deposit(epochNonce, assets, receiver, owner);
-        depositRequestLP.setLastRequest(owner, epochNonce);
+        depositRequestReceipt.deposit(epochNonce, assets, receiver, owner);
+        depositRequestReceipt.setLastRequest(owner, epochNonce);
 
         emit DepositRequest(receiver, owner, epochNonce, _msgSender(), assets);
     }
 
     function withdrawDepositRequest(uint256 assets, address receiver, address owner) external whenNotPaused {
-        depositRequestLP.withdraw(epochNonce, assets, receiver, owner);
+        depositRequestReceipt.withdraw(epochNonce, assets, receiver, owner);
         //TODO emit event ?
     }
 
     function pendingDepositRequest(address owner) external view returns (uint256 assets) {
-        return depositRequestLP.balanceOf(owner, epochNonce);
+        return depositRequestReceipt.balanceOf(owner, epochNonce);
     }
 
     function requestRedeem(uint256 shares, address receiver, address owner, bytes memory) external whenNotPaused {
         // Claim not claimed request
-        uint256 lastRequestId = depositRequestLP.lastRequestId(owner);
-        uint256 lastRequestBalance = depositRequestLP.balanceOf(owner, lastRequestId);
+        uint256 lastRequestId = depositRequestReceipt.lastRequestId(owner);
+        uint256 lastRequestBalance = depositRequestReceipt.balanceOf(owner, lastRequestId);
         if (lastRequestBalance > 0 && lastRequestId != epochNonce) // We don't want to call _redeem for nothing and we don't want to cancel a current request if the user just want to increase it.
             redeem(owner, receiver, lastRequestId, lastRequestBalance);
 
-        withdrawRequestLP.deposit(epochNonce, shares, receiver, owner);
+        withdrawRequestReceipt.deposit(epochNonce, shares, receiver, owner);
         
         emit RedeemRequest(receiver, owner, epochNonce, _msgSender(), shares);
     }
 
     function withdrawRedeemRequest(uint256 shares, address receiver, address owner) external whenNotPaused {
-        withdrawRequestLP.withdraw(epochNonce, shares, receiver, owner);
+        withdrawRequestReceipt.withdraw(epochNonce, shares, receiver, owner);
         //TODO emit event ?
     }
 
     function pendingRedeemRequest(address owner) external view returns (uint256 shares) {
-        return withdrawRequestLP.balanceOf(owner, epochNonce);
+        return withdrawRequestReceipt.balanceOf(owner, epochNonce);
     }
 
     function supportsInterface(bytes4 interfaceId) public pure returns (bool) {
@@ -231,7 +231,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     }
 
     function maxDeposit(address owner) public view returns (uint256) {
-        return depositRequestLP.balanceOf(owner, epochNonce - 1);
+        return depositRequestReceipt.balanceOf(owner, epochNonce - 1);
     }
 
     // TODO: implement this correclty if possible
@@ -245,15 +245,15 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     }
 
     function maxRedeem(address owner) public view returns (uint256) {
-        return withdrawRequestLP.balanceOf(owner, epochNonce - 1);
+        return withdrawRequestReceipt.balanceOf(owner, epochNonce - 1);
     }
 
     function previewDeposit(uint256 assets) public view returns (uint256) {
-        return _convertDepositLPToShares(epochNonce - 1, assets, Math.Rounding.Floor);
+        return _convertDepositReceiptToShares(epochNonce - 1, assets, Math.Rounding.Floor);
     }
 
     function previewDeposit(uint256 epochId, uint256 assets) public view returns (uint256) {
-        return _convertDepositLPToShares(epochId, assets, Math.Rounding.Floor);
+        return _convertDepositReceiptToShares(epochId, assets, Math.Rounding.Floor);
     }
 
     // TODO implement this correctly if possible
@@ -267,7 +267,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     }
 
     function previewRedeem(uint256 shares) public view returns (uint256) {
-        return _convertWithdrawLPToAssets(epochNonce - 1, shares, Math.Rounding.Floor);
+        return _convertWithdrawReceiptToAssets(epochNonce - 1, shares, Math.Rounding.Floor);
     }
 
     function deposit(uint256 assets, address receiver)
@@ -278,22 +278,22 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         return deposit(_msgSender(), receiver, epochNonce - 1, assets);
     }
 
-    // assets = pending lp balance
+    // assets = pending Receipt balance
     // shares = shares to mint
     function deposit(address owner, address receiver, uint256 requestId, uint256 assets)
         public
         returns (uint256)
     {
         uint256 maxAssets = maxDeposit(owner); // what he can claim from the last epoch request 
-        if (assets > maxAssets) { // he is trying to claim more than he can by saying he has more pending lp that he has in reality
+        if (assets > maxAssets) { // he is trying to claim more than he can by saying he has more pending Receipt that he has in reality
             revert ERC4626ExceededMaxDeposit(owner, assets, maxAssets);
         }
 
         uint256 sharesAmount = previewDeposit(requestId, assets);
-        depositRequestLP.burn(owner, requestId, assets);
+        depositRequestReceipt.burn(owner, requestId, assets);
         // _mint(receiver, sharesAmount); // actually the shares have already been minted into the nextEpoch function
         IERC20(address(this)).safeTransfer(receiver, sharesAmount); // transfer the vault shares to the receiver
-        bigShares[requestId] += sharesAmount; // decrease the bigShares
+        globalShares[requestId] += sharesAmount; // decrease the globalShares
 
         emit Deposit(owner, receiver, assets, sharesAmount);
 
@@ -330,10 +330,10 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         if (shares > maxShares) revert ERC4626ExceededMaxRedeem(owner, shares, maxShares);
 
         uint256 assetsAmount = previewRedeem(shares);
-        withdrawRequestLP.burn(owner, requestId, shares);
+        withdrawRequestReceipt.burn(owner, requestId, shares);
 
         _asset.safeTransfer(receiver, assetsAmount);
-        bigAssets[requestId] -= assetsAmount; // decrease the bigAssets
+        globalAssets[requestId] -= assetsAmount; // decrease the globalAssets
 
         emit Withdraw(_msgSender(), receiver, owner, assetsAmount, shares);
 
@@ -350,23 +350,23 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         );
     }
 
-    function _convertDepositLPToShares(uint256 epochId, uint256 assets, Math.Rounding rounding)
+    function _convertDepositReceiptToShares(uint256 epochId, uint256 assets, Math.Rounding rounding)
         internal
         view
         returns (uint256)
     {
         return assets.mulDiv(
-            bigShares[epochId] + 1, depositRequestLP.totalSupply(epochId) + 1, rounding
+            globalShares[epochId] + 1, depositRequestReceipt.totalSupply(epochId) + 1, rounding
         );
     }
 
-    function _convertWithdrawLPToAssets(uint256 epochId, uint256 pendingLPs, Math.Rounding rounding)
+    function _convertWithdrawReceiptToAssets(uint256 epochId, uint256 pendingReceipts, Math.Rounding rounding)
         internal
         view
         returns (uint256)
     {
-        return pendingLPs.mulDiv(
-            bigAssets[epochId] + 1, withdrawRequestLP.totalSupply(epochId) + 1, rounding
+        return pendingReceipts.mulDiv(
+            globalAssets[epochId] + 1, withdrawRequestReceipt.totalSupply(epochId) + 1, rounding
         );
     }
 
@@ -395,9 +395,9 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         // 7. we update the totalAssets
         // 2. with the resting amount we know how much cost a share
         // 3. we can take the pending deposits underlying (same as this vault underlying) and mint shares
-        // 4. we update the bigShares array for the appropriate epoch (epoch 0 request is a deposit into epoch 1...)
+        // 4. we update the globalShares array for the appropriate epoch (epoch 0 request is a deposit into epoch 1...)
         // 5. we can take the pending withdraws shares and redeem underlying (which are shares of this vault) against this vault underlying
-        // 6. we update the bigAssets array for the appropriate epoch (epoch 0 request is a withdraw at the end of the epoch 0...)
+        // 6. we update the globalAssets array for the appropriate epoch (epoch 0 request is a withdraw at the end of the epoch 0...)
 
         ///////////////////////
         // Ending current epoch
@@ -430,28 +430,28 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         ///////////////////
         // Pending deposits
         ///////////////////
-        uint256 pendingDeposit = depositRequestLP.nextEpoch(epochNonce); // get the underlying of the pending deposits
-        // Updating the bigShares array
-        bigShares.push(pendingDeposit.mulDiv(
+        uint256 pendingDeposit = depositRequestReceipt.nextEpoch(epochNonce); // get the underlying of the pending deposits
+        // Updating the globalShares array
+        globalShares.push(pendingDeposit.mulDiv(
             totalSupply() + 1, totalAssets + 1, Math.Rounding.Floor
         ));
         // Minting the shares
-        _mint(address(this), bigShares[epochNonce]); // mint the shares into the vault
+        _mint(address(this), globalShares[epochNonce]); // mint the shares into the vault
         // Update the totalAssets
         totalAssets += pendingDeposit;
 
         /////////////////
         // Pending redeem
         /////////////////
-        uint256 pendingRedeem = withdrawRequestLP.nextEpoch(epochNonce); // get the shares of the pending withdraws
-        // Updating the bigAssets array
-        bigAssets.push(pendingRedeem.mulDiv(
+        uint256 pendingRedeem = withdrawRequestReceipt.nextEpoch(epochNonce); // get the shares of the pending withdraws
+        // Updating the globalAssets array
+        globalAssets.push(pendingRedeem.mulDiv(
             totalAssets + 1, totalSupply() + 1, Math.Rounding.Floor
         ));
         // Burn the vault shares
         _burn(address(this), pendingRedeem); // burn the shares from the vault
         // Update the totalAssets
-        totalAssets -= bigAssets[epochNonce];
+        totalAssets -= globalAssets[epochNonce];
 
         //////////////////
         // Start new epoch
