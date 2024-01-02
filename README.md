@@ -4,7 +4,7 @@ The AsyncSynthVault from Amphor is based on the ERC7540 standard.
 We allow users to request deposits and withdrawals of their assets in an asynchrnous way. Those requests are validated at the end of each epoch.. We separate the assets hold by the contract with the assets used in the current epoch using the totalAssets variable.
 
 ###How does it work?
-Accountability of pending deposits and withdrawals is ensured by the use of per epoch data. Though the various processes we store:
+Accountability of pending deposits and withdrawals is ensured by the use of per epoch data. Though the various fonctions we store:
 
 - The total amount of requested deposits and withdrawals for the current epoch using the `currentEpochPendingAssets` and `currentEpochPendingShares` variables. Those variables are reset at the end of each epoch.
 - The total amount of assets and shares at the end of each epoch using the `epochs` mapping variable. This will be used to calculate the amount of shares/assets we owe to each user.
@@ -23,6 +23,8 @@ Note: since there are also pendingWithdrawals, we might burn shares and remove a
 Other consideration:
 
 - We might need to override the erc20 balanceOf function to take into account the pending deposits that can be claimed. This remark may also apply to other functions.
+
+- why not use two others 1155 tokens for the pending shares/shares? Because we don't see a particular use case for the pending shares/assets being a proper token with all the associated functions. We will just use the vault to handle those pending shares/assets. Moreover making it another contract would add complexity and gas cost.
 
 Upgreability:
 Since we will have multiple vaults, we will base the upgradability of the vault on the beacon architecture. Like we will be able to update the implementation of all vault in one transaction. See https://docs.openzeppelin.com/contracts/3.x/api/proxy#BeaconProxy for more information.
