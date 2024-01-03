@@ -1,10 +1,11 @@
 ## Asynchronous Amphor vaults
 
-*This repository implements the ERC-7540, it should so be considered as a draft since the standard is still in review state.*
+**This repository implements the ERC-7540, it should so be considered as a draft since the standard is still in review state.**
+**In addition, this code is itself a first draft and contains multiple bugs and potential vulnerabilities.**
 
 ### Problem solved:  
-- The Amphor strategy currently works with epochs, so deposits and withdrawals are only active between these. Because of this strategy system, we are forced to not farm during a certain amount of time in order to let users deposit between periods. Also, this is decreasing the user experience because they cannot deposit or withdraw when they want but instead need to be here at the right moment.
-- Thank to the deposit and withdraw request system we will be able to bypass this.
+- The Amphor strategy currently works with epochs, so deposits and withdrawals are only active between these. Because of this strategy system, we are forced to not farm during a certain amount of time in order to let users deposit between periods. Also, this is highly decreasing the user experience because they cannot deposit or withdraw when they want but instead need to be here at the right moment.
+- Thank to the deposit and withdraw request system we will be able to bypass these problems.
 
 ### Two contracts architecture vs One contract
 
@@ -35,7 +36,7 @@ The main vault is `SynthVault.sol`, and the pending requests (deposit or withdra
 - Remove un-useful functions for us into ERC6909ib contract. Indeed since our receipt tokens are working like a multi-token interest bearing vault, I used an implementation of it provided by _jtriley-eth_. But there is some functions I could remove from ERC6909ib in order to make the code liter.
 
 ## Repo specs
-The repository itself is an hybrid Foundry/Hardhat project. We made this because we want to be able to do solidity tests as well as js ones.
+The repository itself is an hybrid Foundry/Hardhat project. We made this because we want to be able to do solidity tests as well as js ones and we were not fully happy with ffi.
 
 ## Documentation
 

@@ -133,14 +133,14 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
      */
     uint16 public feesInBps;
 
-    IERC20 public immutable _asset;
+    IERC20 internal immutable _asset;
     uint256 public epochNonce = 1; // in order to start at epoch 1, otherwise users might try to claim epoch -1 requests
-    uint256[] public globalAssets; // pending withdrawals requests that has been processed && waiting for claim/deposit
-    uint256[] public globalShares; // pending deposits requests that has been processed && waiting for claim/withdraw
+    uint256[] public globalAssets; // withdrawals requests that has been processed && waiting for claim/deposit
+    uint256[] public globalShares; // deposits requests that has been processed && waiting for claim/withdraw
     uint256 public totalAssets; // total working assets (in the strategy), not including pending withdrawals money
 
-    SynthVaultRequestReceipt public depositRequestReceipt;
-    SynthVaultRequestReceipt public withdrawRequestReceipt;
+    SynthVaultRequestReceipt public depositRequestReceipt; // deposits requests tokens
+    SynthVaultRequestReceipt public withdrawRequestReceipt; // withdrawals requests tokens
 
     /*
      ############################
@@ -165,7 +165,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     }
 
     function requestDeposit(uint256 assets, address receiver, address owner) public whenNotPaused {
-        // Claim not claimed request
+        // Claim not claimed request (if any)
         uint256 lastRequestId = depositRequestReceipt.lastRequestId(owner);
         uint256 lastRequestBalance = depositRequestReceipt.balanceOf(owner, lastRequestId);
         if (lastRequestBalance > 0 && lastRequestId != epochNonce) // We don't want to call _deposit for nothing and we don't want to cancel a current request if the user just want to increase it.
@@ -180,6 +180,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
 
     function withdrawDepositRequest(uint256 assets, address receiver, address owner) external whenNotPaused {
         depositRequestReceipt.withdraw(epochNonce, assets, receiver, owner);
+
         //TODO emit event ?
     }
 
@@ -188,19 +189,22 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     }
 
     function requestRedeem(uint256 shares, address receiver, address owner, bytes memory) external whenNotPaused {
-        // Claim not claimed request
-        uint256 lastRequestId = depositRequestReceipt.lastRequestId(owner);
-        uint256 lastRequestBalance = depositRequestReceipt.balanceOf(owner, lastRequestId);
+        // Claim not claimed request (if any)
+        uint256 lastRequestId = withdrawRequestReceipt.lastRequestId(owner);
+        uint256 lastRequestBalance = withdrawRequestReceipt.balanceOf(owner, lastRequestId);
         if (lastRequestBalance > 0 && lastRequestId != epochNonce) // We don't want to call _redeem for nothing and we don't want to cancel a current request if the user just want to increase it.
             redeem(owner, receiver, lastRequestId, lastRequestBalance);
 
+        // Create a new request
         withdrawRequestReceipt.deposit(epochNonce, shares, receiver, owner);
-        
+        withdrawRequestReceipt.setLastRequest(owner, epochNonce);
+
         emit RedeemRequest(receiver, owner, epochNonce, _msgSender(), shares);
     }
 
     function withdrawRedeemRequest(uint256 shares, address receiver, address owner) external whenNotPaused {
         withdrawRequestReceipt.withdraw(epochNonce, shares, receiver, owner);
+
         //TODO emit event ?
     }
 
@@ -230,44 +234,100 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         return _convertToAssets(shares, Math.Rounding.Floor);
     }
 
+    /*
+     @dev The `maxDeposit` function is used to get the max amount of underlying
+        assets that can be deposited for `owner`.
+     @param owner The address of the account for which we want to know the max
+     amount of underlying assets that can be deposited.
+     @return The max amount of underlying assets that can be deposited for
+     `owner`.
+    */
     function maxDeposit(address owner) public view returns (uint256) {
         return depositRequestReceipt.balanceOf(owner, epochNonce - 1);
     }
 
-    // TODO: implement this correclty if possible
+    // TODO: implement this correclty if possible (it's not possible to know the max mintable shares)
     function maxMint(address) public pure returns (uint256) {
         return 0;
     }
 
-    // TODO: implement this correclty if possible
+    // TODO: implement this correclty if possible (it's not possible to know the max withdrawable assets)
     function maxWithdraw(address) public pure returns (uint256) {
-        return 0; // check if the rounding is correct
+        return 0;
     }
 
+    /*
+     @dev The `maxRedeem` function is used to get the max amount of shares that
+        can be redeemed for `owner`.
+     @param owner The address of the account for which we want to know the max
+     amount of shares that can be redeemed.
+     @return The max amount of shares that can be redeemed for `owner`.
+    */
     function maxRedeem(address owner) public view returns (uint256) {
         return withdrawRequestReceipt.balanceOf(owner, epochNonce - 1);
     }
 
+    /* 
+     @dev The `previewDeposit` function is used to preview the amount of shares
+        that would be minted for `assets` amount of underlying assets for the last
+        epoch.
+     @param assets The amount of underlying assets for which we want to know the
+     amount of shares that would be minted.
+     @return The amount of shares that would be minted for `assets` amount of
+     underlying assets.
+    */
     function previewDeposit(uint256 assets) public view returns (uint256) {
         return _convertDepositReceiptToShares(epochNonce - 1, assets, Math.Rounding.Floor);
     }
 
+    /* 
+     @dev The `previewMint` function is used to preview the amount of shares
+        that would be minted for `shares` amount of shares for a specified epoch.
+     @param epochId The epoch for which we want to know the amount of shares
+        that would be minted.
+     @param assets The amount of assets for which we want to know the amount of
+        shares that would be minted.
+     @return The amount of shares that would be minted for `shares` amount of
+     shares.
+    */
     function previewDeposit(uint256 epochId, uint256 assets) public view returns (uint256) {
         return _convertDepositReceiptToShares(epochId, assets, Math.Rounding.Floor);
     }
 
-    // TODO implement this correctly if possible
+    // TODO implement this correctly if possible (it's not possible to know the mintable shares)
     function previewMint(uint256) public pure returns (uint256) {
         return 0;
     }
 
-    //TODO implement this correctly if possible
+    //TODO implement this correctly if possible (it's not possible to know the withdrawable assets)
     function previewWithdraw(uint256) public pure returns (uint256) {
         return 0;
     }
 
+    /* 
+     @dev The `previewRedeem` function is used to preview the amount of assets
+        that would be redeemed for `shares` amount of shares for the last epoch.
+     @param shares The amount of shares for which we want to know the amount of
+     assets that would be redeemed.
+     @return The amount of assets that would be redeemed for `shares` amount of
+     shares.
+    */
     function previewRedeem(uint256 shares) public view returns (uint256) {
         return _convertWithdrawReceiptToAssets(epochNonce - 1, shares, Math.Rounding.Floor);
+    }
+
+    /*
+     @dev The `previewRedeem` function is used to preview the amount of assets
+        that would be redeemed for `shares` amount of shares for a specified epoch.
+     @param epochId The epoch for which we want to know the amount of assets
+        that would be redeemed.
+     @param shares The amount of shares for which we want to know the amount of
+        assets that would be redeemed.
+     @return The amount of assets that would be redeemed for `shares` amount of
+    shares.
+    */
+    function previewRedeem(uint256 shares, uint256 epochId) public view returns (uint256) {
+        return _convertWithdrawReceiptToAssets(epochId, shares, Math.Rounding.Floor);
     }
 
     function deposit(uint256 assets, address receiver)
@@ -278,7 +338,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         return deposit(_msgSender(), receiver, epochNonce - 1, assets);
     }
 
-    // assets = pending Receipt balance
+    // assets = Deposit request receipt balance
     // shares = shares to mint
     function deposit(address owner, address receiver, uint256 requestId, uint256 assets)
         public
@@ -300,12 +360,12 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         return sharesAmount;
     }
 
-    // TODO: implement this correclty if possible
+    // TODO: implement this correclty if possible (it's not possible to know the mintable shares)
     function mint(uint256, address) public pure returns (uint256) {
         return 0;
     }
 
-    // TODO: implement this correclty if possible
+    // TODO: implement this correclty if possible (it's not possible to know the withdrawable assets)
     function withdraw(uint256, address, address)
         external
         pure
@@ -329,7 +389,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         uint256 maxShares = maxRedeem(owner);
         if (shares > maxShares) revert ERC4626ExceededMaxRedeem(owner, shares, maxShares);
 
-        uint256 assetsAmount = previewRedeem(shares);
+        uint256 assetsAmount = previewRedeem(requestId, shares);
         withdrawRequestReceipt.burn(owner, requestId, shares);
 
         _asset.safeTransfer(receiver, assetsAmount);
@@ -386,7 +446,6 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
      ####################################
     */
 
-    // TODO: implement this
     function nextEpoch(uint256 returnedUnderlyingAmount) public onlyOwner returns (uint256) {
         // (end + start epochs)
 
@@ -476,7 +535,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         emit FeesChanged(feesInBps, newFees);
     }
 
-    // TODO: implement this correclty
+    // TODO: Finish to implement this correclty
     /**
      * @dev The `claimToken` function is used to claim other tokens that have
      * been sent to the vault.
@@ -490,7 +549,11 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         token.safeTransfer(_msgSender(), token.balanceOf(address(this)));
     }
 
-    // Pausability
+    /*
+     ####################################
+      Pausability RELATED FUNCTIONS
+     ####################################
+    */
     function pause() public onlyOwner {
         _pause();
     }
@@ -504,9 +567,9 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     }
 
     /*
-     ##################
-      PERMIT2 FUNCTION
-     ##################
+     ###########################
+      PERMIT2 RELATED FUNCTIONS
+     ###########################
     */
 
     // Deposit some amount of an ERC20 token into this contract
