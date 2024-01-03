@@ -2,8 +2,8 @@
 
 ## Introduction
 
-The AsyncSynthVault from Amphor is based on the ERC7540 standard.
-We allow users to request deposits and withdrawals of their assets in an asynchronous way. Our vault integrates a system of epoch. At the beginning of an epoch, funds are withdrawns from the contract to work in an offchain strategy. At the end of an epoch they come back plus some profits. Those requests are always associated with an epoch and they are accepted at its end. The vault will be also upgradable. To compute a price of pending shares, we will use historic data from previous epochs and compute using the same formula as in a typical ERC4626 vault.
+The AsyncSynthVault from Amphor is based on the future ERC7540 standard.
+This allow users to request deposits and withdrawals of their assets in an asynchronous way. Our vault integrates a system of distinct epochs. At the beginning of an epoch, funds are withdrawns from the contract to work in an offchain strategy. At the end of an epoch they come back plus hopefully some profits. The requests are associated to an epoch and they are always accepted at its end. To compute a price of pending shares, we will use historic data from previous epochs and the same formula as in a typical ERC4626 vault.
 
 ###How does it work?
 
