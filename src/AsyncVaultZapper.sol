@@ -11,6 +11,15 @@ import {PermitParams} from "./SynthVaultPermit.sol";
 import {ERC20Permit} from
     "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
+import {IPermit2, ISignatureTransfer} from "permit2/src/interfaces/IPermit2.sol";
+
+struct Permit2Params {
+    uint256 amount;
+    uint256 nonce;
+    uint256 deadline;
+    address token;
+    bytes signature;
+}
 
 contract AsyncVaultZapper is Ownable2Step, Pausable {
     /**
@@ -26,6 +35,9 @@ contract AsyncVaultZapper is Ownable2Step, Pausable {
 
     mapping(IERC7540 => bool) public authorizedVaults;
     mapping(address => bool) public authorizedRouters;
+
+    // The canonical permit2 contract.
+    IPermit2 public immutable permit2;
 
     error NotRouter(address router);
     error NotVault(IERC7540 vault);
@@ -64,7 +76,9 @@ contract AsyncVaultZapper is Ownable2Step, Pausable {
         _;
     }
 
-    constructor() Ownable(_msgSender()) {}
+    constructor(IPermit2 _permit2) Ownable(_msgSender()) {
+        permit2 = _permit2;
+    }
 
     /**
      * @dev The `claimToken` function is used to claim other tokens that have
@@ -145,7 +159,7 @@ contract AsyncVaultZapper is Ownable2Step, Pausable {
         }
     }
 
-    function zapAndReqestDeposit(
+    function zapAndRequestDeposit(
         IERC20 tokenIn,
         IERC7540 vault,
         address router,
@@ -234,7 +248,7 @@ contract AsyncVaultZapper is Ownable2Step, Pausable {
         if (tokenIn.allowance(_msgSender(), address(this)) < amount) {
             _executePermit(tokenIn, _msgSender(), address(this), permitParams);
         }
-        /*return*/ zapAndReqestDeposit(tokenIn, vault, router, amount, data);
+        /*return*/ zapAndRequestDeposit(tokenIn, vault, router, amount, data);
     }
 
     function redeemAndZapWithPermit(
@@ -279,5 +293,56 @@ contract AsyncVaultZapper is Ownable2Step, Pausable {
             permitParams.r,
             permitParams.s
         );
+    }
+
+    /*
+     ###########################
+      PERMIT2 RELATED FUNCTIONS
+     ###########################
+    */
+
+    // Deposit some amount of an ERC20 token into this contract
+    // using Permit2.
+    function execPermit2(
+        Permit2Params calldata permit2Params
+    ) internal {
+        // Transfer tokens from the caller to ourselves.
+        permit2.permitTransferFrom(
+            // The permit message.
+            ISignatureTransfer.PermitTransferFrom({
+                permitted: ISignatureTransfer.TokenPermissions({
+                    token: permit2Params.token,
+                    amount: permit2Params.amount
+                }),
+                nonce: permit2Params.nonce,
+                deadline: permit2Params.deadline
+            }),
+            // The transfer recipient and amount.
+            ISignatureTransfer.SignatureTransferDetails({
+                to: address(this),
+                requestedAmount: permit2Params.amount
+            }),
+            // The owner of the tokens, which must also be
+            // the signer of the message, otherwise this call
+            // will fail.
+            _msgSender(),
+            // The packed signature that was the result of signing
+            // the EIP712 hash of `permit`.
+            permit2Params.signature
+        );
+    }
+
+    function zapAndRequestDepositWithPermit2(
+        IERC20 tokenIn,
+        IERC7540 vault,
+        address router,
+        uint256 amount,
+        bytes calldata data,
+        Permit2Params calldata permit2Params
+    ) external {
+        if (tokenIn.allowance(_msgSender(), address(this)) < amount)
+            execPermit2(permit2Params);
+
+        /*return*/ zapAndRequestDeposit(tokenIn, vault, router, amount, data);
     }
 }
