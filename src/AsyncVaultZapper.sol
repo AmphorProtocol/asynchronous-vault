@@ -4,9 +4,6 @@ pragma solidity 0.8.21;
 import {Ownable2Step, Ownable} from
     "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
-import {
-    Pausable
-} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IERC7540} from "./interfaces/IERC7540.sol";
