@@ -123,10 +123,10 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         uint256 _currentEpochId = currentEpochId;
 
         // a user can only have one pending deposit at a time. If he wants to request a deposit while he already has one, we will redeem the pending deposit and add the new one.
-        PendingDeposit storage pendingDeposit = pendingDeposits[owner];
+        PendingDeposit storage pendingDeposit = pendingDeposits[receiver];
         if (pendingDeposit.assets != 0 && pendingDeposit.epochId != _currentEpochId) {
             _deposit(
-                owner,
+                receiver,
                 receiver,
                 pendingDeposit.epochId,
                 pendingDeposit.assets
@@ -167,13 +167,13 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         bytes memory
     ) external whenNotPaused {
         // to make the logic easier, we will redeem the pending redeem if any before adding the new one
-        PendingRedeem storage pendingRedeem = pendingRedeems[owner];
+        PendingRedeem storage pendingRedeem = pendingRedeems[receiver];
         uint256 _currentEpochId = currentEpochId;
         if (
             pendingRedeem.epochId != 0 && pendingRedeem.epochId != _currentEpochId // We don't want to call _redeem for nothing and we don't want to cancel a current request if the user just want to increase it.
         ) {
             _redeem(
-                owner,
+                receiver,
                 receiver,
                 pendingRedeem.epochId,
                 pendingRedeem.shares
