@@ -32,6 +32,9 @@ The main vault is `SynthVault.sol`, and the pending requests (deposit or withdra
     However, it is entirely possible to create a contract that will receive the underlying, make the deposit/withdrawal request, store it and allow the user to claim it afterwards. However, it seems simpler to me to create a contract that just holds the receipt tokens, and lets the user retrieve them as soon as the epochId of the main vault is iterated.
     Same thing for a contract that is taking your deposit receipt for auto-request a withdrawal at the next epoch (if we add a "not renew" tick button into our UI).
 
+*** Flow of this 7540 imp
+- In order to deposit, 
+
 ### Some things I need to do to have something cleaner
 - Remove un-useful functions for us into ERC6909ib contract. Indeed since our receipt tokens are working like a multi-token interest bearing vault, I used an implementation of it provided by _jtriley-eth_. But there is some functions I could remove from ERC6909ib in order to make the code liter.
 

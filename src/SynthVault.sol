@@ -169,7 +169,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         uint256 lastRequestId = depositRequestReceipt.lastRequestId(owner);
         uint256 lastRequestBalance = depositRequestReceipt.balanceOf(owner, lastRequestId);
         if (lastRequestBalance > 0 && lastRequestId != epochNonce) // We don't want to call _deposit for nothing and we don't want to cancel a current request if the user just want to increase it.
-            deposit(owner, receiver, lastRequestId, lastRequestBalance);
+            deposit(owner, owner, lastRequestId, lastRequestBalance);
 
         // Create a new request
         depositRequestReceipt.deposit(epochNonce, assets, receiver, owner);
@@ -340,6 +340,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
 
     // assets = Deposit request receipt balance
     // shares = shares to mint
+    // TODO: check allowance before burning the receipt
     function deposit(address owner, address receiver, uint256 requestId, uint256 assets)
         public
         returns (uint256)
@@ -366,6 +367,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     }
 
     // TODO: implement this correclty if possible (it's not possible to know the withdrawable assets)
+    // TODO: check allowance before burning the receipt
     function withdraw(uint256, address, address)
         external
         pure
