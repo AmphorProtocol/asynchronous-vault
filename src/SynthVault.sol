@@ -29,6 +29,13 @@ struct Permit2Params {
     bytes signature;
 }
 
+struct Epoch {
+    uint256 totalDeposits;
+    uint256 totalRequests;
+    mapping(address => uint256) deposits;
+    mapping(address => uint256) withdrawals;
+}
+
 contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
 
     /*
@@ -141,6 +148,8 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
 
     SynthVaultRequestReceipt public depositRequestReceipt; // deposits requests tokens
     SynthVaultRequestReceipt public withdrawRequestReceipt; // withdrawals requests tokens
+
+    Epoch[] public epochs;
 
     /*
      ############################
