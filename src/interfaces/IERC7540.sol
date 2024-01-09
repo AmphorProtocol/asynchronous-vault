@@ -27,9 +27,12 @@ interface IERC165 {
 
 interface IERC7540Deposit {
     event DepositRequest(
-        address indexed sender, address indexed operator, uint256 assets
+        address indexed receiver,
+        address indexed owner,
+        uint256 indexed requestId,
+        address sender,
+        uint256 assets
     );
-
     /**
      * @dev Transfers assets from msg.sender into the Vault and submits a Request for asynchronous deposit/mint.
      *
@@ -38,8 +41,8 @@ interface IERC7540Deposit {
      *
      * NOTE: most implementations will require pre-approval of the Vault with the Vault's underlying asset token.
      */
-    function requestDeposit(uint256 assets, address receiver, address owner)
-        external;
+    function requestDeposit(uint256 assets, address receiver, address owner, bytes memory data)
+        external returns (uint256 requestId);
 
     /**
      * @dev Returns the amount of requested assets in Pending state for the operator to deposit or mint.
@@ -56,9 +59,10 @@ interface IERC7540Deposit {
 
 interface IERC7540Redeem {
     event RedeemRequest(
-        address indexed sender,
-        address indexed operator,
+        address indexed receiver,
         address indexed owner,
+        uint256 indexed requestId,
+        address sender,
         uint256 shares
     );
 
@@ -71,10 +75,10 @@ interface IERC7540Redeem {
      */
     function requestRedeem(
         uint256 shares,
-        address operator,
+        address receiver,
         address owner,
         bytes memory data
-    ) external;
+    ) external returns (uint256 );
 
     /**
      * @dev Returns the amount of requested shares in Pending state for the operator to redeem or withdraw.

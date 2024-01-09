@@ -2,6 +2,7 @@
 pragma solidity 0.8.21;
 
 import {IERC7540, IERC165, IERC7540Redeem} from "./interfaces/IERC7540.sol";
+import {ERC7540Receiver} from "./interfaces/ERC7540Receiver.sol";
 import {
     Ownable,
     Ownable2Step
@@ -83,6 +84,8 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
 
     error ERC4626ExceededMaxRedeem(address owner, uint256 shares, uint256 max);
 
+
+
     // The canonical permit2 contract.
     // IPermit2 public immutable permit2;
 
@@ -91,7 +94,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     uint16 public feesInBps;
 
     IERC20 public immutable _asset;
-    uint256 public currentEpochId = 0;
+    uint256 public currentEpochId = 1;
     uint256 public totalAssets; // total working assets (in the strategy), not including pending withdrawals money
 
 
@@ -116,9 +119,9 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         _asset = IERC20(underlying);
     }
 
-    function requestDeposit(uint256 assets, address receiver, address owner)
-        public
-        whenNotPaused
+    function requestDeposit(uint256 assets, address receiver, address owner, bytes memory data) 
+        external
+        whenNotPaused returns (uint256)
     {
         uint256 _currentEpochId = currentEpochId;
 
@@ -140,6 +143,12 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
             pendingDeposit.epochId = _currentEpochId;
         
         currentEpochPendingAssets += assets;
+
+        if (data.length > 0)
+            require(ERC7540Receiver(receiver).onERC7540DepositReceived(msg.sender, owner, _currentEpochId, data) == ERC7540Receiver.onERC7540DepositReceived.selector, "receiver failed");
+        
+        emit DepositRequest(receiver, owner, _currentEpochId, msg.sender, assets);
+        return _currentEpochId;
     }
 
     function cancelDepositRequest(
@@ -164,8 +173,8 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         uint256 shares,
         address receiver,
         address owner,
-        bytes memory
-    ) external whenNotPaused {
+        bytes memory data
+    ) external whenNotPaused returns (uint256) {
         // to make the logic easier, we will redeem the pending redeem if any before adding the new one
         PendingRedeem storage pendingRedeem = pendingRedeems[receiver];
         uint256 _currentEpochId = currentEpochId;
@@ -185,6 +194,12 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         if (pendingRedeem.epochId != _currentEpochId) 
             pendingRedeem.epochId = _currentEpochId;
         currentEpochPendingShares += shares;
+
+        if (data.length > 0)
+            require(ERC7540Receiver(receiver).onERC7540RedeemReceived(_msgSender(), owner, _currentEpochId, data) == ERC7540Receiver.onERC7540RedeemReceived.selector, "receiver failed");
+
+        emit RedeemRequest(receiver, owner, _currentEpochId, _msgSender(), shares);
+        return _currentEpochId;
     }
 
     function withdrawRedeemRequest(
