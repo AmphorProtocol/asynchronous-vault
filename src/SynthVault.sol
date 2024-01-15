@@ -18,7 +18,7 @@ import {
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ERC20Permit} from
     "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
-import {SynthVaultRequestReceipt, SafeERC20} from "./SynthVaultRequestReceipt.sol";
+import {SafeERC20} from "./SynthVaultRequestReceipt.sol";
 import {IPermit2, ISignatureTransfer} from "permit2/src/interfaces/IPermit2.sol";
 
 struct Permit2Params {
@@ -31,9 +31,9 @@ struct Permit2Params {
 
 struct Epoch {
     uint256 totalDeposits;
-    uint256 totalRequests;
-    mapping(address => uint256) deposits;
-    mapping(address => uint256) withdrawals;
+    uint256 totalRedeems;
+    mapping(address => uint256) deposit;
+    mapping(address => uint256) redeem;
 }
 
 contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
@@ -142,14 +142,11 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
 
     IERC20 internal immutable _asset;
     uint256 public epochNonce = 1; // in order to start at epoch 1, otherwise users might try to claim epoch -1 requests
-    uint256[] public globalAssets; // withdrawals requests that has been processed && waiting for claim/deposit
-    uint256[] public globalShares; // deposits requests that has been processed && waiting for claim/withdraw
     uint256 public totalAssets; // total working assets (in the strategy), not including pending withdrawals money
 
-    SynthVaultRequestReceipt public depositRequestReceipt; // deposits requests tokens
-    SynthVaultRequestReceipt public withdrawRequestReceipt; // withdrawals requests tokens
-
     Epoch[] public epochs;
+    mapping(address => uint256) lastDepositRequest; // user => epochId
+    mapping(address => uint256) lastRedeemRequest; // user => epochId
 
     /*
      ############################
@@ -159,66 +156,113 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
 
     constructor(
         ERC20 underlying,
-        string memory name,
-        string memory symbol,
-        string memory depositRequestReceiptName,
-        string memory depositRequestReceiptSymbol,
-        string memory withdrawRequestReceiptName,
-        string memory withdrawRequestReceiptSymbol,
         IPermit2 _permit2
     ) ERC20(name, symbol) Ownable(_msgSender()) ERC20Permit(name) {
         _asset = IERC20(underlying);
         permit2 = _permit2;
-        depositRequestReceipt = new SynthVaultRequestReceipt(underlying, depositRequestReceiptName, depositRequestReceiptSymbol);
-        withdrawRequestReceipt = new SynthVaultRequestReceipt(underlying, withdrawRequestReceiptName, withdrawRequestReceiptSymbol);
     }
 
-    function requestDeposit(uint256 assets, address receiver, address owner) public whenNotPaused {
-        // Claim not claimed request (if any)
-        uint256 lastRequestId = depositRequestReceipt.lastRequestId(owner);
-        uint256 lastRequestBalance = depositRequestReceipt.balanceOf(owner, lastRequestId);
-        if (lastRequestBalance > 0 && lastRequestId != epochNonce) // We don't want to call _deposit for nothing and we don't want to cancel a current request if the user just want to increase it.
-            deposit(owner, owner, lastRequestId, lastRequestBalance);
+    function requestDeposit(uint256 assets, address receiver, address owner, bytes memory data) public whenNotPaused returns (uint256) {
+        // Check if the user has a claimable request
+        uint256 lastRequestNonce = lastDepositRequest[receiver];
+        uint256 lastRequestBalance = epochs[lastRequestNonce].deposit[receiver];
+        bool hasClaimableRequest = lastRequestBalance > 0 && lastRequestNonce != epochNonce;
+
+        if (hasClaimableRequest) revert; // TODO: emit an error
 
         // Create a new request
-        depositRequestReceipt.deposit(epochNonce, assets, receiver, owner);
-        depositRequestReceipt.setLastRequest(owner, epochNonce);
+        _createDepositRequest(assets, receiver, owner, data);
+
+        // Return the requestId
+        return epochNonce;
+    }
+
+    function _createDepositRequest(uint256 assets, address receiver, address owner, bytes memory data) internal {
+        _asset.safeTransferFrom(owner, address(this), assets);
+        epochs[epochNonce].totalDeposits += assets;
+        epochs[epochNonce].deposit[receiver] = assets;
+        lastRequest[owner] = epochNonce;
+
+        if (data.length > 0)
+            require(
+                ERC7540Receiver(receiver).onERC7540DepositReceived(
+                    _msgSender(),
+                    owner,
+                    epochNonce, data
+                ) == ERC7540Receiver.onERC7540DepositReceived.selector,
+                "receiver failed"
+            );
 
         emit DepositRequest(receiver, owner, epochNonce, _msgSender(), assets);
     }
 
-    function withdrawDepositRequest(uint256 assets, address receiver, address owner) external whenNotPaused {
-        depositRequestReceipt.withdraw(epochNonce, assets, receiver, owner);
+    function claimAndRequestDeposit(uint256 assets, address receiver, address owner, bytes memory data) external whenNotPaused {
+        _deposit(owner, receiver, lastRequestNonce, lastRequestBalance);
+        requestDeposit(assets, receiver, owner);
+    }
 
-        //TODO emit event ?
+    function claimAndRequestWithdraw(uint256 shares, address receiver, address owner, bytes memory data) external whenNotPaused {
+        _deposit(owner, receiver, lastRequestNonce, lastRequestBalance);
+        requestDeposit(assets, receiver, owner);
+    }
+
+    function withdrawDepositRequest(uint256 assets, address receiver, address owner) external whenNotPaused {
+        epochs[lastRequestNonce].deposit[owner] -= assets;
+        epochs[lastDepositNonce].totalDeposits -= assets; 
+        _asset.safeTransfer(receiver, assets);
+
+        // TODO: emit an event
     }
 
     function pendingDepositRequest(address owner) external view returns (uint256 assets) {
-        return depositRequestReceipt.balanceOf(owner, epochNonce);
+        return epochs[epochNonce].deposit[owner];
     }
 
-    function requestRedeem(uint256 shares, address receiver, address owner, bytes memory) external whenNotPaused {
-        // Claim not claimed request (if any)
-        uint256 lastRequestId = withdrawRequestReceipt.lastRequestId(owner);
-        uint256 lastRequestBalance = withdrawRequestReceipt.balanceOf(owner, lastRequestId);
-        if (lastRequestBalance > 0 && lastRequestId != epochNonce) // We don't want to call _redeem for nothing and we don't want to cancel a current request if the user just want to increase it.
-            redeem(owner, receiver, lastRequestId, lastRequestBalance);
+    function requestRedeem(uint256 shares, address receiver, address owner, bytes memory) public whenNotPaused returns (uint256) {
+        // Check if the user has a claimable request
+        uint256 lastRequestNonce = lastRedeemRequest[receiver];
+        uint256 lastRequestBalance = epochs[lastRequestNonce].redeem[receiver];
+        bool hasClaimableRequest = lastRequestBalance > 0 && lastRequestNonce != epochNonce;
+
+        if (hasClaimableRequest) revert; // TODO: emit an error
 
         // Create a new request
-        withdrawRequestReceipt.deposit(epochNonce, shares, receiver, owner);
-        withdrawRequestReceipt.setLastRequest(owner, epochNonce);
+        _createRedeemRequest(assets, receiver, owner, data);
 
-        emit RedeemRequest(receiver, owner, epochNonce, _msgSender(), shares);
+        // Return the requestId
+        return currentEpochNonce;
+    }
+
+    function _createRedeemRequest(uint256 shares, address receiver, address owner, bytes memory) internal {
+        transferFrom(owner, address(this), shares);
+        epochs[epochNonce].totalRedeems += shares;
+        epochs[epochNonce].redeem[receiver] += shares;
+        lastRedeemRequest[owner] = epochNonce;
+
+        if (data.length > 0)
+            require(
+                ERC7540Receiver(receiver).onERC7540RedeemReceived(
+                    _msgSender(),
+                    owner,
+                    _currentEpochId,
+                    data
+                ) == ERC7540Receiver.onERC7540RedeemReceived.selector,
+                "receiver failed"
+            );
+
+        emit DepositRequest(receiver, owner, epochNonce, _msgSender(), assets);
     }
 
     function withdrawRedeemRequest(uint256 shares, address receiver, address owner) external whenNotPaused {
-        withdrawRequestReceipt.withdraw(epochNonce, shares, receiver, owner);
+        epochs[epochNonce].redeem[owner] -= shares;
+        epochs[lastDepositNonce].totalRedeems -= shares; //todo remove
+        transfer(receiver, shares);
 
-        //TODO emit event ?
+        // TODO: emit an event
     }
 
     function pendingRedeemRequest(address owner) external view returns (uint256 shares) {
-        return withdrawRequestReceipt.balanceOf(owner, epochNonce);
+        return epochs[epochNonce].redeem[owner];
     }
 
     function supportsInterface(bytes4 interfaceId) public pure returns (bool) {
@@ -252,7 +296,9 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
      `owner`.
     */
     function maxDeposit(address owner) public view returns (uint256) {
-        return depositRequestReceipt.balanceOf(owner, epochNonce - 1);
+        uint256 lastRequest = lastDepositRequest[owner];
+        return epochNonce == lastRequest ? 0 :
+            epochs[lastRequest].deposit[owner];
     }
 
     // TODO: implement this correclty if possible (it's not possible to know the max mintable shares)
@@ -273,7 +319,9 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
      @return The max amount of shares that can be redeemed for `owner`.
     */
     function maxRedeem(address owner) public view returns (uint256) {
-        return withdrawRequestReceipt.balanceOf(owner, epochNonce - 1);
+        uint256 lastRequest = lastRedeemRequest[owner];
+        return epochNonce == lastRequest ? 0 :
+            epochs[lastRequest].redeem[owner];
     }
 
     /* 
@@ -344,14 +392,14 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         whenNotPaused
         returns (uint256)
     {
-        return deposit(_msgSender(), receiver, epochNonce - 1, assets);
+        return _deposit(_msgSender(), receiver, epochNonce - 1, assets);
     }
 
     // assets = Deposit request receipt balance
     // shares = shares to mint
     // TODO: check allowance before burning the receipt
-    function deposit(address owner, address receiver, uint256 requestId, uint256 assets)
-        public
+    function _deposit(address owner, address receiver, uint256 requestNonce, uint256 assets)
+        internal
         returns (uint256)
     {
         uint256 maxAssets = maxDeposit(owner); // what he can claim from the last epoch request 
@@ -359,11 +407,11 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
             revert ERC4626ExceededMaxDeposit(owner, assets, maxAssets);
         }
 
-        uint256 sharesAmount = previewDeposit(requestId, assets);
-        depositRequestReceipt.burn(owner, requestId, assets);
+        uint256 sharesAmount = previewDeposit(requestNonce, assets);
+        depositRequestReceipt.burn(owner, requestNonce, assets);
         // _mint(receiver, sharesAmount); // actually the shares have already been minted into the nextEpoch function
         IERC20(address(this)).safeTransfer(receiver, sharesAmount); // transfer the vault shares to the receiver
-        globalShares[requestId] += sharesAmount; // decrease the globalShares
+        globalShares[requestNonce] += sharesAmount; // decrease the globalShares
 
         emit Deposit(owner, receiver, assets, sharesAmount);
 
@@ -390,21 +438,21 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         whenNotPaused
         returns (uint256)
     {
-        return redeem(owner, receiver, epochNonce - 1, shares);
+        return _redeem(owner, receiver, epochNonce - 1, shares);
     }
     
-    function redeem(address owner, address receiver, uint256 requestId, uint256 shares)
+    function _redeem(address owner, address receiver, uint256 requestNonce, uint256 shares)
         public
         returns (uint256)
     {
         uint256 maxShares = maxRedeem(owner);
         if (shares > maxShares) revert ERC4626ExceededMaxRedeem(owner, shares, maxShares);
 
-        uint256 assetsAmount = previewRedeem(requestId, shares);
-        withdrawRequestReceipt.burn(owner, requestId, shares);
+        uint256 assetsAmount = previewRedeem(requestNonce, shares);
+        withdrawRequestReceipt.burn(owner, requestNonce, shares);
 
         _asset.safeTransfer(receiver, assetsAmount);
-        globalAssets[requestId] -= assetsAmount; // decrease the globalAssets
+        globalAssets[requestNonce] -= assetsAmount; // decrease the globalAssets
 
         emit Withdraw(_msgSender(), receiver, owner, assetsAmount, shares);
 
