@@ -145,8 +145,8 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     uint256 public totalAssets; // total working assets (in the strategy), not including pending withdrawals money
 
     Epoch[] public epochs;
-    mapping(address => uint256) lastDepositRequest; // user => epochId
-    mapping(address => uint256) lastRedeemRequest; // user => epochId
+    mapping(address => uint256) lastDepositRequest; // user => epochNonce
+    mapping(address => uint256) lastRedeemRequest; // user => epochNonce
 
     /*
      ############################
@@ -244,7 +244,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
                 ERC7540Receiver(receiver).onERC7540RedeemReceived(
                     _msgSender(),
                     owner,
-                    _currentEpochId,
+                    _currentepochNonce,
                     data
                 ) == ERC7540Receiver.onERC7540RedeemReceived.selector,
                 "receiver failed"
@@ -334,21 +334,21 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
      underlying assets.
     */
     function previewDeposit(uint256 assets) public view returns (uint256) {
-        return _convertDepositReceiptToShares(epochNonce - 1, assets, Math.Rounding.Floor);
+        return previewDeposit(epochNonce, assets, Math.Rounding.Floor);
     }
 
     /* 
      @dev The `previewMint` function is used to preview the amount of shares
         that would be minted for `shares` amount of shares for a specified epoch.
-     @param epochId The epoch for which we want to know the amount of shares
+     @param epochNonce The epoch for which we want to know the amount of shares
         that would be minted.
      @param assets The amount of assets for which we want to know the amount of
         shares that would be minted.
      @return The amount of shares that would be minted for `shares` amount of
      shares.
     */
-    function previewDeposit(uint256 epochId, uint256 assets) public view returns (uint256) {
-        return _convertDepositReceiptToShares(epochId, assets, Math.Rounding.Floor);
+    function previewDeposit(uint256 epochNonce, uint256 assets) public view returns (uint256) {
+        return _convertToShares(epochNonce, assets, Math.Rounding.Down);
     }
 
     // TODO implement this correctly if possible (it's not possible to know the mintable shares)
@@ -370,21 +370,21 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
      shares.
     */
     function previewRedeem(uint256 shares) public view returns (uint256) {
-        return _convertWithdrawReceiptToAssets(epochNonce - 1, shares, Math.Rounding.Floor);
+        return previewRedeem(epochNonce, shares); // remark: ideally this should just be used with sync flow
     }
 
     /*
      @dev The `previewRedeem` function is used to preview the amount of assets
         that would be redeemed for `shares` amount of shares for a specified epoch.
-     @param epochId The epoch for which we want to know the amount of assets
+     @param epochNonce The epoch for which we want to know the amount of assets
         that would be redeemed.
      @param shares The amount of shares for which we want to know the amount of
         assets that would be redeemed.
      @return The amount of assets that would be redeemed for `shares` amount of
     shares.
     */
-    function previewRedeem(uint256 shares, uint256 epochId) public view returns (uint256) {
-        return _convertWithdrawReceiptToAssets(epochId, shares, Math.Rounding.Floor);
+    function previewRedeem(uint256 epochNonce, uint256 shares) public view returns (uint256) {
+        return _convertToAssets(shares, Math.Rounding.Down);
     }
 
     function deposit(uint256 assets, address receiver)
@@ -392,7 +392,10 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         whenNotPaused
         returns (uint256)
     {
-        return _deposit(_msgSender(), receiver, epochNonce - 1, assets);
+        uint256 lastRequest = lastDepositRequest[_msgSender()];
+        return lastRequest == epochNonce ? 0 : _deposit(
+                _msgSender(), receiver, lastRequest, assets
+            );
     }
 
     // assets = Deposit request receipt balance
@@ -438,9 +441,12 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         whenNotPaused
         returns (uint256)
     {
-        return _redeem(owner, receiver, epochNonce - 1, shares);
+        uint256 lastRedeemRequest = lastRedeemRequest[owner];
+        return lastRedeemRequest == epochNonce ? 0 : _redeem(
+                owner, receiver, lastRedeemRequest, shares
+            );
     }
-    
+
     function _redeem(address owner, address receiver, uint256 requestNonce, uint256 shares)
         public
         returns (uint256)
@@ -459,33 +465,14 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         return assetsAmount;
     }
 
-    function _convertToShares(uint256 assets, Math.Rounding rounding)
+    function _convertToShares(uint256 _epochNonce, uint256 assets, Math.Rounding rounding)
         internal
         view
         returns (uint256)
     {
-        return assets.mulDiv(
-            totalSupply() + 1, totalAssets + 1, rounding
-        );
-    }
-
-    function _convertDepositReceiptToShares(uint256 epochId, uint256 assets, Math.Rounding rounding)
-        internal
-        view
-        returns (uint256)
-    {
-        return assets.mulDiv(
-            globalShares[epochId] + 1, depositRequestReceipt.totalSupply(epochId) + 1, rounding
-        );
-    }
-
-    function _convertWithdrawReceiptToAssets(uint256 epochId, uint256 pendingReceipts, Math.Rounding rounding)
-        internal
-        view
-        returns (uint256)
-    {
-        return pendingReceipts.mulDiv(
-            globalAssets[epochId] + 1, withdrawRequestReceipt.totalSupply(epochId) + 1, rounding
+        uint256 totalAssets = globalAssets[epochNonce];
+        return _epochNonce == epochNonce ? 0 : assets.mulDiv(
+            totalAssets + 1, totalAssets + 1, rounding
         );
     }
 
@@ -666,10 +653,11 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         uint256 assets,
         address receiver,
         address owner,
+        bytes memory data,
         Permit2Params calldata permit2Params
     ) external {
         if (_asset.allowance(owner, address(this)) < assets)
             execPermit2(permit2Params);
-        return requestDeposit(assets, receiver, owner);
+        return requestDeposit(assets, receiver, owner, data);
     }
 }
