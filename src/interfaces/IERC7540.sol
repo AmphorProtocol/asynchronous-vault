@@ -33,7 +33,7 @@ interface IERC7540Deposit {
      *
      * NOTE: most implementations will require pre-approval of the Vault with the Vault's underlying asset token.
      */
-    function requestDeposit(uint256 assets, address receiver, address owner) external;
+    function requestDeposit(uint256 assets, address receiver, address owner, bytes memory data) external;
 
     /**
      * @dev Returns the amount of requested assets in Pending state for the operator to deposit or mint.

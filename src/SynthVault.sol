@@ -2,6 +2,7 @@
 pragma solidity 0.8.21;
 
 import {IERC7540, IERC165, IERC7540Redeem} from "./interfaces/IERC7540.sol";
+import {ERC7540Receiver} from "./interfaces/ERC7540Receiver.sol";
 import {
     Ownable,
     Ownable2Step
@@ -224,25 +225,24 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
 
     constructor(
         ERC20 underlying,
+        string memory name,
+        string memory symbol,
         IPermit2 _permit2
     ) ERC20(name, symbol) Ownable(_msgSender()) ERC20Permit(name) {
         _asset = IERC20(underlying);
         permit2 = _permit2;
     }
 
-    function requestDeposit(uint256 assets, address receiver, address owner, bytes memory data) public whenNotPaused returns (uint256) {
+    function requestDeposit(uint256 assets, address receiver, address owner, bytes memory data) public whenNotPaused {
         // Check if the user has a claimable request
         uint256 lastRequestNonce = lastDepositRequest[receiver];
         uint256 lastRequestBalance = epochs[lastRequestNonce].deposit[receiver];
         bool hasClaimableRequest = lastRequestBalance > 0 && lastRequestNonce != epochNonce;
 
-        if (hasClaimableRequest) revert; // TODO: emit an error
+        if (hasClaimableRequest) revert(); // TODO: emit an error
 
         // Create a new request
         _createDepositRequest(assets, receiver, owner, data);
-
-        // Return the requestId
-        return epochNonce;
     }
 
     function _createDepositRequest(uint256 assets, address receiver, address owner, bytes memory data) internal {
@@ -267,13 +267,13 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     function claimAndRequestDeposit(uint256 assets, address receiver, address owner, bytes memory data) external whenNotPaused {
         uint256 lastRequestNonce = lastDepositRequest[receiver];
         _deposit(owner, receiver, lastRequestNonce, epochs[lastRequestNonce].deposit[receiver]);
-        requestDeposit(assets, receiver, owner);
+        requestDeposit(assets, receiver, owner, data);
     }
 
     function claimAndRequestRedeem(uint256 shares, address receiver, address owner, bytes memory data) external whenNotPaused {
         uint256 lastRequestNonce = lastRedeemRequest[receiver];
         // _redeem(owner, receiver, lastRequestNonce, epochs[lastRequestNonce].redeem[receiver]); // TODO
-        requestRedeem(shares, receiver, owner);
+        requestRedeem(shares, receiver, owner, data);
     }
 
     function withdrawDepositRequest(uint256 assets, address receiver, address owner) external whenNotPaused {
@@ -289,19 +289,16 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         return epochs[epochNonce].deposit[owner];
     }
 
-    function requestRedeem(uint256 shares, address receiver, address owner, bytes memory data) public whenNotPaused returns (uint256) {
+    function requestRedeem(uint256 shares, address receiver, address owner, bytes memory data) public whenNotPaused {
         // Check if the user has a claimable request
         uint256 lastRequestNonce = lastRedeemRequest[receiver];
         uint256 lastRequestBalance = epochs[lastRequestNonce].redeem[receiver];
         bool hasClaimableRequest = lastRequestBalance > 0 && lastRequestNonce != epochNonce;
 
-        if (hasClaimableRequest) revert; // TODO: emit an error
+        if (hasClaimableRequest) revert(); // TODO: emit an error
 
         // Create a new request
         _createRedeemRequest(shares, receiver, owner, data);
-
-        // Return the requestId
-        return epochNonce;
     }
 
     function _createRedeemRequest(uint256 shares, address receiver, address owner, bytes memory data) internal {
@@ -366,7 +363,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
      * assets amount.
      */
     function convertToShares(uint256 assets) public view returns (uint256) {
-        return _convertToShares(assets, Math.Rounding.Down);
+        return _convertToShares(assets, Math.Rounding.Floor);
     }
 
     /**
@@ -378,7 +375,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
      * amount.
      */
     function convertToAssets(uint256 shares) public view returns (uint256) {
-        return _convertToAssets(shares, Math.Rounding.Down);
+        return _convertToAssets(shares, Math.Rounding.Floor);
     }
 
     /**
@@ -413,7 +410,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
      */
     function maxWithdraw(address owner) public view returns (uint256) {
         return vaultIsOpen
-            ? _convertToAssets(balanceOf(owner), Math.Rounding.Down)
+            ? _convertToAssets(balanceOf(owner), Math.Rounding.Floor)
             : 0;
     }
 
@@ -437,7 +434,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
      * assets amount.
      */
     function previewDeposit(uint256 assets) public view returns (uint256) {
-        return _convertToShares(assets, Math.Rounding.Down);
+        return _convertToShares(assets, Math.Rounding.Floor);
     }
 
     /**
@@ -448,7 +445,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
      * amount of shares.
      */
     function previewMint(uint256 shares) public view returns (uint256) {
-        return _convertToAssets(shares, Math.Rounding.Up);
+        return _convertToAssets(shares, Math.Rounding.Ceil);
     }
 
     /**
@@ -459,7 +456,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
      * assets amount.
      */
     function previewWithdraw(uint256 assets) public view returns (uint256) {
-        return _convertToShares(assets, Math.Rounding.Up);
+        return _convertToShares(assets, Math.Rounding.Ceil);
     }
 
     /**
@@ -470,7 +467,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
      * amount of shares.
      */
     function previewRedeem(uint256 shares) public view returns (uint256) {
-        return _convertToAssets(shares, Math.Rounding.Down);
+        return _convertToAssets(shares, Math.Rounding.Floor);
     }
 
     /**
@@ -643,7 +640,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         returns (uint256)
     {
         return assets.mulDiv(
-            totalSupply() + 1, totalAssets() + 1, rounding
+            totalSupply() + 1, totalAssets + 1, rounding
         );
     }
 
@@ -661,7 +658,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         returns (uint256)
     {
         return shares.mulDiv(
-            totalAssets() + 1, totalSupply() + 1, rounding
+            totalAssets + 1, totalSupply() + 1, rounding
         );
     }
 
@@ -762,7 +759,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
             unchecked {
                 profits = assetReturned - lastSavedBalance;
             }
-            fees = (profits).mulDiv(feesInBps, 10000, Math.Rounding.Up);
+            fees = (profits).mulDiv(feesInBps, 10000, Math.Rounding.Ceil);
         }
 
         SafeERC20.safeTransferFrom(

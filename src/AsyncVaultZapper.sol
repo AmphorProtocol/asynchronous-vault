@@ -164,7 +164,8 @@ contract AsyncVaultZapper is Ownable2Step, Pausable {
         IERC7540 vault,
         address router,
         uint256 amount,
-        bytes calldata data
+        bytes calldata data,
+        bytes calldata swapData
     )
         public
         payable
@@ -177,14 +178,15 @@ contract AsyncVaultZapper is Ownable2Step, Pausable {
             IERC20(vault.asset()).balanceOf(address(this)); // tokenOut balance to deposit, not final value
 
         // Zap
-        _zapIn(tokenIn, router, amount, data);
+        _zapIn(tokenIn, router, amount, swapData);
 
         // Request deposit
         vault.requestDeposit(
             IERC20(vault.asset()).balanceOf(address(this))
                 - initialTokenOutBalance,
             _msgSender(),
-            _msgSender()
+            _msgSender(),
+            data
         );
 
         emit ZapAndRequestDeposit({
@@ -243,12 +245,13 @@ contract AsyncVaultZapper is Ownable2Step, Pausable {
         address router,
         uint256 amount,
         bytes calldata data,
+        bytes calldata swapData,
         PermitParams calldata permitParams
     ) public payable /*returns (uint256)*/ {
         if (tokenIn.allowance(_msgSender(), address(this)) < amount) {
             _executePermit(tokenIn, _msgSender(), address(this), permitParams);
         }
-        /*return*/ zapAndRequestDeposit(tokenIn, vault, router, amount, data);
+        /*return*/ zapAndRequestDeposit(tokenIn, vault, router, amount, data, swapData);
     }
 
     function redeemAndZapWithPermit(
@@ -338,11 +341,12 @@ contract AsyncVaultZapper is Ownable2Step, Pausable {
         address router,
         uint256 amount,
         bytes calldata data,
+        bytes calldata swapData,
         Permit2Params calldata permit2Params
     ) external {
         if (tokenIn.allowance(_msgSender(), address(this)) < amount)
             execPermit2(permit2Params);
 
-        /*return*/ zapAndRequestDeposit(tokenIn, vault, router, amount, data);
+        /*return*/ zapAndRequestDeposit(tokenIn, vault, router, amount, data, swapData);
     }
 }
