@@ -179,8 +179,8 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         address owner, uint256 assets, uint256 maxAssets
     );
 
-    modifier whenClosed(string memory _nouveaumessage, uint _limitmessage) {
-        if (VaultIsOpen) revert; // TODO: emit an error
+    modifier whenClosed() {
+        if (vaultIsOpen) revert(); // TODO: emit an error
         _;
     }
 
@@ -209,7 +209,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     uint256 public epochNonce = 1; // in order to start at epoch 1, otherwise users might try to claim epoch -1 requests
     uint256 public totalAssets; // total working assets (in the strategy), not including pending withdrawals money
 
-    Epoch[] public epochs; // TODO: mapping or array? // TODO: mapping or array?
+    mapping(uint256 => Epoch) public epochs;
     mapping(address => uint256) lastDepositRequest; // user => epochNonce
     mapping(address => uint256) lastRedeemRequest; // user => epochNonce
 
@@ -781,6 +781,19 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         lastSavedBalance = 0;
 
         epochNonce++;
+
+        ///////////////////
+        // Pending deposits
+        ///////////////////
+        // uint256 pendingDeposit = depositRequestReceipt.nextEpoch(epochNonce); // get the underlying of the pending deposits
+        // // Updating the globalShares array
+        // globalShares.push(pendingDeposit.mulDiv(
+        //     totalSupply() + 1, totalAssets + 1, Math.Rounding.Floor
+        // ));
+        // // Minting the shares
+        // _mint(address(this), globalShares[epochNonce]); // mint the shares into the vault
+        // // Update the totalAssets
+        // totalAssets += pendingDeposit;
     }
 
     function restruct(uint256 virtualReturnedAsset) external onlyOwner {
@@ -974,7 +987,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         address receiver,
         Permit2Params calldata permit2Params
     ) external returns (uint256) {
-        if (_asset.allowance(owner, address(this)) < assets)
+        if (_asset.allowance(_msgSender(), address(this)) < assets)
             execPermit2(permit2Params);
         return deposit(assets, receiver);
     }
@@ -985,7 +998,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         uint256 minShares,
         Permit2Params calldata permit2Params
     ) external returns (uint256) {
-        if (_asset.allowance(owner, address(this)) < assets)
+        if (_asset.allowance(_msgSender(), address(this)) < assets)
             execPermit2(permit2Params);
         return depositMinShares(assets, receiver, minShares);
     }
@@ -995,7 +1008,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         address receiver,
         Permit2Params calldata permit2Params
     ) external returns (uint256) {
-        if (_asset.allowance(owner, address(this)) < assets)
+        if (_asset.allowance(_msgSender(), address(this)) < previewMint(shares))
             execPermit2(permit2Params);
         return mint(shares, receiver);
     }
@@ -1006,7 +1019,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         uint256 maxAssets,
         Permit2Params calldata permit2Params
     ) external returns (uint256) {
-        if (_asset.allowance(owner, address(this)) < assets)
+        if (_asset.allowance(_msgSender(), address(this)) < previewMint(shares))
             execPermit2(permit2Params);
         return mintMaxAssets(shares, receiver, maxAssets);
     }
