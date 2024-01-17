@@ -281,8 +281,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         requestRedeem(shares, receiver, owner, data);
     }
 
-    // TODO: if we increase the epochNonce into end(), we can remove the modifier whenClosed
-    function withdrawDepositRequest(uint256 assets, address receiver, address owner) external whenClosed whenNotPaused {
+    function withdrawDepositRequest(uint256 assets, address receiver, address owner) external whenNotPaused {
         epochs[epochNonce].deposit[owner] -= assets;
         epochs[epochNonce].totalDeposits -= assets; 
         _asset.safeTransfer(receiver, assets);
@@ -326,8 +325,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         emit DepositRequest(receiver, owner, epochNonce, _msgSender(), shares);
     }
 
-    // TODO: if we increase the epochNonce into end(), we can remove the modifier whenClosed
-    function withdrawRedeemRequest(uint256 shares, address receiver, address owner) external whenClosed whenNotPaused {
+    function withdrawRedeemRequest(uint256 shares, address receiver, address owner) external whenNotPaused {
         epochs[epochNonce].redeem[owner] -= shares;
         epochs[epochNonce].totalRedeems -= shares;
         transfer(receiver, shares);
@@ -969,5 +967,47 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         if (_asset.allowance(owner, address(this)) < assets)
             execPermit2(permit2Params);
         return requestDeposit(assets, receiver, owner, data);
+    }
+
+    function depositWithPermit2(
+        uint256 assets,
+        address receiver,
+        Permit2Params calldata permit2Params
+    ) external returns (uint256) {
+        if (_asset.allowance(owner, address(this)) < assets)
+            execPermit2(permit2Params);
+        return deposit(assets, receiver);
+    }
+
+    function depositWithPermit2MinShares(
+        uint256 assets,
+        address receiver,
+        uint256 minShares,
+        Permit2Params calldata permit2Params
+    ) external returns (uint256) {
+        if (_asset.allowance(owner, address(this)) < assets)
+            execPermit2(permit2Params);
+        return depositMinShares(assets, receiver, minShares);
+    }
+
+    function mintWithPermit2(
+        uint256 shares,
+        address receiver,
+        Permit2Params calldata permit2Params
+    ) external returns (uint256) {
+        if (_asset.allowance(owner, address(this)) < assets)
+            execPermit2(permit2Params);
+        return mint(shares, receiver);
+    }
+    
+    function mintWithPermit2MaxAssets(
+        uint256 shares,
+        address receiver,
+        uint256 maxAssets,
+        Permit2Params calldata permit2Params
+    ) external returns (uint256) {
+        if (_asset.allowance(owner, address(this)) < assets)
+            execPermit2(permit2Params);
+        return mintMaxAssets(shares, receiver, maxAssets);
     }
 }
