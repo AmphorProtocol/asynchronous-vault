@@ -829,9 +829,11 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     // of the contract (`onlyOwner` modifier).
     function close() external onlyOwner { 
         if (!isOpen()) revert VaultIsLocked();
-        if (_asset.balanceOf(address(this)) == 0) revert VaultIsEmpty();
 
-        _lastSavedBalance = _totalAssets();
+        uint256 totalAssets = _totalAssets();
+        if (totalAssets == 0) revert VaultIsEmpty();
+
+        _lastSavedBalance = totalAssets;
 
         _asset.safeTransfer(owner(), _lastSavedBalance);
 
