@@ -98,7 +98,6 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         uint256 totalShares
     );
 
-    
     // @dev Emitted when fees are changed.
     // @param oldFees The old fees.
     // @param newFees The new fees.
@@ -109,6 +108,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         uint256 requestedAssets,
         uint256 acceptedAssets
     );
+
     event AsyncRedeem(
         uint256 indexed requestId,
         uint256 requestedShares,
@@ -170,6 +170,8 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     );
 
     error VaultIsEmpty(); // We cannot start an epoch with an empty vault
+    error ClaimableRequestPending();
+    error MustClaimFirst();
 
     modifier whenClosed() {
         if (isOpen()) revert(); // TODO: emit an error
@@ -237,7 +239,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         bool hasClaimableRequest =
             lastRequestBalance > 0 && lastRequestNonce != epochNonce;
 
-        if (hasClaimableRequest) revert(); // TODO: emit an error
+        if (hasClaimableRequest) MustClaimFirst();
 
         // Create a new request
         _createDepositRequest(assets, receiver, owner, data);
@@ -334,7 +336,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         bool hasClaimableRequest =
             lastRequestBalance > 0 && lastRequestNonce != epochNonce;
 
-        if (hasClaimableRequest) revert(); // TODO: emit an error
+        if (hasClaimableRequest) MustClaimFirst();
 
         // Create a new request
         _createRedeemRequest(shares, receiver, owner, data);
