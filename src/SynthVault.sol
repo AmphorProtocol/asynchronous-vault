@@ -49,48 +49,47 @@ struct Epoch {
 
 
 contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
-    /*
-     ######
+    
+     /** 
+     #######
       LIBS
-     ######
+     ###### 
     */
 
-    /**
-     * @dev The `Math` lib is only used for `mulDiv` operations.
-     */
+    
+    // @dev The `Math` lib is only used for `mulDiv` operations.
+     
     using Math for uint256;
 
-    /**
-     * @dev The `SafeERC20` lib is only used for `safeTransfer` and
-     * `safeTransferFrom` operations.
-     */
+    
+    // @dev The `SafeERC20` lib is only used for `safeTransfer` and
+    // `safeTransferFrom` operations.
+     
     using SafeERC20 for IERC20;
 
-    /*
+    /** 
      ########
       EVENTS
      ########
     */
 
-    /**
-     * @dev Emitted when an epoch starts.
-     * @param timestamp The block timestamp of the epoch start.
-     * @param lastSavedBalance The `lastSavedBalance` when the vault start.
-     * @param totalShares The total amount of shares when the vault start.
-     */
+    
+    // @dev Emitted when an epoch starts.
+    // @param timestamp The block timestamp of the epoch start.
+    // @param lastSavedBalance The `lastSavedBalance` when the vault start.
+    // @param totalShares The total amount of shares when the vault start.
     event EpochStart(
         uint256 indexed timestamp, uint256 lastSavedBalance, uint256 totalShares
     );
 
-    /**
-     * @dev Emitted when an epoch ends.
-     * @param timestamp The block timestamp of the epoch end.
-     * @param lastSavedBalance The `lastSavedBalance` when the vault end.
-     * @param returnedAssets The total amount of underlying assets returned to
-     * the vault before collecting fees.
-     * @param fees The amount of fees collected.
-     * @param totalShares The total amount of shares when the vault end.
-     */
+    
+    // @dev Emitted when an epoch ends.
+    // @param timestamp The block timestamp of the epoch end.
+    // @param lastSavedBalance The `lastSavedBalance` when the vault end.
+    // @param returnedAssets The total amount of underlying assets returned to
+    // the vault before collecting fees.
+    // @param fees The amount of fees collected.
+    // @param totalShares The total amount of shares when the vault end.
     event EpochEnd(
         uint256 indexed timestamp,
         uint256 lastSavedBalance,
@@ -99,11 +98,10 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         uint256 totalShares
     );
 
-    /**
-     * @dev Emitted when fees are changed.
-     * @param oldFees The old fees.
-     * @param newFees The new fees.
-     */
+    
+    // @dev Emitted when fees are changed.
+    // @param oldFees The old fees.
+    // @param newFees The new fees.
     event FeesChanged(uint16 oldFees, uint16 newFees);
 
     event AsyncDeposit(
@@ -117,32 +115,23 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         uint256 acceptedShares
     );
 
-    /*
+    /**
      ########
       ERRORS
      ########
-    */
-
-    /**
-     * @dev The vault is in locked state. Emitted if the tx cannot happen in
-     * this state.
      */
+    
+    // @dev The vault is in locked state. Emitted if the tx cannot happen in
+    // this state.
     error VaultIsLocked();
 
-    /**
-     * @dev The vault is in open state. Emitted if the tx cannot happen in this
-     * state.
-     */
+    // @dev The vault is open and the tx cannot happen in this state.
     error VaultIsOpen();
 
-    /**
-     * @dev The rules doesn't allow the perf fees to be higher than 30.00%.
-     */
+    // @dev The rules doesn't allow the perf fees to be higher than 30.00%.
     error FeesTooHigh();
 
-    /**
-     * @dev Claiming the underlying assets is not allowed.
-     */
+    // @dev Claiming the underlying assets is not allowed.
     error CannotClaimAsset();
 
     error ERC4626ExceededMaxDeposit(
@@ -152,32 +141,30 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     error ERC4626ExceededMaxWithdraw(address owner, uint256 assets, uint256 max);
     error ERC4626ExceededMaxRedeem(address owner, uint256 shares, uint256 max);
 
-    /**
-     * @dev Attempted to mint less shares than the min amount for `receiver`.
-     * This error is only thrown when the `depositMinShares` function is used.
-     * @notice The `depositMinShares` function is used to deposit underlying
-     * assets into the vault. It also checks that the amount of shares minted is
-     * greater or equal to the specified minimum amount.
-     * @param owner The address of the owner.
-     * @param shares The shares amount to be converted into underlying assets.
-     * @param minShares The minimum amount of shares to be minted.
-     */
+    
+    // @dev Attempted to mint less shares than the min amount for `receiver`.
+    // This error is only thrown when the `depositMinShares` function is used.
+    // @notice The `depositMinShares` function is used to deposit underlying
+    // assets into the vault. It also checks that the amount of shares minted is
+    // greater or equal to the specified minimum amount.
+    // @param owner The address of the owner.
+    // @param shares The shares amount to be converted into underlying assets.
+    // @param minShares The minimum amount of shares to be minted.
     error ERC4626NotEnoughSharesMinted(
         address owner, uint256 shares, uint256 minShares
     );
 
-    /**
-     * @dev Attempted to withdraw more underlying assets than the max amount for
-     * `receiver`.
-     * This error is only thrown when the `mintMaxAssets` function is used.
-     * @notice The `mintMaxAssets` function is used to mint the specified amount
-     * of shares in exchange of the corresponding underlying assets amount from
-     * owner. It also checks that the amount of assets deposited is less or
-     * equal to the specified maximum amount.
-     * @param owner The address of the owner.
-     * @param assets The underlying assets amount to be converted into shares.
-     * @param maxAssets The maximum amount of assets to be deposited.
-     */
+    
+    // @dev Attempted to withdraw more underlying assets than the max amount for
+    // `receiver`.
+    // This error is only thrown when the `mintMaxAssets` function is used.
+    // @notice The `mintMaxAssets` function is used to mint the specified amount
+    // of shares in exchange of the corresponding underlying assets amount from
+    // owner. It also checks that the amount of assets deposited is less or
+    // equal to the specified maximum amount.
+    // @param owner The address of the owner.
+    // @param assets The underlying assets amount to be converted into shares.
+    // @param maxAssets The maximum amount of assets to be deposited.
     error ERC4626TooMuchAssetsDeposited(
         address owner, uint256 assets, uint256 maxAssets
     );
@@ -189,25 +176,24 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         _;
     }
 
-    /*
+     /** 
      ####################################
       GENERAL PERMIT2 RELATED ATTRIBUTES
      ####################################
-    */
-
+     */
     // The canonical permit2 contract.
     IPermit2 public immutable permit2;
 
-    /*
+    
+     /**
      #####################################
       AMPHOR SYNTHETIC RELATED ATTRIBUTES
      #####################################
-    */
-
-    /**
-     * @dev The perf fees applied on the positive yield.
-     * @return Amount of the perf fees applied on the positive yield.
      */
+    
+    // @dev The perf fees applied on the positive yield.
+    // @return Amount of the perf fees applied on the positive yield.
+     
     uint16 public feesInBps;
 
     IERC20 internal immutable _asset;
@@ -218,17 +204,16 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     mapping(address => uint256) lastDepositRequest; // user => epochNonce
     mapping(address => uint256) lastRedeemRequest; // user => epochNonce
 
-    /**
-     * @dev The total underlying assets amount just before the lock period.
-     */
+    // @dev The total underlying assets amount just before the lock period.
+     
     uint256 internal _lastSavedBalance;
 
-    /*
+    /**
      ############################
       AMPHOR SYNTHETIC FUNCTIONS
      ############################
-    */
-
+     */
+    
     constructor(
         ERC20 underlying,
         string memory name,
@@ -449,146 +434,136 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         return 0;
     }
 
-    /*
-     ####################################
+    /** 
+    ####################################
       GENERAL ERC-4626 RELATED FUNCTIONS
      ####################################
-    */
-
-    /*
-     * @dev The `asset` function is used to return the address of the underlying
-     * @return address of the underlying asset.
-     */
+    */ 
+    
+    // @dev The `asset` function is used to return the address of the underlying
+    // @return address of the underlying asset.
     function asset() public view returns (address) {
         return address(_asset);
     }
 
-    /**
-     * @dev See {IERC4626-convertToShares}.
-     * @notice The `convertToShares` function is used to calculate shares amount
-     * received in exchange of the specified underlying assets amount.
-     * @param assets The underlying assets amount to be converted into shares.
-     * @return Amount of shares received in exchange of the specified underlying
-     * assets amount.
-     */
+    
+    // @dev See {IERC4626-convertToShares}.
+    // @notice The `convertToShares` function is used to calculate shares amount
+    // received in exchange of the specified underlying assets amount.
+    // @param assets The underlying assets amount to be converted into shares.
+    // @return Amount of shares received in exchange of the specified underlying
+    // assets amount.
     function convertToShares(uint256 assets) public view returns (uint256) {
         return _convertToShares(assets, Math.Rounding.Floor);
     }
 
-    /**
-     * @dev See {IERC4626-convertToAssets}.
-     * @notice The `convertToAssets` function is used to calculate underlying
-     * assets amount received in exchange of the specified amount of shares.
-     * @param shares The shares amount to be converted into underlying assets.
-     * @return Amount of assets received in exchange of the specified shares
-     * amount.
-     */
+    
+    // @dev See {IERC4626-convertToAssets}.
+    // @notice The `convertToAssets` function is used to calculate underlying
+    // assets amount received in exchange of the specified amount of shares.
+    // @param shares The shares amount to be converted into underlying assets.
+    // @return Amount of assets received in exchange of the specified shares
+    // amount.
     function convertToAssets(uint256 shares) public view returns (uint256) {
         return _convertToAssets(shares, Math.Rounding.Floor);
     }
 
-    /**
-     * @dev The `maxDeposit` function is used to calculate the maximum deposit.
-     * @notice If the vault is locked or paused, users are not allowed to mint,
-     * the maxMint is 0.
-     * @ param _ The address of the receiver.
-     * @return Amount of the maximum underlying assets deposit amount.
-     */
+    
+    // @dev The `maxDeposit` function is used to calculate the maximum deposit.
+    // @notice If the vault is locked or paused, users are not allowed to mint,
+    // the maxMint is 0.
+    // @ param _ The address of the receiver.
+    // @return Amount of the maximum underlying assets deposit amount.
     function maxDeposit(address) public view returns (uint256) {
         return _lastSavedBalance != 0 || paused() ? 0 : type(uint256).max;
     }
 
-    /**
-     * @dev The `maxMint` function is used to calculate the maximum amount of
-     * shares you can mint.
-     * @notice If the vault is locked or paused, the maxMint is 0.
-     * @ param _ The address of the receiver.
-     * @return Amount of the maximum shares mintable for the specified address.
-     */
+    
+    // @dev The `maxMint` function is used to calculate the maximum amount of
+    // shares you can mint.
+    // @notice If the vault is locked or paused, the maxMint is 0.
+    // @ param _ The address of the receiver.
+    // @return Amount of the maximum shares mintable for the specified address.
+     
     function maxMint(address) public view returns (uint256) {
         return _lastSavedBalance != 0 || paused() ? 0 : type(uint256).max;
     }
 
-    /**
-     * @dev The `maxWithdraw` function is used to calculate the maximum amount
-     * of withdrawable underlying assets.
-     * @notice If the function is called during the lock period the maxWithdraw
-     * is `0`.
-     * @param owner The address of the owner.
-     * @return Amount of the maximum number of withdrawable underlying assets.
-     */
+    
+    // @dev The `maxWithdraw` function is used to calculate the maximum amount
+    // of withdrawable underlying assets.
+    // @notice If the function is called during the lock period the maxWithdraw
+    // is `0`.
+    // @param owner The address of the owner.
+    // @return Amount of the maximum number of withdrawable underlying assets.
     function maxWithdraw(address owner) public view returns (uint256) {
         return isOpen()
             ? _convertToAssets(balanceOf(owner), Math.Rounding.Floor)
             : 0;
     }
 
-    /**
-     * @dev The `maxRedemm` function is used to calculate the maximum amount of
-     * redeemable shares.
-     * @notice If the function is called during the lock period the maxRedeem is
-     * `0`.
-     * @param owner The address of the owner.
-     * @return Amount of the maximum number of redeemable shares.
-     */
+    
+    // @dev The `maxRedemm` function is used to calculate the maximum amount of
+    // redeemable shares.
+    // @notice If the function is called during the lock period the maxRedeem is
+    // `0`.
+    // @param owner The address of the owner.
+    // @return Amount of the maximum number of redeemable shares.
     function maxRedeem(address owner) public view returns (uint256) {
         return isOpen() ? balanceOf(owner) : 0;
     }
 
-    /**
-     * @dev The `previewDeposit` function is used to calculate shares amount
-     * received in exchange of the specified underlying amount.
-     * @param assets The underlying assets amount to be converted into shares.
-     * @return Amount of shares received in exchange of the specified underlying
-     * assets amount.
-     */
+    
+    // @dev The `previewDeposit` function is used to calculate shares amount
+    // received in exchange of the specified underlying amount.
+    // @param assets The underlying assets amount to be converted into shares.
+    // @return Amount of shares received in exchange of the specified underlying
+    // assets amount.
     function previewDeposit(uint256 assets) public view returns (uint256) {
         return _convertToShares(assets, Math.Rounding.Floor);
     }
 
-    /**
-     * @dev The `previewMint` function is used to calculate the underlying asset
-     * amount received in exchange of the specified amount of shares.
-     * @param shares The shares amount to be converted into underlying assets.
-     * @return Amount of underlying assets received in exchange of the specified
-     * amount of shares.
-     */
+    
+    // @dev The `previewMint` function is used to calculate the underlying asset
+    // amount received in exchange of the specified amount of shares.
+    // @param shares The shares amount to be converted into underlying assets.
+    // @return Amount of underlying assets received in exchange of the specified
+    // amount of shares.
+     
     function previewMint(uint256 shares) public view returns (uint256) {
         return _convertToAssets(shares, Math.Rounding.Ceil);
     }
 
-    /**
-     * @dev The `previewWithdraw` function is used to calculate the shares
-     * amount received in exchange of the specified underlying amount.
-     * @param assets The underlying assets amount to be converted into shares.
-     * @return Amount of shares received in exchange of the specified underlying
-     * assets amount.
-     */
+    
+    // @dev The `previewWithdraw` function is used to calculate the shares
+    // amount received in exchange of the specified underlying amount.
+    // @param assets The underlying assets amount to be converted into shares.
+    // @return Amount of shares received in exchange of the specified underlying
+    // assets amount.
+     
     function previewWithdraw(uint256 assets) public view returns (uint256) {
         return _convertToShares(assets, Math.Rounding.Ceil);
     }
 
-    /**
-     * @dev The `previewRedeem` function is used to calculate the underlying
-     * assets amount received in exchange of the specified amount of shares.
-     * @param shares The shares amount to be converted into underlying assets.
-     * @return Amount of underlying assets received in exchange of the specified
-     * amount of shares.
-     */
+    
+    // @dev The `previewRedeem` function is used to calculate the underlying
+    // assets amount received in exchange of the specified amount of shares.
+    // @param shares The shares amount to be converted into underlying assets.
+    // @return Amount of underlying assets received in exchange of the specified
+    // amount of shares.
     function previewRedeem(uint256 shares) public view returns (uint256) {
         return _convertToAssets(shares, Math.Rounding.Floor);
     }
 
-    /**
-     * @dev The `deposit` function is used to deposit underlying assets into the
-     * vault.
-     * @notice The `deposit` function is used to deposit underlying assets into
-     * the vault.
-     * @param assets The underlying assets amount to be converted into shares.
-     * @param receiver The address of the shares receiver.
-     * @return Amount of shares received in exchange of the
-     * specified underlying assets amount.
-     */
+    
+    // @dev The `deposit` function is used to deposit underlying assets into the
+    // vault.
+    // @notice The `deposit` function is used to deposit underlying assets into
+    // the vault.
+    // @param assets The underlying assets amount to be converted into shares.
+    // @param receiver The address of the shares receiver.
+    // @return Amount of shares received in exchange of the
+    // specified underlying assets amount.
     function deposit(uint256 assets, address receiver)
         public
         whenNotPaused
@@ -605,16 +580,15 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         return sharesAmount;
     }
 
-    /**
-     * @dev The `depositMinShares` function is used to deposit underlying assets
-     * into the vault. It also checks that the amount of shares minted is greater
-     * or equal to the specified minimum amount.
-     * @param assets The underlying assets amount to be converted into shares.
-     * @param receiver The address of the shares receiver.
-     * @param minShares The minimum amount of shares to be minted.
-     * @return Amount of shares received in exchange of the specified underlying
-     * assets amount.
-     */
+    
+    // @dev The `depositMinShares` function is used to deposit underlying assets
+    // into the vault. It also checks that the amount of shares minted is greater
+    // or equal to the specified minimum amount.
+    // @param assets The underlying assets amount to be converted into shares.
+    // @param receiver The address of the shares receiver.
+    // @param minShares The minimum amount of shares to be minted.
+    // @return Amount of shares received in exchange of the specified underlying
+    // assets amount.
     function depositMinShares(
         uint256 assets,
         address receiver,
@@ -629,14 +603,14 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         return sharesAmount;
     }
 
-    /**
-     * @dev The `mint` function is used to mint the specified amount of shares in
-     * exchange of the corresponding assets amount from owner.
-     * @param shares The shares amount to be converted into underlying assets.
-     * @param receiver The address of the shares receiver.
-     * @return Amount of underlying assets deposited in exchange of the specified
-     * amount of shares.
-     */
+    
+    // @dev The `mint` function is used to mint the specified amount of shares in
+    // exchange of the corresponding assets amount from owner.
+    // @param shares The shares amount to be converted into underlying assets.
+    // @param receiver The address of the shares receiver.
+    // @return Amount of underlying assets deposited in exchange of the specified
+    // amount of shares.
+
     function mint(uint256 shares, address receiver)
         public
         whenNotPaused
@@ -653,17 +627,16 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         return assetsAmount;
     }
 
-    /**
-     * @dev The `mintMaxAssets` function is used to mint the specified amount of
-     * shares in exchange of the corresponding underlying assets amount from
-     * owner. It also checks that the amount of assets deposited is less or equal
-     * to the specified maximum amount.
-     * @param shares The shares amount to be converted into underlying assets.
-     * @param receiver The address of the shares receiver.
-     * @param maxAssets The maximum amount of assets to be deposited.
-     * @return Amount of underlying assets deposited in exchange of the specified
-     * amount of shares.
-     */
+    
+    // @dev The `mintMaxAssets` function is used to mint the specified amount of
+    // shares in exchange of the corresponding underlying assets amount from
+    // owner. It also checks that the amount of assets deposited is less or equal
+    // to the specified maximum amount.
+    // @param shares The shares amount to be converted into underlying assets.
+    // @param receiver The address of the shares receiver.
+    // @param maxAssets The maximum amount of assets to be deposited.
+    // @return Amount of underlying assets deposited in exchange of the specified
+    // amount of shares.
     function mintMaxAssets(uint256 shares, address receiver, uint256 maxAssets)
         public
         returns (uint256)
@@ -678,15 +651,14 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         return assetsAmount;
     }
 
-    /**
-     * @dev The `withdraw` function is used to withdraw the specified underlying
-     * assets amount in exchange of a proportional amount of shares.
-     * @param assets The underlying assets amount to be converted into shares.
-     * @param receiver The address of the shares receiver.
-     * @param owner The address of the owner.
-     * @return Amount of shares received in exchange of the specified underlying
-     * assets amount.
-     */
+    
+    // @dev The `withdraw` function is used to withdraw the specified underlying
+    // assets amount in exchange of a proportional amount of shares.
+    // @param assets The underlying assets amount to be converted into shares.
+    // @param receiver The address of the shares receiver.
+    // @param owner The address of the owner.
+    // @return Amount of shares received in exchange of the specified underlying
+    // assets amount.
     function withdraw(uint256 assets, address receiver, address owner)
         external
         whenNotPaused
@@ -703,16 +675,15 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         return sharesAmount;
     }
 
-    /**
-     * @dev The `redeem` function is used to redeem the specified amount of
-     * shares in exchange of the corresponding underlying assets amount from
-     * owner.
-     * @param shares The shares amount to be converted into underlying assets.
-     * @param receiver The address of the shares receiver.
-     * @param owner The address of the owner.
-     * @return Amount of underlying assets received in exchange of the specified
-     * amount of shares.
-     */
+    
+    // @dev The `redeem` function is used to redeem the specified amount of
+    // shares in exchange of the corresponding underlying assets amount from
+    // owner.
+    // @param shares The shares amount to be converted into underlying assets.
+    // @param receiver The address of the shares receiver.
+    // @param owner The address of the owner.
+    // @return Amount of underlying assets received in exchange of the specified
+    // amount of shares.
     function redeem(uint256 shares, address receiver, address owner)
         external
         whenNotPaused
@@ -729,27 +700,25 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         return assetsAmount;
     }
 
-    /**
-     * @dev The `_totalAssets` function is used to return the current assets
-     * balance of the vault contract.
-     * @notice The `_totalAssets` is used to know the balance of underlying of
-     * the vault contract without
-     * taking care of any theoretical external funds of the vault.
-     * @return Amount of underlying assets balance actually contained into the
-     * vault contract.
-     */
+    
+    // @dev The `_totalAssets` function is used to return the current assets
+    // balance of the vault contract.
+    // @notice The `_totalAssets` is used to know the balance of underlying of
+    // the vault contract without
+    // taking care of any theoretical external funds of the vault.
+    // @return Amount of underlying assets balance actually contained into the
+    // vault contract.
     function _totalAssets() internal view returns (uint256) {
         return _asset.balanceOf(address(this));
     }
 
-    /**
-     * @dev Internal conversion function (from assets to shares) with support
-     * for rounding direction.
-     * @param assets Theunderlying assets amount to be converted into shares.
-     * @param rounding The rounding direction.
-     * @return Amount of shares received in exchange of the specified underlying
-     * assets amount.
-     */
+    
+    // @dev Internal conversion function (from assets to shares) with support
+    // for rounding direction.
+    // @param assets Theunderlying assets amount to be converted into shares.
+    // @param rounding The rounding direction.
+    // @return Amount of shares received in exchange of the specified underlying
+    // assets amount.
     function _convertToShares(uint256 assets, Math.Rounding rounding)
         internal
         view
@@ -758,14 +727,13 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         return assets.mulDiv(totalSupply() + 1, totalAssets + 1, rounding);
     }
 
-    /**
-     * @dev Internal conversion function (from shares to assets) with support
-     * for rounding direction.
-     * @param shares The shares amount to be converted into underlying assets.
-     * @param rounding The rounding direction.
-     * @return Amount of underlying assets received in exchange of the
-     * specified amount of shares.
-     */
+    
+    // @dev Internal conversion function (from shares to assets) with support
+    // for rounding direction.
+    // @param shares The shares amount to be converted into underlying assets.
+    // @param rounding The rounding direction.
+    // @return Amount of underlying assets received in exchange of the
+    // specified amount of shares.
     function _convertToAssets(uint256 shares, Math.Rounding rounding)
         internal
         view
@@ -774,14 +742,14 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         return shares.mulDiv(totalAssets + 1, totalSupply() + 1, rounding);
     }
 
-    /**
-     * @dev The `_deposit` function is used to deposit the specified underlying
-     * assets amount in exchange of a proportionnal amount of shares.
-     * @param caller The address of the caller.
-     * @param receiver The address of the shares receiver.
-     * @param assets The underlying assets amount to be converted into shares.
-     * @param shares The shares amount to be converted into underlying assets.
-     */
+    
+    // @dev The `_deposit` function is used to deposit the specified underlying
+    // assets amount in exchange of a proportionnal amount of shares.
+    // @param caller The address of the caller.
+    // @param receiver The address of the shares receiver.
+    // @param assets The underlying assets amount to be converted into shares.
+    // @param shares The shares amount to be converted into underlying assets.
+     
     function _deposit(
         address caller,
         address receiver,
@@ -803,17 +771,16 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         emit Deposit(caller, receiver, assets, shares);
     }
 
-    /**
-     * @dev The function `_withdraw` is used to withdraw the specified
-     * underlying assets amount in exchange of a proportionnal amount of shares by
-     * specifying all the params.
-     * @notice The `withdraw` function is used to withdraw the specified
-     * underlying assets amount in exchange of a proportionnal amount of shares.
-     * @param receiver The address of the shares receiver.
-     * @param owner The address of the owner.
-     * @param assets The underlying assets amount to be converted into shares.
-     * @param shares The shares amount to be converted into underlying assets.
-     */
+    
+    // @dev The function `_withdraw` is used to withdraw the specified
+    // underlying assets amount in exchange of a proportionnal amount of shares by
+    // specifying all the params.
+    // @notice The `withdraw` function is used to withdraw the specified
+    // underlying assets amount in exchange of a proportionnal amount of shares.
+    // @param receiver The address of the shares receiver.
+    // @param owner The address of the owner.
+    // @param assets The underlying assets amount to be converted into shares.
+    // @param shares The shares amount to be converted into underlying assets.
     function _withdraw(
         address receiver,
         address owner,
@@ -830,8 +797,8 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         emit Withdraw(_msgSender(), receiver, owner, assets, shares);
     }
 
-    /*
-     ####################################
+     /**
+      ####################################
       AMPHOR SYNTHETIC RELATED FUNCTIONS
      ####################################
     */
@@ -840,11 +807,10 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         return _lastSavedBalance == 0;
     }
 
-    /**
-     * @dev The `start` function is used to start the lock period of the vault.
-     * It is the only way to lock the vault. It can only be called by the owner
-     * of the contract (`onlyOwner` modifier).
-     */
+    
+    // @dev The `start` function is used to start the lock period of the vault.
+    // It is the only way to lock the vault. It can only be called by the owner
+    // of the contract (`onlyOwner` modifier).
     function start() external onlyOwner {
         if (!isOpen()) revert VaultIsLocked();
 
@@ -856,16 +822,15 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         emit EpochStart(block.timestamp, _lastSavedBalance, totalSupply());
     }
 
-    /**
-     * @dev The `end` function is used to end the lock period of the vault.
-     * @notice The `end` function is used to end the lock period of the vault.
-     * It can only be called by the owner of the contract (`onlyOwner` modifier)
-     * and only when the vault is locked.
-     * If there are profits, the performance fees are taken and sent to the
-     * owner of the contract.
-     * @param assetReturned The underlying assets amount to be deposited into
-     * the vault.
-     */
+    
+    // @dev The `end` function is used to end the lock period of the vault.
+    // @notice The `end` function is used to end the lock period of the vault.
+    // It can only be called by the owner of the contract (`onlyOwner` modifier)
+    // and only when the vault is locked.
+    // If there are profits, the performance fees are taken and sent to the
+    // owner of the contract.
+    // @param assetReturned The underlying assets amount to be deposited into
+    // the vault.
     function end(uint256 assetReturned) external onlyOwner {
         if (isOpen()) revert VaultIsOpen();
 
@@ -914,95 +879,16 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         emit EpochStart(block.timestamp, _lastSavedBalance, totalSupply());
     }
 
-    /*
-     ####################################
+    
+     /** ####################################
       AMPHOR SYNTHETIC RELATED FUNCTIONS
-     ####################################
-    */
+     #################################### */
 
-    // function nextEpoch(uint256 returnedUnderlyingAmount) public onlyOwner returns (uint256) {
-    //     // (end + start epoch)
-
-    //     // TODO
-    //     // 1. take fees from returnedUnderlyingAmount
-    //     // 7. we update the totalAssets
-    //     // 2. with the resting amount we know how much cost a share
-    //     // 3. we can take the pending deposits underlying (same as this vault underlying) and mint shares
-    //     // 4. we update the globalShares array for the appropriate epoch (epoch 0 request is a deposit into epoch 1...)
-    //     // 5. we can take the pending withdraws shares and redeem underlying (which are shares of this vault) against this vault underlying
-    //     // 6. we update the globalAssets array for the appropriate epoch (epoch 0 request is a withdraw at the end of the epoch 0...)
-
-    //     ///////////////////////
-    //     // Ending current epoch
-    //     ///////////////////////
-    //     uint256 fees;
-
-    //     if (returnedUnderlyingAmount > totalAssets && feesInBps > 0) {
-    //         uint256 profits;
-    //         unchecked {
-    //             profits = returnedUnderlyingAmount - totalAssets;
-    //         }
-    //         fees = (profits).mulDiv(feesInBps, 10000, Math.Rounding.Ceil);
-    //     }
-
-    //     totalAssets = returnedUnderlyingAmount - fees;
-
-    //     // Can be done in one time at the end
-    //     _asset.safeTransferFrom(
-    //         _msgSender(), address(this), returnedUnderlyingAmount - fees
-    //     );
-
-    //     emit EpochEnd(
-    //         block.timestamp,
-    //         totalAssets,
-    //         returnedUnderlyingAmount,
-    //         fees,
-    //         totalSupply()
-    //     );
-
-    //     ///////////////////
-    //     // Pending deposits
-    //     ///////////////////
-    //     uint256 pendingDeposit = depositRequestReceipt.nextEpoch(epochNonce); // get the underlying of the pending deposits
-    //     // Updating the globalShares array
-    //     globalShares.push(pendingDeposit.mulDiv(
-    //         totalSupply() + 1, totalAssets + 1, Math.Rounding.Floor
-    //     ));
-    //     // Minting the shares
-    //     _mint(address(this), globalShares[epochNonce]); // mint the shares into the vault
-    //     // Update the totalAssets
-    //     totalAssets += pendingDeposit;
-
-    //     /////////////////
-    //     // Pending redeem
-    //     /////////////////
-    //     uint256 pendingRedeem = withdrawRequestReceipt.nextEpoch(epochNonce); // get the shares of the pending withdraws
-    //     // Updating the globalAssets array
-    //     globalAssets.push(pendingRedeem.mulDiv(
-    //         totalAssets + 1, totalSupply() + 1, Math.Rounding.Floor
-    //     ));
-    //     // Burn the vault shares
-    //     _burn(address(this), pendingRedeem); // burn the shares from the vault
-    //     // Update the totalAssets
-    //     totalAssets -= globalAssets[epochNonce];
-
-    //     //////////////////
-    //     // Start new epoch
-    //     //////////////////
-    //     _asset.safeTransfer(owner(), totalAssets);
-
-    //     emit EpochStart(block.timestamp, totalAssets, totalSupply());
-
-    //     return ++epochNonce;
-    // }
-
-    /**
-     * @dev The `setFees` function is used to modify the protocol fees.
-     * @notice The `setFees` function is used to modify the perf fees.
-     * It can only be called by the owner of the contract (`onlyOwner` modifier).
-     * It can't exceed 30% (3000 in BPS).
-     * @param newFees The new perf fees to be applied.
-     */
+    // @dev The `setFees` function is used to modify the protocol fees.
+    // @notice The `setFees` function is used to modify the perf fees.
+    // It can only be called by the owner of the contract (`onlyOwner` modifier).
+    // It can't exceed 30% (3000 in BPS).
+    // @param newFees The new perf fees to be applied.
     function setFees(uint16 newFees) external onlyOwner {
         if (newFees > 3000) revert FeesTooHigh();
         feesInBps = newFees;
@@ -1010,25 +896,25 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     }
 
     // TODO: Finish to implement this correclty
-    /**
-     * @dev The `claimToken` function is used to claim other tokens that have
-     * been sent to the vault.
-     * @notice The `claimToken` function is used to claim other tokens that have
-     * been sent to the vault.
-     * It can only be called by the owner of the contract (`onlyOwner` modifier).
-     * @param token The IERC20 token to be claimed.
-     */
+    
+    // @dev The `claimToken` function is used to claim other tokens that have
+    // been sent to the vault.
+    // @notice The `claimToken` function is used to claim other tokens that have
+    // been sent to the vault.
+    // It can only be called by the owner of the contract (`onlyOwner` modifier).
+    // @param token The IERC20 token to be claimed.
+     
     function claimToken(IERC20 token) external onlyOwner {
-        if (token == _asset) { /*TODO: get the discrepancy between returned assets and pending deposits*/
+        if (token == _asset) { // TODO: get the discrepancy between returned assets and pending deposits
         }
         token.safeTransfer(_msgSender(), token.balanceOf(address(this)));
     }
 
-    /*
-     ####################################
+    
+     /** ####################################
       Pausability RELATED FUNCTIONS
-     ####################################
-    */
+     #################################### */
+    
     function pause() public onlyOwner {
         _pause();
     }
@@ -1046,11 +932,11 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         super._update(from, to, value);
     }
 
-    /*
-     ###########################
+    
+     /** ###########################
       PERMIT2 RELATED FUNCTIONS
-     ###########################
-    */
+     ########################### */
+    
 
     // Deposit some amount of an ERC20 token into this contract
     // using Permit2.
