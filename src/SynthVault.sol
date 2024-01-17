@@ -179,6 +179,11 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         address owner, uint256 assets, uint256 maxAssets
     );
 
+    modifier whenClosed(string memory _nouveaumessage, uint _limitmessage) {
+        if (VaultIsOpen) revert; // TODO: emit an error
+        _;
+    }
+
     /*
      ####################################
       GENERAL PERMIT2 RELATED ATTRIBUTES
@@ -233,7 +238,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         permit2 = _permit2;
     }
 
-    function requestDeposit(uint256 assets, address receiver, address owner, bytes memory data) public whenNotPaused {
+    function requestDeposit(uint256 assets, address receiver, address owner, bytes memory data) public whenClosed whenNotPaused {
         // Check if the user has a claimable request
         uint256 lastRequestNonce = lastDepositRequest[receiver];
         uint256 lastRequestBalance = epochs[lastRequestNonce].deposit[receiver];
@@ -276,10 +281,10 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         requestRedeem(shares, receiver, owner, data);
     }
 
-    function withdrawDepositRequest(uint256 assets, address receiver, address owner) external whenNotPaused {
-        uint256 lastRequestNonce = lastDepositRequest[owner];
-        epochs[lastRequestNonce].deposit[owner] -= assets;
-        epochs[lastRequestNonce].totalDeposits -= assets; 
+    // TODO: if we increase the epochNonce into end(), we can remove the modifier whenClosed
+    function withdrawDepositRequest(uint256 assets, address receiver, address owner) external whenClosed whenNotPaused {
+        epochs[epochNonce].deposit[owner] -= assets;
+        epochs[epochNonce].totalDeposits -= assets; 
         _asset.safeTransfer(receiver, assets);
 
         // TODO: emit an event
@@ -289,7 +294,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         return epochs[epochNonce].deposit[owner];
     }
 
-    function requestRedeem(uint256 shares, address receiver, address owner, bytes memory data) public whenNotPaused {
+    function requestRedeem(uint256 shares, address receiver, address owner, bytes memory data) public whenClosed whenNotPaused {
         // Check if the user has a claimable request
         uint256 lastRequestNonce = lastRedeemRequest[receiver];
         uint256 lastRequestBalance = epochs[lastRequestNonce].redeem[receiver];
@@ -321,11 +326,10 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         emit DepositRequest(receiver, owner, epochNonce, _msgSender(), shares);
     }
 
-    function withdrawRedeemRequest(uint256 shares, address receiver, address owner) external whenNotPaused {
-        uint256 lastRequestNonce = lastRedeemRequest[owner];
-
-        epochs[lastRequestNonce].redeem[owner] -= shares;
-        epochs[lastRequestNonce].totalRedeems -= shares;
+    // TODO: if we increase the epochNonce into end(), we can remove the modifier whenClosed
+    function withdrawRedeemRequest(uint256 shares, address receiver, address owner) external whenClosed whenNotPaused {
+        epochs[epochNonce].redeem[owner] -= shares;
+        epochs[epochNonce].totalRedeems -= shares;
         transfer(receiver, shares);
 
         // TODO: emit an event
@@ -777,6 +781,8 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         );
 
         lastSavedBalance = 0;
+
+        epochNonce++;
     }
 
     function restruct(uint256 virtualReturnedAsset) external onlyOwner {
