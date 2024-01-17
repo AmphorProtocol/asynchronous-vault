@@ -1,15 +1,15 @@
-[submodule "amphor-contracts/lib/forge-std"]
-	path = amphor-contracts/lib/forge-std
+[submodule "lib/forge-std"]
+	path = lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
-[submodule "amphor-contracts/lib/openzeppelin-contracts"]
-	path = amphor-contracts/lib/openzeppelin-contracts
+[submodule "lib/openzeppelin-contracts"]
+	path = lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
-[submodule "amphor-contracts/lib/permit2"]
-	path = amphor-contracts/lib/permit2
+[submodule "lib/permit2"]
+	path = lib/permit2
 	url = https://github.com/Uniswap/permit2
-[submodule "amphor-contracts/lib/ERC-7540-Reference"]
-	path = amphor-contracts/lib/ERC-7540-Reference
+[submodule "lib/solmate"]
+	path = lib/solmate
+	url = https://github.com/transmissions11/solmate
+[submodule "lib/ERC-7540-Reference"]
+	path = lib/ERC-7540-Reference
 	url = https://github.com/ERC4626-Alliance/ERC-7540-Reference
-[submodule "amphor-contracts/lib/ERC-6909"]
-	path = amphor-contracts/lib/ERC-6909
-	url = https://github.com/jtriley-eth/ERC-6909
