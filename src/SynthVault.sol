@@ -46,7 +46,7 @@ struct Epoch {
 // Add functions like convertToShares(uint256 asset, uint256 requestId) and convertToAssets(uint256 shares, uint256 requestId) for all requests
 // Eventually add functions like maxDepositRequest(uint256 requestId) and maxRedeemRequest(uint256 requestId) for all requests
 // Add functions like previewDepositRequest(uint256 asset, uint256 requestId) and previewRedeemRequest(uint256 shares, uint256 requestId) for all requests
-
+uint256 constant BPS_DIVIDER = 10000;
 
 contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     
@@ -174,7 +174,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     error MustClaimFirst();
 
     modifier whenClosed() {
-        if (isOpen()) revert(); // TODO: emit an error
+        if (isOpen()) revert VaultIsOpen();
         _;
     }
 
@@ -810,10 +810,10 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     }
 
     
-    // @dev The `start` function is used to start the lock period of the vault.
+    // @dev The `close` function is used to close the vault.
     // It is the only way to lock the vault. It can only be called by the owner
     // of the contract (`onlyOwner` modifier).
-    function start() external onlyOwner {
+    function close() external onlyOwner { 
         if (!isOpen()) revert VaultIsLocked();
 
         _lastSavedBalance = _totalAssets();
@@ -825,7 +825,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     }
 
     
-    // @dev The `end` function is used to end the lock period of the vault.
+    // @dev The `open` function is used to open the vault.
     // @notice The `end` function is used to end the lock period of the vault.
     // It can only be called by the owner of the contract (`onlyOwner` modifier)
     // and only when the vault is locked.
@@ -833,7 +833,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     // owner of the contract.
     // @param assetReturned The underlying assets amount to be deposited into
     // the vault.
-    function end(uint256 assetReturned) external onlyOwner {
+    function open(uint256 assetReturned) external onlyOwner whenClosed() {
         if (isOpen()) revert VaultIsOpen();
 
         uint256 fees;
@@ -843,7 +843,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
             unchecked {
                 profits = assetReturned - _lastSavedBalance;
             }
-            fees = (profits).mulDiv(feesInBps, 10000, Math.Rounding.Ceil);
+            fees = (profits).mulDiv(feesInBps, BPS_DIVIDER, Math.Rounding.Ceil);
         }
 
         _asset.safeTransferFrom(
