@@ -12,7 +12,6 @@ struct PermitParams {
 }
 
 contract SynthVaultPermit is SynthVault {
-
     constructor(
         ERC20 underlying,
         string memory name,
@@ -27,8 +26,9 @@ contract SynthVaultPermit is SynthVault {
         bytes memory data,
         PermitParams calldata permitParams
     ) external {
-        if (_asset.allowance(owner, address(this)) < assets)
+        if (_asset.allowance(owner, address(this)) < assets) {
             execPermit(owner, address(this), permitParams);
+        }
         return super.requestDeposit(assets, receiver, owner, data);
     }
 

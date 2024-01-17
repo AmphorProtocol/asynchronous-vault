@@ -43,7 +43,7 @@ contract AmprWithdrawReceipt is ERC4626, Ownable2Step {
      * @dev The max amount of underlying assets that can be withdrawn.
      */
     uint256 _maxWithdraw;
-    
+
     /*
      * @dev The max amount of underlying assets that can be deposited.
      */
@@ -99,11 +99,10 @@ contract AmprWithdrawReceipt is ERC4626, Ownable2Step {
      ########
     */
 
-    modifier onlyMinter {
+    modifier onlyMinter() {
         if (_msgSender() != minter) revert notMinter();
         _;
     }
-
 
     /*
      #############
@@ -154,7 +153,12 @@ contract AmprWithdrawReceipt is ERC4626, Ownable2Step {
      * @return Amount of shares received in exchange of the specified underlying
      * assets amount.
      */
-    function convertToShares(uint256 assets) public pure override returns (uint256) {
+    function convertToShares(uint256 assets)
+        public
+        pure
+        override
+        returns (uint256)
+    {
         return assets;
     }
 
@@ -166,7 +170,12 @@ contract AmprWithdrawReceipt is ERC4626, Ownable2Step {
      * @return Amount of assets received in exchange of the specified shares
      * amount.
      */
-    function convertToAssets(uint256 shares) public pure override returns (uint256) {
+    function convertToAssets(uint256 shares)
+        public
+        pure
+        override
+        returns (uint256)
+    {
         return shares;
     }
 
@@ -194,7 +203,12 @@ contract AmprWithdrawReceipt is ERC4626, Ownable2Step {
      * of withdrawable underlying assets.
      * @return Amount of the maximum number of withdrawable underlying assets.
      */
-    function maxWithdraw(address) public view override(ERC4626) returns (uint256) {
+    function maxWithdraw(address)
+        public
+        view
+        override(ERC4626)
+        returns (uint256)
+    {
         return _maxWithdraw < totalAssets() ? _maxWithdraw : totalAssets();
     }
 
@@ -241,7 +255,8 @@ contract AmprWithdrawReceipt is ERC4626, Ownable2Step {
      * amount of shares.
      */
     function mint(uint256 shares, address receiver)
-        public override
+        public
+        override
         returns (uint256)
     {
         uint256 maxShares = maxMint(receiver);
@@ -254,7 +269,6 @@ contract AmprWithdrawReceipt is ERC4626, Ownable2Step {
         return shares;
     }
 
-
     /**
      * @dev The `withdraw` function is used to withdraw the specified underlying
      * assets amount in exchange of a proportional amount of shares.
@@ -265,7 +279,8 @@ contract AmprWithdrawReceipt is ERC4626, Ownable2Step {
      * assets amount.
      */
     function withdraw(uint256 assets, address receiver, address owner)
-        public override
+        public
+        override
         returns (uint256)
     {
         uint256 maxAssets = maxWithdraw(owner);
@@ -290,12 +305,14 @@ contract AmprWithdrawReceipt is ERC4626, Ownable2Step {
      * amount of shares.
      */
     function redeem(uint256 shares, address receiver, address owner)
-        public override
+        public
+        override
         returns (uint256)
     {
         uint256 maxShares = maxRedeem(owner);
-        if (shares > maxShares)
+        if (shares > maxShares) {
             revert ERC4626ExceededMaxRedeem(owner, shares, maxShares);
+        }
 
         if (_maxWithdraw != type(uint256).max) _maxWithdraw -= shares;
         IERC20(asset()).safeTransferFrom(_treasuryWallet, receiver, shares);
@@ -345,5 +362,4 @@ contract AmprWithdrawReceipt is ERC4626, Ownable2Step {
     function mintFrom(uint256 amount, address receiver) external onlyMinter {
         mint(amount, receiver);
     }
-
 }

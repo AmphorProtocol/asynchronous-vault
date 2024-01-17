@@ -20,7 +20,9 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ERC20Permit} from
     "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 import {SafeERC20} from "./SynthVaultRequestReceipt.sol";
-import {IPermit2, ISignatureTransfer} from "permit2/src/interfaces/IPermit2.sol";
+import {
+    IPermit2, ISignatureTransfer
+} from "permit2/src/interfaces/IPermit2.sol";
 
 struct Permit2Params {
     uint256 amount;
@@ -43,7 +45,6 @@ struct Epoch {
 // Add functions like totalPendingDeposits() and totalPendingRedeems() for all requests
 
 contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
-
     /*
      ######
       LIBS
@@ -101,8 +102,16 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
      */
     event FeesChanged(uint16 oldFees, uint16 newFees);
 
-    event AsyncDeposit(uint256 indexed requestId, uint256 requestedAssets, uint256 acceptedAssets);
-    event AsyncRedeem(uint256 indexed requestId, uint256 requestedShares, uint256 acceptedShares);
+    event AsyncDeposit(
+        uint256 indexed requestId,
+        uint256 requestedAssets,
+        uint256 acceptedAssets
+    );
+    event AsyncRedeem(
+        uint256 indexed requestId,
+        uint256 requestedShares,
+        uint256 acceptedShares
+    );
 
     /*
      ########
@@ -226,11 +235,18 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         permit2 = _permit2;
     }
 
-    function requestDeposit(uint256 assets, address receiver, address owner, bytes memory data) public whenClosed whenNotPaused {
+    function requestDeposit(
+        uint256 assets,
+        address receiver,
+        address owner,
+        bytes memory data
+    ) public whenClosed whenNotPaused {
         // Check if the user has a claimable request
         uint256 lastRequestNonce = lastDepositRequest[receiver];
-        uint256 lastRequestBalance = epoch[lastRequestNonce].depositRequestBalance[receiver];
-        bool hasClaimableRequest = lastRequestBalance > 0 && lastRequestNonce != epochNonce;
+        uint256 lastRequestBalance =
+            epoch[lastRequestNonce].depositRequestBalance[receiver];
+        bool hasClaimableRequest =
+            lastRequestBalance > 0 && lastRequestNonce != epochNonce;
 
         if (hasClaimableRequest) revert(); // TODO: emit an error
 
@@ -238,58 +254,96 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         _createDepositRequest(assets, receiver, owner, data);
     }
 
-    function _createDepositRequest(uint256 assets, address receiver, address owner, bytes memory data) internal {
+    function _createDepositRequest(
+        uint256 assets,
+        address receiver,
+        address owner,
+        bytes memory data
+    ) internal {
         _asset.safeTransferFrom(owner, address(this), assets);
         epoch[epochNonce].totalDepositRequest += assets;
         epoch[epochNonce].depositRequestBalance[receiver] = assets;
         lastDepositRequest[owner] = epochNonce;
 
-        if (data.length > 0)
+        if (data.length > 0) {
             require(
                 ERC7540Receiver(receiver).onERC7540DepositReceived(
-                    _msgSender(),
-                    owner,
-                    epochNonce, data
+                    _msgSender(), owner, epochNonce, data
                 ) == ERC7540Receiver.onERC7540DepositReceived.selector,
                 "receiver failed"
             );
+        }
 
         emit DepositRequest(receiver, owner, epochNonce, _msgSender(), assets);
     }
 
-    function claimAndRequestDeposit(uint256 assets, address receiver, address owner, bytes memory data) external whenNotPaused {
+    function claimAndRequestDeposit(
+        uint256 assets,
+        address receiver,
+        address owner,
+        bytes memory data
+    ) external whenNotPaused {
         uint256 lastRequestNonce = lastDepositRequest[receiver];
-        _deposit(owner, receiver, lastRequestNonce, epoch[lastRequestNonce].depositRequestBalance[receiver]);
+        _deposit(
+            owner,
+            receiver,
+            lastRequestNonce,
+            epoch[lastRequestNonce].depositRequestBalance[receiver]
+        );
         requestDeposit(assets, receiver, owner, data);
     }
 
-    function claimAndRequestRedeem(uint256 shares, address receiver, address owner, bytes memory data) external whenNotPaused {
+    function claimAndRequestRedeem(
+        uint256 shares,
+        address receiver,
+        address owner,
+        bytes memory data
+    ) external whenNotPaused {
         uint256 lastRequestNonce = lastRedeemRequest[receiver];
         // _redeem(owner, receiver, lastRequestNonce, epoch[lastRequestNonce].redeemRequestBalance[receiver]); // TODO
         requestRedeem(shares, receiver, owner, data);
     }
 
-    function withdrawDepositRequest(uint256 assets, address receiver, address owner) external whenNotPaused {
+    function withdrawDepositRequest(
+        uint256 assets,
+        address receiver,
+        address owner
+    ) external whenNotPaused {
         epoch[epochNonce].depositRequestBalance[owner] -= assets;
-        epoch[epochNonce].totalDepositRequest -= assets; 
+        epoch[epochNonce].totalDepositRequest -= assets;
         _asset.safeTransfer(receiver, assets);
 
         // TODO: emit an event
     }
 
-    function pendingDepositRequest(address owner) external view returns (uint256 assets) {
+    function pendingDepositRequest(address owner)
+        external
+        view
+        returns (uint256 assets)
+    {
         return epoch[epochNonce].depositRequestBalance[owner];
     }
 
-    function claimableDepositRequest(address owner) external view returns (uint256 assets) {
+    function claimableDepositRequest(address owner)
+        external
+        view
+        returns (uint256 assets)
+    {
         return epoch[lastDepositRequest[owner]].depositRequestBalance[owner];
     }
 
-    function requestRedeem(uint256 shares, address receiver, address owner, bytes memory data) public whenClosed whenNotPaused {
+    function requestRedeem(
+        uint256 shares,
+        address receiver,
+        address owner,
+        bytes memory data
+    ) public whenClosed whenNotPaused {
         // Check if the user has a claimable request
         uint256 lastRequestNonce = lastRedeemRequest[receiver];
-        uint256 lastRequestBalance = epoch[lastRequestNonce].redeemRequestBalance[receiver];
-        bool hasClaimableRequest = lastRequestBalance > 0 && lastRequestNonce != epochNonce;
+        uint256 lastRequestBalance =
+            epoch[lastRequestNonce].redeemRequestBalance[receiver];
+        bool hasClaimableRequest =
+            lastRequestBalance > 0 && lastRequestNonce != epochNonce;
 
         if (hasClaimableRequest) revert(); // TODO: emit an error
 
@@ -297,27 +351,34 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         _createRedeemRequest(shares, receiver, owner, data);
     }
 
-    function _createRedeemRequest(uint256 shares, address receiver, address owner, bytes memory data) internal {
+    function _createRedeemRequest(
+        uint256 shares,
+        address receiver,
+        address owner,
+        bytes memory data
+    ) internal {
         transferFrom(owner, address(this), shares);
         epoch[epochNonce].totalRedeemRequest += shares;
         epoch[epochNonce].redeemRequestBalance[receiver] += shares;
         lastRedeemRequest[owner] = epochNonce;
 
-        if (data.length > 0)
+        if (data.length > 0) {
             require(
                 ERC7540Receiver(receiver).onERC7540RedeemReceived(
-                    _msgSender(),
-                    owner,
-                    epochNonce,
-                    data
+                    _msgSender(), owner, epochNonce, data
                 ) == ERC7540Receiver.onERC7540RedeemReceived.selector,
                 "receiver failed"
             );
+        }
 
         emit DepositRequest(receiver, owner, epochNonce, _msgSender(), shares);
     }
 
-    function withdrawRedeemRequest(uint256 shares, address receiver, address owner) external whenNotPaused {
+    function withdrawRedeemRequest(
+        uint256 shares,
+        address receiver,
+        address owner
+    ) external whenNotPaused {
         epoch[epochNonce].redeemRequestBalance[owner] -= shares;
         epoch[epochNonce].totalRedeemRequest -= shares;
         transfer(receiver, shares);
@@ -325,37 +386,60 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         // TODO: emit an event
     }
 
-    function pendingRedeemRequest(address owner) external view returns (uint256 shares) {
+    function pendingRedeemRequest(address owner)
+        external
+        view
+        returns (uint256 shares)
+    {
         return epoch[epochNonce].redeemRequestBalance[owner];
     }
 
-    function claimableRedeemRequest(address owner) external view returns (uint256 shares) {
+    function claimableRedeemRequest(address owner)
+        external
+        view
+        returns (uint256 shares)
+    {
         return epoch[lastRedeemRequest[owner]].redeemRequestBalance[owner];
     }
 
     function supportsInterface(bytes4 interfaceId) public pure returns (bool) {
-        return interfaceId == type(IERC165).interfaceId || interfaceId == type(IERC7540Redeem).interfaceId;
+        return interfaceId == type(IERC165).interfaceId
+            || interfaceId == type(IERC7540Redeem).interfaceId;
     }
 
-    function previewClaimDepositRequest(address owner) external view returns (uint256 assets) {
+    function previewClaimDepositRequest(address owner)
+        external
+        view
+        returns (uint256 assets)
+    {
         uint256 lastRequestNonce = lastDepositRequest[owner];
         // TODO
         return 0;
     }
 
-    function previewClaimRedeemRequest(address owner) external view returns (uint256 assets) {
+    function previewClaimRedeemRequest(address owner)
+        external
+        view
+        returns (uint256 assets)
+    {
         uint256 lastRequestNonce = lastDepositRequest[owner];
         // TODO
         return 0;
     }
 
-    function claimDepositRequest(address owner) external returns (uint256 assets) {
+    function claimDepositRequest(address owner)
+        external
+        returns (uint256 assets)
+    {
         uint256 lastRequestNonce = lastDepositRequest[owner];
         // TODO
         return 0;
     }
 
-    function claimRedeemRequest(address owner) external returns (uint256 assets) {
+    function claimRedeemRequest(address owner)
+        external
+        returns (uint256 assets)
+    {
         uint256 lastRequestNonce = lastDepositRequest[owner];
         // TODO
         return 0;
@@ -549,8 +633,11 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
      * @return Amount of underlying assets deposited in exchange of the specified
      * amount of shares.
      */
-    function mint(uint256 shares, address receiver) public 
-        whenNotPaused returns (uint256) {
+    function mint(uint256 shares, address receiver)
+        public
+        whenNotPaused
+        returns (uint256)
+    {
         uint256 maxShares = maxMint(receiver);
         if (shares > maxShares) {
             revert ERC4626ExceededMaxMint(receiver, shares, maxShares);
@@ -664,9 +751,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         view
         returns (uint256)
     {
-        return assets.mulDiv(
-            totalSupply() + 1, totalAssets + 1, rounding
-        );
+        return assets.mulDiv(totalSupply() + 1, totalAssets + 1, rounding);
     }
 
     /**
@@ -682,9 +767,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         view
         returns (uint256)
     {
-        return shares.mulDiv(
-            totalAssets + 1, totalSupply() + 1, rounding
-        );
+        return shares.mulDiv(totalAssets + 1, totalSupply() + 1, rounding);
     }
 
     /**
@@ -810,7 +893,8 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         // Pending deposits treatment
         /////////////////////////////
         uint256 pendingDeposit = epoch[epochNonce].totalDepositRequest; // get the underlying of the pending deposits
-        epoch[epochNonce].totalSharesAfterDeposit = deposit(pendingDeposit, address(this));
+        epoch[epochNonce].totalSharesAfterDeposit =
+            deposit(pendingDeposit, address(this));
 
         epochNonce++;
     }
@@ -931,7 +1015,8 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
      * @param token The IERC20 token to be claimed.
      */
     function claimToken(IERC20 token) external onlyOwner {
-        if (token == _asset) {/*TODO: get the discrepancy between returned assets and pending deposits*/}
+        if (token == _asset) { /*TODO: get the discrepancy between returned assets and pending deposits*/
+        }
         token.safeTransfer(_msgSender(), token.balanceOf(address(this)));
     }
 
@@ -948,7 +1033,12 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         _unpause();
     }
 
-    function _update(address from, address to, uint256 value) internal virtual override(ERC20, ERC20Pausable) whenNotPaused {
+    function _update(address from, address to, uint256 value)
+        internal
+        virtual
+        override(ERC20, ERC20Pausable)
+        whenNotPaused
+    {
         super._update(from, to, value);
     }
 
@@ -960,9 +1050,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
 
     // Deposit some amount of an ERC20 token into this contract
     // using Permit2.
-    function execPermit2(
-        Permit2Params calldata permit2Params
-    ) internal {
+    function execPermit2(Permit2Params calldata permit2Params) internal {
         // Transfer tokens from the caller to ourselves.
         permit2.permitTransferFrom(
             // The permit message.
@@ -996,8 +1084,9 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         bytes memory data,
         Permit2Params calldata permit2Params
     ) external {
-        if (_asset.allowance(owner, address(this)) < assets)
+        if (_asset.allowance(owner, address(this)) < assets) {
             execPermit2(permit2Params);
+        }
         return requestDeposit(assets, receiver, owner, data);
     }
 
@@ -1006,8 +1095,9 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         address receiver,
         Permit2Params calldata permit2Params
     ) external returns (uint256) {
-        if (_asset.allowance(_msgSender(), address(this)) < assets)
+        if (_asset.allowance(_msgSender(), address(this)) < assets) {
             execPermit2(permit2Params);
+        }
         return deposit(assets, receiver);
     }
 
@@ -1017,8 +1107,9 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         uint256 minShares,
         Permit2Params calldata permit2Params
     ) external returns (uint256) {
-        if (_asset.allowance(_msgSender(), address(this)) < assets)
+        if (_asset.allowance(_msgSender(), address(this)) < assets) {
             execPermit2(permit2Params);
+        }
         return depositMinShares(assets, receiver, minShares);
     }
 
@@ -1028,10 +1119,12 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         Permit2Params calldata permit2Params
     ) external returns (uint256) {
         if (_asset.allowance(_msgSender(), address(this)) < previewMint(shares))
+        {
             execPermit2(permit2Params);
+        }
         return mint(shares, receiver);
     }
-    
+
     function mintWithPermit2MaxAssets(
         uint256 shares,
         address receiver,
@@ -1039,7 +1132,9 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         Permit2Params calldata permit2Params
     ) external returns (uint256) {
         if (_asset.allowance(_msgSender(), address(this)) < previewMint(shares))
+        {
             execPermit2(permit2Params);
+        }
         return mintMaxAssets(shares, receiver, maxAssets);
     }
 }

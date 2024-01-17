@@ -1,17 +1,22 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import {Ownable2Step, Ownable} from
-    "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {
+    Ownable2Step,
+    Ownable
+} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {SafeERC20} from
+    "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IERC7540} from "./interfaces/IERC7540.sol";
 import {PermitParams} from "./SynthVaultPermit.sol";
 import {ERC20Permit} from
     "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
-import {IPermit2, ISignatureTransfer} from "permit2/src/interfaces/IPermit2.sol";
+import {
+    IPermit2, ISignatureTransfer
+} from "permit2/src/interfaces/IPermit2.sol";
 
 struct Permit2Params {
     uint256 amount;
@@ -59,7 +64,10 @@ contract AsyncVaultZapper is Ownable2Step, Pausable {
     );
 
     event ClaimRedeemAndZap(
-        IERC7540 indexed vault, address indexed router, uint256 shares, uint256 assets
+        IERC7540 indexed vault,
+        address indexed router,
+        uint256 shares,
+        uint256 assets
     );
 
     event routerApproved(address indexed router, IERC20 indexed token);
@@ -172,7 +180,7 @@ contract AsyncVaultZapper is Ownable2Step, Pausable {
         onlyAllowedRouter(router)
         onlyAllowedVault(vault)
         whenNotPaused
-        // returns (uint256) // request receipt tokens amount minted
+    // returns (uint256) // request receipt tokens amount minted
     {
         uint256 initialTokenOutBalance =
             IERC20(vault.asset()).balanceOf(address(this)); // tokenOut balance to deposit, not final value
@@ -213,13 +221,20 @@ contract AsyncVaultZapper is Ownable2Step, Pausable {
         address router,
         uint256 shares, // redeemable shares to claim
         bytes calldata data
-    ) public onlyAllowedRouter(router) onlyAllowedVault(vault) whenNotPaused returns (uint256) {
+    )
+        public
+        onlyAllowedRouter(router)
+        onlyAllowedVault(vault)
+        whenNotPaused
+        returns (uint256)
+    {
         // zapper balance in term of vault underlying
         uint256 balanceBeforeRedeem =
             IERC20(vault.asset()).balanceOf(address(this));
 
         // Claim redeem
-        uint256 assets = IERC7540(vault).redeem(shares, address(this), _msgSender());
+        uint256 assets =
+            IERC7540(vault).redeem(shares, address(this), _msgSender());
 
         // Once the assets are out of the vault, we can zap them into the desired asset
         _execute(router, data);
@@ -251,7 +266,8 @@ contract AsyncVaultZapper is Ownable2Step, Pausable {
         if (tokenIn.allowance(_msgSender(), address(this)) < amount) {
             _executePermit(tokenIn, _msgSender(), address(this), permitParams);
         }
-        /*return*/ zapAndRequestDeposit(tokenIn, vault, router, amount, data, swapData);
+        /*return*/
+        zapAndRequestDeposit(tokenIn, vault, router, amount, data, swapData);
     }
 
     function redeemAndZapWithPermit(
@@ -306,9 +322,7 @@ contract AsyncVaultZapper is Ownable2Step, Pausable {
 
     // Deposit some amount of an ERC20 token into this contract
     // using Permit2.
-    function execPermit2(
-        Permit2Params calldata permit2Params
-    ) internal {
+    function execPermit2(Permit2Params calldata permit2Params) internal {
         // Transfer tokens from the caller to ourselves.
         permit2.permitTransferFrom(
             // The permit message.
@@ -344,9 +358,11 @@ contract AsyncVaultZapper is Ownable2Step, Pausable {
         bytes calldata swapData,
         Permit2Params calldata permit2Params
     ) external {
-        if (tokenIn.allowance(_msgSender(), address(this)) < amount)
+        if (tokenIn.allowance(_msgSender(), address(this)) < amount) {
             execPermit2(permit2Params);
+        }
 
-        /*return*/ zapAndRequestDeposit(tokenIn, vault, router, amount, data, swapData);
+        /*return*/
+        zapAndRequestDeposit(tokenIn, vault, router, amount, data, swapData);
     }
 }
