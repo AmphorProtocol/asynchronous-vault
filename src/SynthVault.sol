@@ -115,6 +115,18 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         uint256 acceptedShares
     );
 
+    event WithdrawDepositRequest(
+        uint256 indexed requestId,
+        uint256 previousRequestedAssets,
+        uint256 newRequestedAssets
+    );
+
+    event WithdrawRedeemRequest(
+        uint256 indexed requestId,
+        uint256 previousRequestedShares,
+        uint256 newRequestedShares
+    );
+
     /**
      ########
       ERRORS
@@ -178,7 +190,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         _;
     }
 
-     /** 
+    /** 
      ####################################
       GENERAL PERMIT2 RELATED ATTRIBUTES
      ####################################
@@ -186,16 +198,14 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     // The canonical permit2 contract.
     IPermit2 public immutable permit2;
 
-    
-     /**
+    /**
      #####################################
       AMPHOR SYNTHETIC RELATED ATTRIBUTES
      #####################################
-     */
+    */
     
     // @dev The perf fees applied on the positive yield.
     // @return Amount of the perf fees applied on the positive yield.
-     
     uint16 public feesInBps;
 
     IERC20 internal immutable _asset;
@@ -370,10 +380,16 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         address receiver,
         address owner
     ) external whenNotPaused {
+        uint256 oldBalance = epoch[epochNonce].redeemRequestBalance[owner];
         epoch[epochNonce].redeemRequestBalance[owner] -= shares;
         epoch[epochNonce].totalRedeemRequest -= shares;
         transfer(receiver, shares);
 
+        emit WithdrawRedeemRequest(
+            epochNonce,
+            oldBalance,
+            epoch[epochNonce].redeemRequestBalance[owner]
+        );
         // TODO: emit an event
     }
 
@@ -531,7 +547,6 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     // @param shares The shares amount to be converted into underlying assets.
     // @return Amount of underlying assets received in exchange of the specified
     // amount of shares.
-     
     function previewMint(uint256 shares) public view returns (uint256) {
         return _convertToAssets(shares, Math.Rounding.Ceil);
     }
@@ -809,15 +824,14 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         return _lastSavedBalance == 0;
     }
 
-    
     // @dev The `close` function is used to close the vault.
     // It is the only way to lock the vault. It can only be called by the owner
     // of the contract (`onlyOwner` modifier).
     function close() external onlyOwner { 
         if (!isOpen()) revert VaultIsLocked();
+        if (_asset.balanceOf(address(this)) == 0) revert VaultIsEmpty();
 
         _lastSavedBalance = _totalAssets();
-        if (_lastSavedBalance == 0) revert VaultIsEmpty();
 
         _asset.safeTransfer(owner(), _lastSavedBalance);
 
