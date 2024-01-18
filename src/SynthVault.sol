@@ -342,7 +342,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         view
         returns (uint256 assets)
     {
-        return epoch[lastDepositRequest[owner]].depositRequestBalance[owner];
+        return lastDepositRequest[owner] == epochNonce ? 0 : epoch[lastDepositRequest[owner]].depositRequestBalance[owner];
     }
 
     function requestRedeem(
@@ -418,7 +418,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         view
         returns (uint256 shares)
     {
-        return epoch[lastRedeemRequest[owner]].redeemRequestBalance[owner];
+        return lastDepositRequest[owner] == epochNonce ? 0 : epoch[lastRedeemRequest[owner]].redeemRequestBalance[owner];
     }
 
     function supportsInterface(bytes4 interfaceId) public pure returns (bool) {
