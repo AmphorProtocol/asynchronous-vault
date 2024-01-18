@@ -227,10 +227,6 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     mapping(address => uint256) lastDepositRequest; // user => epochNonce
     mapping(address => uint256) lastRedeemRequest; // user => epochNonce
 
-    // @dev The total underlying assets amount just before the lock period.
-
-    uint256 internal _lastSavedBalance;
-
     /**
      * ############################
      *   AMPHOR SYNTHETIC FUNCTIONS
@@ -260,7 +256,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         bool hasClaimableRequest =
             lastRequestBalance > 0 && lastRequestNonce != epochNonce;
 
-        if (hasClaimableRequest) MustClaimFirst();
+        if (hasClaimableRequest) revert MustClaimFirst();
 
         // Create a new request
         _createDepositRequest(assets, receiver, owner, data);
@@ -459,7 +455,6 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         epoch[lastRequestNonce].depositRequestBalance[owner] = 0;
         uint256 shares = _convertToShares(assetsToClaim, Math.Rounding.Floor);
         // TODO
-        uint256 shares = 0; // TODO use the appropriate function
         emit ClaimDeposit(lastRequestNonce, _msgSender(), receiver, assets, shares);
         return 0;
     }
