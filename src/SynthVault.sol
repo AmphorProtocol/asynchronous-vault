@@ -43,6 +43,7 @@ struct Epoch {
 
 // TODO
 // Add functions like totalPendingDeposits() and totalPendingRedeems() for all requests
+// Add functions like totalClaimableDeposits() and totalClaimableRedeems() for all requests
 // Add functions like convertToShares(uint256 asset, uint256 requestId) and convertToAssets(uint256 shares, uint256 requestId) for all requests
 // Eventually add functions like maxDepositRequest(uint256 requestId) and maxRedeemRequest(uint256 requestId) for all requests
 // Add functions like previewDepositRequest(uint256 asset, uint256 requestId) and previewRedeemRequest(uint256 shares, uint256 requestId) for all requests
