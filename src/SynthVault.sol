@@ -880,7 +880,6 @@ function _convertToShares(uint256 assets, uint256 requestId, Math.Rounding round
         // Pending redeem treatment
         ////////////////////////////
         uint256 pendingRedeem = epoch[epochNonce].totalRedeemRequest; // get the shares of the pending withdraws
-        uint256 pendingRedeem = epoch[epochNonce].totalRedeemRequest; // get the shares of the pending withdraws
         redeem(pendingRedeem, address(this), address(this));
         emit AsyncRedeem(epochNonce, pendingRedeem, pendingRedeem);
         // epoch[epochNonce].totalSharesAfterDeposit = // TODO replace by the new system
