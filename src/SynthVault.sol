@@ -221,14 +221,11 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
 
     IERC20 internal immutable _asset;
     uint256 public epochNonce = 1; // in order to start at epoch 1, otherwise users might try to claim epoch -1 requests
+    uint256 internal _lastSavedBalance;
 
     mapping(uint256 => Epoch) public epoch;
     mapping(address => uint256) lastDepositRequest; // user => epochNonce
     mapping(address => uint256) lastRedeemRequest; // user => epochNonce
-
-    // @dev The total underlying assets amount just before the lock period.
-
-    uint256 internal _lastSavedBalance;
 
     /**
      * ############################
