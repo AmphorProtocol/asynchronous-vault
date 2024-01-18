@@ -887,10 +887,10 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         ////////////////////////////
         // Pending redeem treatment
         ////////////////////////////
+        uint256 pendingRedeem = epoch[epochNonce].totalRedeemRequest; // get the shares of the pending withdraws
         redeem(pendingRedeem, address(this), address(this));
         emit AsyncRedeem(epochNonce, pendingRedeem, pendingRedeem);
-        uint256 pendingRedeem = epoch[epochNonce].totalRedeemRequest; // get the shares of the pending withdraws
-        epoch[epochNonce].totalSharesAfterDeposit =
+        // epoch[epochNonce].totalSharesAfterDeposit = // TODO replace by the new system
             
         epochNonce++;
         _lastSavedBalance = 0;
