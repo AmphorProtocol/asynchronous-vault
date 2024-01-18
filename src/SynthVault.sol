@@ -115,13 +115,15 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
 
     event WithdrawDepositRequest(
         uint256 indexed requestId,
-        uint256 previousRequestedAssets,
+        address indexed owner,
+        uint256 indexed previousRequestedAssets,
         uint256 newRequestedAssets
     );
 
     event WithdrawRedeemRequest(
         uint256 indexed requestId,
-        uint256 previousRequestedShares,
+        address indexed owner,
+        uint256 indexed previousRequestedShares,
         uint256 newRequestedShares
     );
 
@@ -322,11 +324,17 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         address receiver,
         address owner
     ) external whenNotPaused {
+        uint256 oldBalance = epoch[epochNonce].depositRequestBalance[owner];
         epoch[epochNonce].depositRequestBalance[owner] -= assets;
         epoch[epochNonce].totalDepositRequest -= assets;
         _asset.safeTransfer(receiver, assets);
 
-        // TODO: emit an event
+        emit WithdrawDepositRequest(
+            epochNonce,
+            owner,
+            oldBalance,
+            epoch[epochNonce].depositRequestBalance[owner]
+        );
     }
 
     function pendingDepositRequest(address owner)
@@ -399,6 +407,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
 
         emit WithdrawRedeemRequest(
             epochNonce,
+            owner,
             oldBalance,
             epoch[epochNonce].redeemRequestBalance[owner]
         );
