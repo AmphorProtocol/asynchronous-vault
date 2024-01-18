@@ -47,7 +47,7 @@ struct Epoch {
 // Add functions like convertToShares(uint256 asset, uint256 requestId) and convertToAssets(uint256 shares, uint256 requestId) for all requests
 // Eventually add functions like maxDepositRequest(uint256 requestId) and maxRedeemRequest(uint256 requestId) for all requests
 // Add functions like previewDepositRequest(uint256 asset, uint256 requestId) and previewRedeemRequest(uint256 shares, uint256 requestId) for all requests
-uint256 constant BPS_DIVIDER = 10000;
+
 
 contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     /**
@@ -55,6 +55,8 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
      *   LIBS
      *  ######
      */
+
+     uint256 constant BPS_DIVIDER = 10000;
 
     // @dev The `Math` lib is only used for `mulDiv` operations.
 
@@ -739,7 +741,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     }
 
 function _convertToShares(uint256 assets, uint256 requestId, Math.Rounding rounding) internal view returns (uint256) {
-        return assets.mulDiv(epoch[requestId].totalSharesAfterDeposit + 1, epoch[requestId].totalAssetsAfterRedeem + 1, rounding);
+        return assets.mulDiv(epoch[requestId].totalShares + 1, epoch[requestId].totalAssets + 1, rounding);
     } 
     
 
@@ -756,6 +758,15 @@ function _convertToShares(uint256 assets, uint256 requestId, Math.Rounding round
     {
         return shares.mulDiv(totalAssets() + 1, totalSupply() + 1, rounding);
     }
+
+        function _convertToAssets(uint256 shares, uint256 requestId, Math.Rounding rounding)
+        internal
+        view
+        returns (uint256)
+    {
+        return shares.mulDiv(epoch[requestId].totalAssets + 1, epoch[requestId].totalShares + 1, rounding);
+    }
+
 
     // @dev The `_deposit` function is used to deposit the specified underlying
     // assets amount in exchange of a proportionnal amount of shares.
