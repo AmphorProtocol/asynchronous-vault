@@ -221,7 +221,6 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
 
     IERC20 internal immutable _asset;
     uint256 public epochNonce = 1; // in order to start at epoch 1, otherwise users might try to claim epoch -1 requests
-    uint256 public totalAssets; // total working assets (in the strategy), not including pending withdrawals money
 
     mapping(uint256 => Epoch) public epoch;
     mapping(address => uint256) lastDepositRequest; // user => epochNonce
@@ -743,7 +742,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         view
         returns (uint256)
     {
-        return assets.mulDiv(totalSupply() + 1, totalAssets + 1, rounding);
+        return assets.mulDiv(totalSupply() + 1, _totalAssets() + 1, rounding);
     }
 
 function convertToShares(uint256 asset, uint256 requestId, Math.Rounding) internal view returns (uint256) {
@@ -762,7 +761,7 @@ function convertToShares(uint256 asset, uint256 requestId, Math.Rounding) intern
         view
         returns (uint256)
     {
-        return shares.mulDiv(totalAssets + 1, totalSupply() + 1, rounding);
+        return shares.mulDiv(_totalAssets() + 1, totalSupply() + 1, rounding);
     }
 
     // @dev The `_deposit` function is used to deposit the specified underlying
@@ -788,7 +787,6 @@ function convertToShares(uint256 asset, uint256 requestId, Math.Rounding) intern
         // slither-disable-next-line reentrancy-no-eth
         _asset.safeTransferFrom(caller, address(this), assets);
         _mint(receiver, shares);
-        totalAssets += assets;
         emit Deposit(caller, receiver, assets, shares);
     }
 
