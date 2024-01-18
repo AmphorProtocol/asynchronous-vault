@@ -491,7 +491,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         return _convertToShares(assets, Math.Rounding.Floor);
     }
 
-    function convertToShares(uint256 assets, uint256 epochId) {
+    function convertToShares(uint256 assets, uint256 epochId) public view returns (uint256) {
         return _convertToShares(assets, epochId, Math.Rounding.Floor);
     }
 
@@ -745,7 +745,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         return assets.mulDiv(totalSupply() + 1, _totalAssets() + 1, rounding);
     }
 
-function convertToShares(uint256 asset, uint256 requestId, Math.Rounding) internal view returns (uint256) {
+function convertToShares(uint256 assets, uint256 requestId, Math.Rounding) internal view returns (uint256) {
         return asset.mulDiv(epoch[requestId].totalSharesAfterDeposit + 1, epoch[requestId].totalAssetsAfterRedeem + 1, rounding);
     } 
     
