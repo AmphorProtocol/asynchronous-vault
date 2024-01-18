@@ -943,7 +943,8 @@ function _convertToShares(uint256 assets, uint256 requestId, Math.Rounding round
     // @param token The IERC20 token to be claimed.
 
     function claimToken(IERC20 token) external onlyOwner {
-        if (token == _asset) { // TODO: get the discrepancy between returned assets and pending deposits
+        if (token == _asset) {
+            revert CannotClaimAsset();
         }
         token.safeTransfer(_msgSender(), token.balanceOf(address(this)));
     }
