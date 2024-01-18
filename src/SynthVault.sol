@@ -35,8 +35,8 @@ struct Permit2Params {
 struct Epoch {
     uint256 totalDepositRequest;
     uint256 totalRedeemRequest;
-    uint256 totalSharesAfterDeposit;
-    uint256 totalAssetsAfterRedeem;
+    uint256 totalShares;
+    uint256 totalAssets;
     mapping(address => uint256) depositRequestBalance;
     mapping(address => uint256) redeemRequestBalance;
 }
@@ -882,9 +882,14 @@ function _convertToShares(uint256 assets, uint256 requestId, Math.Rounding round
         uint256 pendingRedeem = epoch[epochNonce].totalRedeemRequest; // get the shares of the pending withdraws
         redeem(pendingRedeem, address(this), address(this));
         emit AsyncRedeem(epochNonce, pendingRedeem, pendingRedeem);
-        epoch[epochNonce].totalSharesAfterDeposit = 0;
-            
+
+        epoch[epochNonce].totalDepositRequest = 0;
+        epoch[epochNonce].totalRedeemRequest = 0;
+       
+        epoch[epochNonce].totalShares = totalSupply();
+        epoch[epochNonce].totalAssets = totalAssets();
         epochNonce++;
+        emit EpochStart(block.timestamp, _lastSavedBalance, totalSupply());
         _lastSavedBalance = 0;
     }
 
