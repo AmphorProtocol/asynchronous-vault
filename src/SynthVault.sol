@@ -127,6 +127,22 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         uint256 newRequestedShares
     );
 
+    event ClaimDeposit(
+        uint256 indexed requestId,
+        address indexed caller,
+        address indexed receiver,
+        uint256 assets,
+        uint256 shares
+    );
+
+    event ClaimRedeem(
+        uint256 indexed requestId,
+        address indexed caller,
+        address indexed receiver,
+        uint256 assets,
+        uint256 shares
+    );
+
     /**
      ########
       ERRORS
@@ -434,21 +450,23 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         return 0;
     }
 
-    function claimDepositRequest(address owner)
+    function claimDeposit(address owner)
         external
         returns (uint256 assets)
     {
         uint256 lastRequestNonce = lastDepositRequest[owner];
         // TODO
+        emit ClaimDeposit(lastRequestNonce, caller, receiver, assets, shares);
         return 0;
     }
 
-    function claimRedeemRequest(address owner)
+    function claimRedeem(address owner)
         external
         returns (uint256 assets)
     {
         uint256 lastRequestNonce = lastDepositRequest[owner];
         // TODO
+        emit ClaimRedeem(lastRequestNonce, caller, receiver, assets, shares);
         return 0;
     }
 
