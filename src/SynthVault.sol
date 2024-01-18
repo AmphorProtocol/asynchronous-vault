@@ -259,7 +259,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         bool hasClaimableRequest =
             lastRequestBalance > 0 && lastRequestNonce != epochNonce;
 
-        if (hasClaimableRequest) MustClaimFirst();
+        if (hasClaimableRequest) revert MustClaimFirst();
 
         // Create a new request
         _createDepositRequest(assets, receiver, owner, data);
@@ -359,7 +359,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         bool hasClaimableRequest =
             lastRequestBalance > 0 && lastRequestNonce != epochNonce;
 
-        if (hasClaimableRequest) MustClaimFirst();
+        if (hasClaimableRequest) revert MustClaimFirst();
 
         // Create a new request
         _createRedeemRequest(shares, receiver, owner, data);
@@ -456,9 +456,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         uint256 assetsToClaim =
             epoch[lastRequestNonce].depositRequestBalance[owner];
         epoch[lastRequestNonce].depositRequestBalance[owner] = 0;
-        uint256 shares = _convertToShares(assetsToClaim, Math.Rounding.Floor);
-        // TODO
-        uint256 shares = 0; // TODO use the appropriate function
+        uint256 shares = _convertToShares(assetsToClaim, lastRequestNonce , Math.Rounding.Floor);
         emit ClaimDeposit(lastRequestNonce, _msgSender(), receiver, assets, shares);
         return 0;
     }
@@ -496,7 +494,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         return _convertToShares(assets, Math.Rounding.Floor);
     }
 
-    function convertToShares(uint256 assets, uint256 epochId) {
+    function convertToShares(uint256 assets, uint256 epochId) public view returns (uint256) {
         return _convertToShares(assets, epochId, Math.Rounding.Floor);
     }
 
@@ -725,14 +723,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         return assetsAmount;
     }
 
-    // @dev The `_totalAssets` function is used to return the current assets
-    // balance of the vault contract.
-    // @notice The `_totalAssets` is used to know the balance of underlying of
-    // the vault contract without
-    // taking care of any theoretical external funds of the vault.
-    // @return Amount of underlying assets balance actually contained into the
-    // vault contract.
-    function _totalAssets() internal view returns (uint256) {
+    function totalAssets() public view returns (uint256) {
         return _asset.balanceOf(address(this));
     }
 
@@ -747,11 +738,11 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         view
         returns (uint256)
     {
-        return assets.mulDiv(totalSupply() + 1, _totalAssets() + 1, rounding);
+        return assets.mulDiv(totalSupply() + 1, totalAssets() + 1, rounding);
     }
 
-function convertToShares(uint256 asset, uint256 requestId, Math.Rounding) internal view returns (uint256) {
-        return asset.mulDiv(epoch[requestId].totalSharesAfterDeposit + 1, epoch[requestId].totalAssetsAfterRedeem + 1, rounding);
+function _convertToShares(uint256 assets, uint256 requestId, Math.Rounding rounding) internal view returns (uint256) {
+        return assets.mulDiv(epoch[requestId].totalSharesAfterDeposit + 1, epoch[requestId].totalAssetsAfterRedeem + 1, rounding);
     } 
     
 
@@ -766,7 +757,7 @@ function convertToShares(uint256 asset, uint256 requestId, Math.Rounding) intern
         view
         returns (uint256)
     {
-        return shares.mulDiv(_totalAssets() + 1, totalSupply() + 1, rounding);
+        return shares.mulDiv(totalAssets() + 1, totalSupply() + 1, rounding);
     }
 
     // @dev The `_deposit` function is used to deposit the specified underlying
@@ -836,10 +827,10 @@ function convertToShares(uint256 asset, uint256 requestId, Math.Rounding) intern
     function close() external onlyOwner {
         if (!isOpen()) revert VaultIsLocked();
 
-        uint256 totalAssets = _totalAssets();
-        if (totalAssets == 0) revert VaultIsEmpty();
+        uint256 _totalAssets = totalAssets();
+        if (_totalAssets == 0) revert VaultIsEmpty();
 
-        _lastSavedBalance = totalAssets;
+        _lastSavedBalance = _totalAssets;
 
         _asset.safeTransfer(owner(), _lastSavedBalance);
 
@@ -891,10 +882,10 @@ function convertToShares(uint256 asset, uint256 requestId, Math.Rounding) intern
         ////////////////////////////
         // Pending redeem treatment
         ////////////////////////////
+        uint256 pendingRedeem = epoch[epochNonce].totalRedeemRequest; // get the shares of the pending withdraws
         redeem(pendingRedeem, address(this), address(this));
         emit AsyncRedeem(epochNonce, pendingRedeem, pendingRedeem);
-        uint256 pendingRedeem = epoch[epochNonce].totalRedeemRequest; // get the shares of the pending withdraws
-        epoch[epochNonce].totalSharesAfterDeposit =
+        epoch[epochNonce].totalSharesAfterDeposit = 0;
             
         epochNonce++;
         _lastSavedBalance = 0;
