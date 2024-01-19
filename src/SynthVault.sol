@@ -33,8 +33,6 @@ struct Permit2Params {
 }
 
 struct Epoch {
-    uint256 totalDepositRequest;
-    uint256 totalRedeemRequest;
     uint256 totalSupplySnapshot;
     uint256 totalAssetsSnapshot;
     mapping(address => uint256) depositRequestBalance;
@@ -209,6 +207,8 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     uint256 public epochNonce = 1; // in order to start at epoch 1, otherwise users might try to claim epoch -1 requests
     uint256 internal _lastSavedBalance;
     uint256 internal _totalAssets;
+    uint256 internal totalPendingDepositRequest;
+    uint256 internal totalPendingRedeemRequest;
 
     bool public _isOpen;
 
@@ -262,7 +262,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         bytes memory data
     ) internal {
         _asset.safeTransferFrom(owner, address(this), assets);
-        epoch[epochNonce].totalDepositRequest += assets;
+        totalPendingDepositRequest += assets;
         epoch[epochNonce].depositRequestBalance[receiver] += assets;
 
         if (lastDepositRequestId[receiver] != epochNonce) {
@@ -282,11 +282,11 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     }
 
     function totalPendingDeposits() public view returns (uint256) {
-        return epoch[epochNonce].totalDepositRequest;
+        return totalPendingDepositRequest;
     }
 
     function totalPendingRedeems() public view returns (uint256) {
-        return epoch[epochNonce].totalRedeemRequest;
+        return totalPendingRedeemRequest;
     }
 
     // function totalClaimableDeposits() public view returns (uint256) { // in term of shares
@@ -343,7 +343,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     ) external whenNotPaused {
         uint256 oldBalance = epoch[epochNonce].depositRequestBalance[owner];
         epoch[epochNonce].depositRequestBalance[owner] -= assets;
-        epoch[epochNonce].totalDepositRequest -= assets;
+        totalPendingDepositRequest -= assets;
         _asset.safeTransfer(receiver, assets);
 
         emit WithdrawDepositRequest(
@@ -398,7 +398,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         bytes memory data
     ) internal {
         transferFrom(owner, address(this), shares);
-        epoch[epochNonce].totalRedeemRequest += shares;
+        totalPendingRedeemRequest += shares;
         epoch[epochNonce].redeemRequestBalance[receiver] += shares;
         lastRedeemRequestId[owner] = epochNonce;
 
@@ -421,7 +421,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     ) external whenNotPaused {
         uint256 oldBalance = epoch[epochNonce].redeemRequestBalance[owner];
         epoch[epochNonce].redeemRequestBalance[owner] -= shares;
-        epoch[epochNonce].totalRedeemRequest -= shares;
+        totalPendingRedeemRequest -= shares;
         transfer(receiver, shares);
 
         emit WithdrawRedeemRequest(
@@ -578,7 +578,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     // @param owner The address of the owner.
     // @return Amount of the maximum number of redeemable shares.
     function maxRedeem(address owner) public view returns (uint256) {
-        return isOpen() &&  ? balanceOf(owner) : 0;
+        return isOpen() && !paused() ? balanceOf(owner) : 0;
     }
 
     // @dev The `previewDeposit` function is used to calculate shares amount
@@ -924,19 +924,19 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         /////////////////////////////
         // Pending deposits treatment
         /////////////////////////////
-        uint256 pendingDeposit = epoch[epochNonce].totalDepositRequest; // get the underlying of the pending deposits
+        uint256 pendingDeposit = totalPendingDepositRequest; // get the underlying of the pending deposits
         deposit(pendingDeposit, address(this));
         emit AsyncDeposit(epochNonce, pendingDeposit, pendingDeposit);
 
         ////////////////////////////
         // Pending redeem treatment
         ////////////////////////////
-        uint256 pendingRedeem = epoch[epochNonce].totalRedeemRequest; // get the shares of the pending withdraws
+        uint256 pendingRedeem = totalPendingRedeemRequest; // get the shares of the pending withdraws
         redeem(pendingRedeem, address(this), address(this));
         emit AsyncRedeem(epochNonce, pendingRedeem, pendingRedeem);
 
-        epoch[epochNonce].totalDepositRequest = 0;
-        epoch[epochNonce].totalRedeemRequest = 0;
+        totalPendingDepositRequest = 0;
+        totalPendingRedeemRequest = 0;
 
         epoch[epochNonce].totalSupplySnapshot = totalSupply();
         epoch[epochNonce].totalAssetsSnapshot = totalAssets();
