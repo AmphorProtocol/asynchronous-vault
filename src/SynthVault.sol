@@ -208,6 +208,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     IERC20 internal immutable _asset;
     uint256 public epochNonce = 1; // in order to start at epoch 1, otherwise users might try to claim epoch -1 requests
     uint256 internal _lastSavedBalance;
+    uint256 internal _totalAssets;
 
     bool public _isOpen;
 
@@ -218,7 +219,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     /**
      * ############################
      *   AMPHOR SYNTHETIC FUNCTIONS
-     *  ############################
+     * ############################
      */
 
     constructor(
@@ -288,13 +289,13 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         return epoch[epochNonce].totalRedeemRequest;
     }
 
-    function totalClaimableDeposits() public view returns (uint256) { // in term of assets
-        return _asset.balanceOf(address(this)) - (totalAssets() + totalPendingDeposits());
-    }
+    // function totalClaimableDeposits() public view returns (uint256) { // in term of shares
+    //     return _asset.balanceOf(address(this)) - totalAssets();
+    // }
 
-    function totalClaimableRedeems() public view returns (uint256) { // in term of shares
-        return _asset.balanceOf(address(this)) - (totalAssets() + totalPendingDeposits());
-    }
+    // function totalClaimableRedeems() public view returns (uint256) { // in term of shares
+    //     return _asset.balanceOf(address(this)) - (totalAssets() + totalPendingDeposits());
+    // }
 
     // function totalClaimableRedeems() public view returns (uint256) {
     //     return epoch[lastRedeemRequestId[owner]].redeemRequestBalance[owner];
@@ -626,7 +627,6 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     // specified underlying assets amount.
     function deposit(uint256 assets, address receiver)
         public
-        whenNotPaused
         returns (uint256)
     {
         uint256 maxAssets = maxDeposit(receiver);
@@ -755,7 +755,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     }
 
     function totalAssets() public view returns (uint256) {
-        return isOpen() ? _asset.balanceOf(address(this)) - totalPendingDeposits() : _lastSavedBalance;
+        return isOpen() ? _totalAssets : _lastSavedBalance;
     }
 
 
@@ -833,6 +833,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         // the shares are minted, which is a valid state.
         // slither-disable-next-line reentrancy-no-eth
         _asset.safeTransferFrom(caller, address(this), assets);
+        _totalAssets += assets;
         _mint(receiver, shares);
         emit Deposit(caller, receiver, assets, shares);
     }
@@ -857,6 +858,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         }
 
         _burn(owner, shares);
+        _totalAssets -= assets;
         _asset.safeTransfer(receiver, assets);
 
         emit Withdraw(_msgSender(), receiver, owner, assets, shares);
