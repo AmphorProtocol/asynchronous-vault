@@ -547,7 +547,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     // @ param _ The address of the receiver.
     // @return Amount of the maximum underlying assets deposit amount.
     function maxDeposit(address) public view returns (uint256) {
-        return isOpen() || paused() ? 0 : type(uint256).max;
+        return isOpen() && !paused() ? type(uint256).max : 0;
     }
 
     // @dev The `maxMint` function is used to calculate the maximum amount of
@@ -557,7 +557,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     // @return Amount of the maximum shares mintable for the specified address.
 
     function maxMint(address) public view returns (uint256) {
-        return isOpen() || paused() ? 0 : type(uint256).max;
+        return isOpen() && !paused() ? type(uint256).max : 0;
     }
 
     // @dev The `maxWithdraw` function is used to calculate the maximum amount
@@ -567,7 +567,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     // @param owner The address of the owner.
     // @return Amount of the maximum number of withdrawable underlying assets.
     function maxWithdraw(address owner) public view returns (uint256) {
-        return isOpen() ? _convertToAssets(balanceOf(owner), Math.Rounding.Floor)
+        return isOpen() && !paused() ? _convertToAssets(balanceOf(owner), Math.Rounding.Floor)
             : 0;
     }
 
@@ -578,7 +578,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     // @param owner The address of the owner.
     // @return Amount of the maximum number of redeemable shares.
     function maxRedeem(address owner) public view returns (uint256) {
-        return isOpen() ? balanceOf(owner) : 0;
+        return isOpen() &&  ? balanceOf(owner) : 0;
     }
 
     // @dev The `previewDeposit` function is used to calculate shares amount
