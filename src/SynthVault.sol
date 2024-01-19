@@ -917,7 +917,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
             totalSupply()
         );
 
-        _lastSavedBalance = ; // deposit and redeem will use this value to calculate the shares price
+        _lastSavedBalance = 0; // deposit and redeem will use this value to calculate the shares price
         
         /////////////////////////////
         // Pending deposits treatment
