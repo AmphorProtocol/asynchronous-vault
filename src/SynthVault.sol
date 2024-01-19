@@ -45,9 +45,9 @@ struct Epoch {
 // Add functions like totalPendingDeposits() and totalPendingRedeems() for all requests
 // Add functions like totalClaimableDeposits() and totalClaimableRedeems() for all requests
 // Add functions like convertToShares(uint256 asset, uint256 requestId) and convertToAssets(uint256 shares, uint256 requestId) for all requests
-// Eventually add functions like maxDepositRequest(uint256 requestId) and maxRedeemRequest(uint256 requestId) for all requests
-// Add functions like previewDepositRequest(uint256 asset, uint256 requestId) and previewRedeemRequest(uint256 shares, uint256 requestId) for all requests
-
+// Eventually add functions like maxDepositRequest(address owner) and maxRedeemRequest(address owner) for all requests
+// Add functions like previewClaimDeposit(uint256 asset, uint256 requestId) and previewClaimRedeem(uint256 shares, uint256 requestId) for all requests
+// Potentially add something isLast
 
 contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     /**
@@ -55,16 +55,13 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
      *   LIBS
      *  ######
      */
-
-     uint256 constant BPS_DIVIDER = 10000;
+    uint256 constant BPS_DIVIDER = 10000;
 
     // @dev The `Math` lib is only used for `mulDiv` operations.
-
     using Math for uint256;
 
     // @dev The `SafeERC20` lib is only used for `safeTransfer` and
     // `safeTransferFrom` operations.
-
     using SafeERC20 for IERC20;
 
     /**
@@ -227,7 +224,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     uint256 public epochNonce = 1; // in order to start at epoch 1, otherwise users might try to claim epoch -1 requests
     uint256 internal _lastSavedBalance;
 
-    mapping(uint256 => Epoch) public epoch;
+    mapping(uint256 => Epoch) internal epoch;
     mapping(address => uint256) lastDepositRequestId; // user => epochNonce
     mapping(address => uint256) lastRedeemRequestId; // user => epochNonce
 
@@ -245,6 +242,10 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     ) ERC20(name, symbol) Ownable(_msgSender()) ERC20Permit(name) {
         _asset = IERC20(underlying);
         permit2 = _permit2;
+    }
+
+    function isCurrentEpoch(uint256 requestId) internal view returns (bool) {
+        return requestId == epochNonce;
     }
 
     function requestDeposit(
@@ -290,6 +291,41 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         }
 
         emit DepositRequest(receiver, owner, epochNonce, _msgSender(), assets);
+    }
+
+    function totalPendingDeposits() public view returns (uint256) {
+        // TODO
+        return 0;
+    }
+
+    function totalPendingRedeems() public view returns (uint256) {
+        // TODO
+        return 0;
+    }
+
+    function totalClaimableDeposits() public view returns (uint256) {
+        // TODO
+        return 0;
+    }
+
+    function totalClaimableRedeems() public view returns (uint256) {
+        // TODO
+        return 0;
+    }
+
+    function convertToAssets(uint256 shares, uint256 requestId) public view returns (uint256) {
+        // TODO
+        return 0;
+    }
+
+    function maxDepositRequest(address owner) public view returns (uint256) {
+        // TODO
+        return 0;
+    }
+
+    function maxRedeemRequest(address owner) public view returns (uint256) {
+        // TODO
+        return 0;
     }
 
     function claimAndRequestDeposit(
@@ -351,7 +387,8 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         returns (uint256 assets)
     {
         uint256 lastRequestId = lastDepositRequestId[owner];
-        return lastRequestId == epochNonce ? 0 : epoch[lastRequestId].depositRequestBalance[owner];
+        return isCurrentEpoch(lastRequestId) ? 0
+            : epoch[lastRequestId].depositRequestBalance[owner];
     }
 
     function requestRedeem(
@@ -429,7 +466,9 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         returns (uint256 shares)
     {
         uint256 lastRequestId = lastRedeemRequestId[owner];
-        return lastRequestId == epochNonce ? 0 : epoch[lastRequestId].redeemRequestBalance[owner];
+        return lastRequestId == epochNonce
+            ? 0
+            : epoch[lastRequestId].redeemRequestBalance[owner];
     }
 
     function supportsInterface(bytes4 interfaceId) public pure returns (bool) {
@@ -466,7 +505,8 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         uint256 assetsToClaim =
             epoch[lastRequestId].depositRequestBalance[owner];
         epoch[lastRequestId].depositRequestBalance[owner] = 0;
-        uint256 shares = _convertToShares(assetsToClaim, lastRequestId , Math.Rounding.Floor);
+        uint256 shares =
+            _convertToShares(assetsToClaim, lastRequestId, Math.Rounding.Floor);
         emit ClaimDeposit(lastRequestId, _msgSender(), receiver, assets, shares);
         return 0;
     }
@@ -504,7 +544,11 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         return _convertToShares(assets, Math.Rounding.Floor);
     }
 
-    function convertToShares(uint256 assets, uint256 epochId) public view returns (uint256) {
+    function convertToShares(uint256 assets, uint256 epochId)
+        public
+        view
+        returns (uint256)
+    {
         return _convertToShares(assets, epochId, Math.Rounding.Floor);
     }
 
@@ -751,10 +795,17 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         return assets.mulDiv(totalSupply() + 1, totalAssets() + 1, rounding);
     }
 
-function _convertToShares(uint256 assets, uint256 requestId, Math.Rounding rounding) internal view returns (uint256) {
-        return assets.mulDiv(epoch[requestId].totalShares + 1, epoch[requestId].totalAssets + 1, rounding);
-    } 
-    
+    function _convertToShares(
+        uint256 assets,
+        uint256 requestId,
+        Math.Rounding rounding
+    ) internal view returns (uint256) {
+        return assets.mulDiv(
+            epoch[requestId].totalShares + 1,
+            epoch[requestId].totalAssets + 1,
+            rounding
+        );
+    }
 
     // @dev Internal conversion function (from shares to assets) with support
     // for rounding direction.
@@ -770,14 +821,17 @@ function _convertToShares(uint256 assets, uint256 requestId, Math.Rounding round
         return shares.mulDiv(totalAssets() + 1, totalSupply() + 1, rounding);
     }
 
-        function _convertToAssets(uint256 shares, uint256 requestId, Math.Rounding rounding)
-        internal
-        view
-        returns (uint256)
-    {
-        return shares.mulDiv(epoch[requestId].totalAssets + 1, epoch[requestId].totalShares + 1, rounding);
+    function _convertToAssets(
+        uint256 shares,
+        uint256 requestId,
+        Math.Rounding rounding
+    ) internal view returns (uint256) {
+        return shares.mulDiv(
+            epoch[requestId].totalAssets + 1,
+            epoch[requestId].totalShares + 1,
+            rounding
+        );
     }
-
 
     // @dev The `_deposit` function is used to deposit the specified underlying
     // assets amount in exchange of a proportionnal amount of shares.
@@ -907,7 +961,7 @@ function _convertToShares(uint256 assets, uint256 requestId, Math.Rounding round
 
         epoch[epochNonce].totalDepositRequest = 0;
         epoch[epochNonce].totalRedeemRequest = 0;
-       
+
         epoch[epochNonce].totalShares = totalSupply();
         epoch[epochNonce].totalAssets = totalAssets();
         epochNonce++;
