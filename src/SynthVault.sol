@@ -555,7 +555,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     // @ param _ The address of the receiver.
     // @return Amount of the maximum underlying assets deposit amount.
     function maxDeposit(address) public view returns (uint256) {
-        return _lastSavedBalance != 0 || paused() ? 0 : type(uint256).max;
+        return isOpen() || paused() ? 0 : type(uint256).max;
     }
 
     // @dev The `maxMint` function is used to calculate the maximum amount of
@@ -565,7 +565,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     // @return Amount of the maximum shares mintable for the specified address.
 
     function maxMint(address) public view returns (uint256) {
-        return _lastSavedBalance != 0 || paused() ? 0 : type(uint256).max;
+        return isOpen() || paused() ? 0 : type(uint256).max;
     }
 
     // @dev The `maxWithdraw` function is used to calculate the maximum amount
@@ -765,8 +765,10 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     }
 
     function totalAssets() public view returns (uint256) {
-        return _asset.balanceOf(address(this));
+        if (isOpen()) return _asset.balanceOf(address(this));
+        else return _lastSavedBalance;
     }
+
 
     // @dev Internal conversion function (from assets to shares) with support
     // for rounding direction.
@@ -930,8 +932,8 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
             totalSupply()
         );
 
-        _lastSavedBalance = 0;
-
+        _lastSavedBalance = ; // deposit and redeem will use this value to calculate the shares price
+        
         /////////////////////////////
         // Pending deposits treatment
         /////////////////////////////
