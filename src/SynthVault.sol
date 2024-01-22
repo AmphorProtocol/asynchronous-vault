@@ -206,7 +206,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     IERC20 internal immutable _asset;
     uint256 public epochNonce = 1; // in order to start at epoch 1, otherwise users might try to claim epoch -1 requests
     uint256 internal _lastSavedBalance;
-    uint256 internal _totalAssets;
+    uint256 public totalAssets;
     uint256 internal totalPendingDepositRequest;
     uint256 internal totalPendingRedeemRequest;
 
@@ -520,7 +520,8 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     // @return Amount of shares received in exchange of the specified underlying
     // assets amount.
     function convertToShares(uint256 assets) public view returns (uint256) {
-        return _convertToShares(assets, Math.Rounding.Floor);
+        //return convertToShares(assets, Math.Rounding.Floor);
+        return 0;
     }
 
     function convertToShares(uint256 assets, uint256 epochId)
@@ -754,9 +755,9 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         return assetsAmount;
     }
 
-    function totalAssets() public view returns (uint256) {
-        return isOpen() ? _totalAssets : _lastSavedBalance;
-    }
+    // function totalAssets() public view returns (uint256) {
+    //     return isOpen() ? totalAssets : _lastSavedBalance;
+    // }
 
 
     // @dev Internal conversion function (from assets to shares) with support
@@ -770,7 +771,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         view
         returns (uint256)
     {
-        return assets.mulDiv(totalSupply() + 1, totalAssets() + 1, rounding);
+        return assets.mulDiv(totalSupply() + 1, totalAssets + 1, rounding);
     }
 
     function _convertToShares(
@@ -796,7 +797,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         view
         returns (uint256)
     {
-        return shares.mulDiv(totalAssets() + 1, totalSupply() + 1, rounding);
+        return shares.mulDiv(totalAssets + 1, totalSupply() + 1, rounding);
     }
 
     function _convertToAssets(
@@ -833,7 +834,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         // the shares are minted, which is a valid state.
         // slither-disable-next-line reentrancy-no-eth
         _asset.safeTransferFrom(caller, address(this), assets);
-        _totalAssets += assets;
+        totalAssets += assets;
         _mint(receiver, shares);
         emit Deposit(caller, receiver, assets, shares);
     }
@@ -858,7 +859,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         }
 
         _burn(owner, shares);
-        _totalAssets -= assets;
+        totalAssets -= assets;
         _asset.safeTransfer(receiver, assets);
 
         emit Withdraw(_msgSender(), receiver, owner, assets, shares);
@@ -876,7 +877,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     function close() external onlyOwner {
         if (!isOpen()) revert VaultIsLocked();
 
-        uint256 _totalAssets = totalAssets();
+        uint256 _totalAssets = totalAssets;
         if (_totalAssets == 0) revert VaultIsEmpty();
 
         _lastSavedBalance = _totalAssets;
@@ -939,7 +940,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         totalPendingRedeemRequest = 0;
 
         epoch[epochNonce].totalSupplySnapshot = totalSupply();
-        epoch[epochNonce].totalAssetsSnapshot = totalAssets();
+        epoch[epochNonce].totalAssetsSnapshot = totalAssets;
         epochNonce++;
         emit EpochStart(block.timestamp, _lastSavedBalance, totalSupply());
         _lastSavedBalance = 0;
