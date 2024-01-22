@@ -771,7 +771,9 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         view
         returns (uint256)
     {
-        return assets.mulDiv(totalSupply() + 1, totalAssets + 1, rounding);
+        uint256 totalSupply = totalSupply();
+        return totalSupply == 0 ? 0 :
+            assets.mulDiv(totalSupply, totalAssets, rounding);
     }
 
     function _convertToShares(
@@ -779,11 +781,12 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         uint256 requestId,
         Math.Rounding rounding
     ) internal view returns (uint256) {
-        return assets.mulDiv(
-            epoch[requestId].totalSupplySnapshot + 1,
-            epoch[requestId].totalAssetsSnapshot + 1,
-            rounding
-        );
+        return epochNonce == requestId ? _convertToShares(assets, rounding) :
+            assets.mulDiv(
+                epoch[requestId].totalSupplySnapshot,
+                epoch[requestId].totalAssetsSnapshot,
+                rounding
+            );
     }
 
     // @dev Internal conversion function (from shares to assets) with support
@@ -797,7 +800,9 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         view
         returns (uint256)
     {
-        return shares.mulDiv(totalAssets + 1, totalSupply() + 1, rounding);
+        uint256 totalSupply = totalSupply();
+        return totalSupply == 0 ? 0
+            : shares.mulDiv(totalAssets, totalSupply, rounding);
     }
 
     function _convertToAssets(
@@ -969,6 +974,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     // It can't exceed 30% (3000 in BPS).
     // @param newFees The new perf fees to be applied.
     function setFees(uint16 newFees) external onlyOwner {
+        if (!isOpen()) revert VaultIsLocked();
         if (newFees > 3000) revert FeesTooHigh();
         feesInBps = newFees;
         emit FeesChanged(feesInBps, newFees);
