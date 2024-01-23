@@ -119,8 +119,8 @@ contract ZapperWithdrawPermitTest is OffChainCalls {
     }
 
     function dealEverybodyUsdc(uint256 assets) public {
-        deal(vm.envAddress("USDC_MAINNET"), user, assets);
-        IERC20(vm.envAddress("USDC_MAINNET")).approve(
+        deal(vm.envAddress("DAI_MAINNET"), user, assets);
+        IERC20(vm.envAddress("DAI_MAINNET")).approve(
             address(_vault), type(uint256).max
         );
         _vault.deposit(assets, user);

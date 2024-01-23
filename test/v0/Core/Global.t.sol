@@ -13,7 +13,7 @@ import "../../../src/SynthVaultPermit.sol";
 
 abstract contract GlobalTest is Test {
     ERC20 internal immutable _DAI = ERC20(vm.envAddress("DAI_MAINNET"));
-    ERC20 internal immutable _USDC = ERC20(vm.envAddress("USDC_MAINNET"));
+    ERC20 internal immutable _USDC = ERC20(vm.envAddress("DAI_MAINNET"));
     ERC20 internal immutable _USDT = ERC20(vm.envAddress("USDT_MAINNET"));
     ERC20 internal immutable _WETH = ERC20(vm.envAddress("WETH_MAINNET"));
     ERC20 internal immutable _ETH = ERC20(vm.envAddress("ETH_MAINNET"));

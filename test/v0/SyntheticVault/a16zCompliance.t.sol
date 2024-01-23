@@ -11,7 +11,7 @@ contract A16zERC4626Tests {
 //  is ERC4626Test
 // function setUp() public override {
 //     _underlying_ = address(new ERC20Mock("Mock ERC20", "MERC20", 6));
-//     _underlying_ = vm.envAddress("USDC_MAINNET");
+//     _underlying_ = vm.envAddress("DAI_MAINNET");
 //     _vault_ = address(
 //         new ERC4626Mock(_underlying_, "Mock ERC4626", "MERC4626", 12)
 //     );

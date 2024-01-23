@@ -16,10 +16,10 @@ contract SyntheticBaseTests is BaseVaultTest {
 
     // Declare global attributes here
     SynthVaultPermit internal _synthVault;
-    ERC20 internal _underlying = ERC20(vm.envAddress("USDC_MAINNET")); // can also be vm.envAddress("WETH_MAINNET") or vm.envAddress("WBTC_MAINNET")
+    ERC20 internal _underlying = ERC20(vm.envAddress("DAI_MAINNET")); // can also be vm.envAddress("WETH_MAINNET") or vm.envAddress("WBTC_MAINNET")
     uint256 internal _underlyingDecimals = ERC20(_underlying).decimals();
     uint8 internal _decimalOffset = 12;
-    //_underlying == vm.envAddress("USDC_MAINNET") ? 24 : 35; // 24 for USDC, 35 for WETH, 35 for WBTC -> we should put less
+    //_underlying == vm.envAddress("DAI_MAINNET") ? 24 : 35; // 24 for USDC, 35 for WETH, 35 for WBTC -> we should put less
     address internal _usdt = vm.envAddress("USDT_MAINNET");
     // Declare AmphorLabs wallet address here
     address internal _amphorLabs = 0xa51337F0B984B28E3363616563e11457a7498BB6;
