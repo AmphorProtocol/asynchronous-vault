@@ -271,7 +271,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     }
 
     function maxDepositRequest(address) public view returns (uint256) {
-        return !isOpen() || paused() ? 0 : type(uint256).max;
+        return isOpen() || paused() ? 0 : type(uint256).max;
     }
 
     function maxRedeemRequest(address owner) public view returns (uint256) {
@@ -440,6 +440,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
 
     function claimDeposit(address receiver)
         public
+        whenNotPaused
         returns (uint256 shares)
     {
         address owner = _msgSender();
@@ -457,6 +458,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
 
     function claimRedeem(address receiver)
         public
+        whenNotPaused
         returns (uint256 assets)
     {
         address owner = _msgSender();
