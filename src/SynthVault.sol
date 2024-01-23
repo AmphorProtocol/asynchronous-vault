@@ -29,13 +29,6 @@ struct Epoch {
     mapping(address => uint256) redeemRequestBalance;
 }
 
-// TODO
-// Add functions like totalPendingDeposits() and totalPendingRedeems() for all requests
-// Add functions like totalClaimableDeposits() and totalClaimableRedeems() for all requests
-// Add functions like convertToShares(uint256 asset, uint256 requestId) and convertToAssets(uint256 shares, uint256 requestId) for all requests
-// Eventually add functions like maxDepositRequest(address owner) and maxRedeemRequest(address owner) for all requests
-// Add functions like previewClaimDeposit(uint256 asset, uint256 requestId) and previewClaimRedeem(uint256 shares, uint256 requestId) for all requests
-
 contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     /**
      * #######
@@ -130,9 +123,6 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     // @dev The rules doesn't allow the perf fees to be higher than 30.00%.
     error FeesTooHigh();
 
-    // @dev Claiming the underlying assets is not allowed.
-    error CannotClaimAsset();
-
     error ERC4626ExceededMaxDeposit(
         address receiver, uint256 assets, uint256 max
     );
@@ -198,6 +188,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     uint256 public totalAssets;
     uint256 internal totalPendingDepositRequest;
     uint256 internal totalPendingRedeemRequest;
+    uint256 public underlyingExcessAssets;
 
     bool public _isOpen;
 
@@ -410,7 +401,6 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
             oldBalance,
             epoch[epochNonce].redeemRequestBalance[owner]
         );
-        // TODO: emit an event
     }
 
     function pendingRedeemRequest(address owner)
@@ -427,7 +417,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         returns (uint256)
     {
         uint256 lastRequestId = lastRedeemRequestId[owner];
-        return isCurrentEpoch(lastRequestId) ? 0 // todo : potential opti
+        return isCurrentEpoch(lastRequestId) ? 0
             : epoch[lastRequestId].redeemRequestBalance[owner];
     }
 
@@ -936,7 +926,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         // Pending redeem treatment
         ////////////////////////////
         uint256 pendingRedeem = totalPendingRedeemRequest; // get the shares of the pending withdraws
-        redeem(pendingRedeem, address(this), address(this));
+        uint256 redeemedAssets = redeem(pendingRedeem, address(this), address(this));
         emit AsyncRedeem(epochNonce, pendingRedeem, pendingRedeem);
 
         totalPendingDepositRequest = 0;
@@ -944,6 +934,8 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
 
         epoch[epochNonce].totalSupplySnapshot = totalSupply();
         epoch[epochNonce].totalAssetsSnapshot = totalAssets;
+
+        underlyingExcessAssets = _asset.balanceOf(address(this)) - (totalAssets + redeemedAssets);
 
         epochNonce++;
     }
@@ -978,19 +970,15 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         emit FeesChanged(feesInBps, newFees);
     }
 
-    // TODO: Finish to implement this correclty
-
     // @dev The `claimToken` function is used to claim other tokens that have
     // been sent to the vault.
     // @notice The `claimToken` function is used to claim other tokens that have
     // been sent to the vault.
     // It can only be called by the owner of the contract (`onlyOwner` modifier).
     // @param token The IERC20 token to be claimed.
-
     function claimToken(IERC20 token) external onlyOwner {
-        if (token == _asset) {
-            revert CannotClaimAsset();
-        }
+        if (token == _asset)
+            token.safeTransfer(_msgSender(), underlyingExcessAssets);
         token.safeTransfer(_msgSender(), token.balanceOf(address(this)));
     }
 
