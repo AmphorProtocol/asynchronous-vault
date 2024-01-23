@@ -140,6 +140,13 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     error ERC4626ExceededMaxWithdraw(address owner, uint256 assets, uint256 max);
     error ERC4626ExceededMaxRedeem(address owner, uint256 shares, uint256 max);
 
+    error ExceededMaxRedeemRequest(
+        address receiver, uint256 shares, uint256 maxShares
+    );
+    error ExceededMaxDepositRequest(
+        address receiver, uint256 assets, uint256 maxDeposit
+    );
+
     // @dev Attempted to mint less shares than the min amount for `receiver`.
     // This error is only thrown when the `depositMinShares` function is used.
     // @notice The `depositMinShares` function is used to deposit underlying
@@ -231,6 +238,12 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
             lastRequestBalance > 0 && lastRequestId != epochNonce;
 
         if (hasClaimableRequest) revert MustClaimFirst();
+
+        if (assets > maxDepositRequest(receiver)) revert ExceededMaxDepositRequest(
+                receiver,
+                assets,
+                maxDepositRequest(receiver)
+        );
 
         // Create a new request
         _createDepositRequest(assets, receiver, owner, data);
@@ -348,6 +361,11 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
             lastRequestBalance > 0 && lastRequestId != epochNonce;
 
         if (hasClaimableRequest) revert MustClaimFirst();
+        if (shares > maxRedeemRequest(receiver)) revert ExceededMaxRedeemRequest(
+                receiver,
+                shares,
+                maxRedeemRequest(receiver)
+        );
 
         // Create a new request
         _createRedeemRequest(shares, receiver, owner, data);
