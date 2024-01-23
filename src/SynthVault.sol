@@ -275,7 +275,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     }
 
     function maxRedeemRequest(address owner) public view returns (uint256) {
-        return !isOpen() || paused() ? 0 : balanceOf(owner);
+        return isOpen() || paused() ? 0 : balanceOf(owner);
     }
 
     function claimAndRequestDeposit(
@@ -302,7 +302,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         uint256 assets,
         address receiver,
         address owner
-    ) external whenNotPaused {
+    ) external whenClosed whenNotPaused {
         uint256 oldBalance = epoch[epochNonce].depositRequestBalance[owner];
         epoch[epochNonce].depositRequestBalance[owner] -= assets;
         totalPendingDepositRequest -= assets;
@@ -380,7 +380,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         uint256 shares,
         address receiver,
         address owner
-    ) external whenNotPaused {
+    ) external whenClosed whenNotPaused {
         uint256 oldBalance = epoch[epochNonce].redeemRequestBalance[owner];
         epoch[epochNonce].redeemRequestBalance[owner] -= shares;
         totalPendingRedeemRequest -= shares;
