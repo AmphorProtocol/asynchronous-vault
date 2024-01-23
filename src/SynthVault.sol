@@ -16,21 +16,11 @@ import {
     Pausable,
     ERC20
 } from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {SafeERC20} from
+    "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ERC20Permit} from
     "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
-import {SafeERC20} from "./SynthVaultRequestReceipt.sol";
-import {
-    IPermit2, ISignatureTransfer
-} from "permit2/src/interfaces/IPermit2.sol";
-
-struct Permit2Params {
-    uint256 amount;
-    uint256 nonce;
-    uint256 deadline;
-    address token;
-    bytes signature;
-}
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 struct Epoch {
     uint256 totalSupplySnapshot;
@@ -53,6 +43,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
      *  ######
      */
     uint256 constant BPS_DIVIDER = 10000;
+    uint256 constant MAX_FEES = 3000;
 
     // @dev The `Math` lib is only used for `mulDiv` operations.
     using Math for uint256;
@@ -185,14 +176,6 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     }
 
     /**
-     * ####################################
-     *   GENERAL PERMIT2 RELATED ATTRIBUTES
-     *  ####################################
-     */
-    // The canonical permit2 contract.
-    IPermit2 public immutable permit2;
-
-    /**
      * #####################################
      *   AMPHOR SYNTHETIC RELATED ATTRIBUTES
      *  #####################################
@@ -225,11 +208,9 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     constructor(
         ERC20 underlying,
         string memory name,
-        string memory symbol,
-        IPermit2 _permit2
+        string memory symbol
     ) ERC20(name, symbol) Ownable(_msgSender()) ERC20Permit(name) {
         _asset = IERC20(underlying);
-        permit2 = _permit2;
     }
 
     function isCurrentEpoch(uint256 requestId) internal view returns (bool) {
@@ -561,8 +542,10 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     // @param owner The address of the owner.
     // @return Amount of the maximum number of withdrawable underlying assets.
     function maxWithdraw(address owner) public view returns (uint256) {
-        return isOpen() && !paused() ? _convertToAssets(balanceOf(owner), Math.Rounding.Floor)
-            : 0;
+        return isOpen() && !paused() ? _convertToAssets(
+                balanceOf(owner),
+                Math.Rounding.Floor
+            ) : 0;
     }
 
     // @dev The `maxRedemm` function is used to calculate the maximum amount of
@@ -971,7 +954,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     // @param newFees The new perf fees to be applied.
     function setFees(uint16 newFees) external onlyOwner {
         if (!isOpen()) revert VaultIsLocked();
-        if (newFees > 3000) revert FeesTooHigh();
+        if (newFees > MAX_FEES) revert FeesTooHigh();
         feesInBps = newFees;
         emit FeesChanged(feesInBps, newFees);
     }
@@ -1013,102 +996,6 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         whenNotPaused
     {
         super._update(from, to, value);
-    }
-
-    /**
-     * ###########################
-     *   PERMIT2 RELATED FUNCTIONS
-     *  ###########################
-     */
-
-    // Deposit some amount of an ERC20 token into this contract
-    // using Permit2.
-    function execPermit2(Permit2Params calldata permit2Params) internal {
-        // Transfer tokens from the caller to ourselves.
-        permit2.permitTransferFrom(
-            // The permit message.
-            ISignatureTransfer.PermitTransferFrom({
-                permitted: ISignatureTransfer.TokenPermissions({
-                    token: permit2Params.token,
-                    amount: permit2Params.amount
-                }),
-                nonce: permit2Params.nonce,
-                deadline: permit2Params.deadline
-            }),
-            // The transfer recipient and amount.
-            ISignatureTransfer.SignatureTransferDetails({
-                to: address(this),
-                requestedAmount: permit2Params.amount
-            }),
-            // The owner of the tokens, which must also be
-            // the signer of the message, otherwise this call
-            // will fail.
-            _msgSender(),
-            // The packed signature that was the result of signing
-            // the EIP712 hash of `permit`.
-            permit2Params.signature
-        );
-    }
-
-    function requestDepositWithPermit2(
-        uint256 assets,
-        address receiver,
-        address owner,
-        bytes memory data,
-        Permit2Params calldata permit2Params
-    ) external {
-        if (_asset.allowance(owner, address(this)) < assets) {
-            execPermit2(permit2Params);
-        }
-        return requestDeposit(assets, receiver, owner, data);
-    }
-
-    function depositWithPermit2(
-        uint256 assets,
-        address receiver,
-        Permit2Params calldata permit2Params
-    ) external returns (uint256) {
-        if (_asset.allowance(_msgSender(), address(this)) < assets) {
-            execPermit2(permit2Params);
-        }
-        return deposit(assets, receiver);
-    }
-
-    function depositWithPermit2MinShares(
-        uint256 assets,
-        address receiver,
-        uint256 minShares,
-        Permit2Params calldata permit2Params
-    ) external returns (uint256) {
-        if (_asset.allowance(_msgSender(), address(this)) < assets) {
-            execPermit2(permit2Params);
-        }
-        return depositMinShares(assets, receiver, minShares);
-    }
-
-    function mintWithPermit2(
-        uint256 shares,
-        address receiver,
-        Permit2Params calldata permit2Params
-    ) external returns (uint256) {
-        if (_asset.allowance(_msgSender(), address(this)) < previewMint(shares))
-        {
-            execPermit2(permit2Params);
-        }
-        return mint(shares, receiver);
-    }
-
-    function mintWithPermit2MaxAssets(
-        uint256 shares,
-        address receiver,
-        uint256 maxAssets,
-        Permit2Params calldata permit2Params
-    ) external returns (uint256) {
-        if (_asset.allowance(_msgSender(), address(this)) < previewMint(shares))
-        {
-            execPermit2(permit2Params);
-        }
-        return mintMaxAssets(shares, receiver, maxAssets);
     }
 
     function isOpen() public view returns (bool) {

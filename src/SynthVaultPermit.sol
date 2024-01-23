@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import {SynthVault, ERC20, ERC20Permit, IPermit2} from "./SynthVault.sol";
+import {SynthVault, ERC20, ERC20Permit} from "./SynthVault.sol";
 
 struct PermitParams {
     uint256 value;
@@ -15,9 +15,8 @@ contract SynthVaultPermit is SynthVault {
     constructor(
         ERC20 underlying,
         string memory name,
-        string memory symbol,
-        IPermit2 _permit2
-    ) SynthVault(underlying, name, symbol, _permit2) {}
+        string memory symbol
+    ) SynthVault(underlying, name, symbol) {}
 
     function requestDepositWithPermit(
         uint256 assets,
