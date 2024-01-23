@@ -210,6 +210,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         string memory symbol
     ) ERC20(name, symbol) Ownable(_msgSender()) ERC20Permit(name) {
         _asset = IERC20(underlying);
+        _isOpen = true;
     }
 
     function isCurrentEpoch(uint256 requestId) internal view returns (bool) {
