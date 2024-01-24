@@ -7,11 +7,10 @@ contract SyntheticDepositAndWithdrawTests is SyntheticBaseTests {
     using Math for uint256;
 
     function test_SimpleDepositAndWithdraw() public {
-        uint256 depositAmount = 10 ** 16; // 1 ETH / 100 000 000 000.00000 USDC
+        uint256 depositAmount = 10 ** _underlyingDecimals; // 1 ETH / 100 000 000 000.00000 USDC
         uint256 vaultUnderlyingBalance =
             IERC20(_underlying).balanceOf(address(_synthVault));
 
-        // Fund the vault with some underlying, and mint the corresponding shares tokens
         deal(address(_underlying), _signer, depositAmount, false);
         vm.startPrank(_signer);
         IERC20(_underlying).approve(address(_synthVault), depositAmount);
@@ -403,6 +402,7 @@ contract SyntheticDepositAndWithdrawTests is SyntheticBaseTests {
         vm.startPrank(_signer);
         uint256 toMint = 10 * 10 ** ERC20(_underlying).decimals();
         uint256 underlyingPreview = _synthVault.previewMint(toMint);
+        console.log("underlyingPreview", underlyingPreview);
         vm.expectRevert(
             abi.encodeWithSelector(
                 SynthVault.ERC4626TooMuchAssetsDeposited.selector,

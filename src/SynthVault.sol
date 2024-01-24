@@ -761,7 +761,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         Math.Rounding rounding
     ) internal view returns (uint256) {
         uint256 _totalAssets = epoch[requestId].totalAssetsSnapshot;
-        return _totalAssets == 0 || requestId == epochNonce ? 0 :
+        return _totalAssets == 0 || requestId == epochNonce ? assets :
             assets.mulDiv(
                 epoch[requestId].totalSupplySnapshot,
                 _totalAssets,
@@ -783,7 +783,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         returns (uint256)
     {
         uint256 totalSupply = totalSupply();
-        return totalSupply == 0 ? 0
+        return totalSupply == 0 ? shares
             : shares.mulDiv(totalAssets, totalSupply, rounding);
     }
 
@@ -793,7 +793,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         Math.Rounding rounding
     ) internal view returns (uint256) {
         uint256 totalSupply = epoch[requestId].totalSupplySnapshot;
-        return totalSupply == 0 || requestId == epochNonce ? 0:
+        return totalSupply == 0 || requestId == epochNonce ? shares :
             shares.mulDiv(
                 epoch[requestId].totalAssetsSnapshot,
                 totalSupply,

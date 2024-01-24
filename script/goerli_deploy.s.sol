@@ -5,7 +5,7 @@ import {Script, console} from "forge-std/Script.sol";
 import {
     SynthVaultPermit,
     ERC20
-} from "../src/SynthVaultPermit.sol";`
+} from "../src/SynthVaultPermit.sol";
 
 contract GOERLI_DeployAmphorSynthetic is Script {
     function run() external {
