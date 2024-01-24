@@ -64,17 +64,18 @@ import "forge-std/console.sol"; //todo remove
                                888
 */
 
-struct Epoch {
-    uint256 totalSupplySnapshot;
-    uint256 totalAssetsSnapshot;
-    mapping(address => uint256) depositRequestBalance;
-    mapping(address => uint256) redeemRequestBalance;
-}
-
-uint256 constant BPS_DIVIDER = 10000;
-uint256 constant MAX_FEES = 3000; // 30%
-
 contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
+
+    struct Epoch {
+        uint256 totalSupplySnapshot;
+        uint256 totalAssetsSnapshot;
+        mapping(address => uint256) depositRequestBalance;
+        mapping(address => uint256) redeemRequestBalance;
+    }
+
+    uint256 constant BPS_DIVIDER = 10000;
+    uint256 constant MAX_FEES = 3000; // 30%
+
     /**
      * ########
      * # LIBS #
@@ -189,17 +190,17 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     */
 
     // @return Amount of the perf fees applied on the positive yield.
-    uint16 public feesInBps;
+    uint16 public feeInBps;
     IERC20 internal immutable _asset; // underlying
     uint256 public epochNonce = 1;
     uint256 public totalAssets; // total underlying assets
     uint256 internal totalPendingDepositRequest; // total underlying assets pre-deposited
     uint256 internal totalPendingRedeemRequest; // total shares pre-redeemed
-    uint256 public underlyingExcessAssets; // donated underlying
+    uint256 public excessAssets; // donated underlying // todo remove this
     bool public _isOpen; // vault is open or closed
     mapping(uint256 => Epoch) internal epoch; // epochNonce => Epoch
-    mapping(address => uint256) lastDepositRequestId; // user => epochNonce
-    mapping(address => uint256) lastRedeemRequestId; // user => epochNonce
+    mapping(address => uint256) lastDepositRequestId; // user => epochNonce // todo remove this
+    mapping(address => uint256) lastRedeemRequestId; // user => epochNonce // todo remove this
 
     /**
      * ##############################
@@ -357,11 +358,12 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
             lastRequestBalance > 0 && lastRequestId != epochNonce;
 
         if (hasClaimableRequest) revert MustClaimFirst();
-        if (shares > maxRedeemRequest(receiver)) revert ExceededMaxRedeemRequest(
-                receiver,
-                shares,
-                maxRedeemRequest(receiver)
-        );
+        if (shares > maxRedeemRequest(receiver))
+            revert ExceededMaxRedeemRequest(
+                    receiver,
+                    shares,
+                    maxRedeemRequest(receiver)
+            );
 
         // Create a new request
         _createRedeemRequest(shares, receiver, owner, data);
@@ -894,12 +896,12 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         uint256 fees;
 
         uint256 _totalAssets = totalAssets;
-        if (assetReturned > _totalAssets && feesInBps > 0) {
+        if (assetReturned > _totalAssets && feeInBps > 0) {
             uint256 profits;
             unchecked {
                 profits = assetReturned - _totalAssets;
             }
-            fees = (profits).mulDiv(feesInBps, BPS_DIVIDER, Math.Rounding.Ceil);
+            fees = (profits).mulDiv(feeInBps, BPS_DIVIDER, Math.Rounding.Ceil);
         }
 
         _totalAssets = assetReturned - fees;
@@ -918,6 +920,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         );
         _isOpen = true;
         _execRequests();
+        
         epochNonce++;
     }
 
@@ -942,8 +945,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         epoch[epochNonce].totalSupplySnapshot = totalSupply();
         epoch[epochNonce].totalAssetsSnapshot = totalAssets;
 
-        underlyingExcessAssets = _asset.balanceOf(address(this)) - (totalAssets + redeemedAssets);
-
+        excessAssets = _asset.balanceOf(address(this)) - (totalAssets + redeemedAssets);
     }
 
     function restruct(uint256 virtualReturnedAsset) external onlyOwner {
@@ -965,17 +967,17 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     */
 
     /*
-     * @dev The `setFees` function is used to modify the protocol fees.
-     * @notice The `setFees` function is used to modify the perf fees.
+     * @dev The `setFee` function is used to modify the protocol fees.
+     * @notice The `setFee` function is used to modify the perf fees.
      * It can only be called by the owner of the contract (`onlyOwner` modifier).
      * It can't exceed 30% (3000 in BPS).
      * @param newFees The new perf fees to be applied.
     */
-    function setFees(uint16 newFees) external onlyOwner {
+    function setFee(uint16 newFee) external onlyOwner {
         if (!isOpen()) revert VaultIsLocked();
-        if (newFees > MAX_FEES) revert FeesTooHigh();
-        feesInBps = newFees;
-        emit FeesChanged(feesInBps, newFees);
+        if (newFee > MAX_FEES) revert FeesTooHigh();
+        feeInBps = newFee;
+        emit FeesChanged(feeInBps, newFee);
     }
 
     /*
@@ -988,7 +990,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     */
     function claimToken(IERC20 token) external onlyOwner {
         if (token == _asset)
-            token.safeTransfer(_msgSender(), underlyingExcessAssets);
+            token.safeTransfer(_msgSender(), excessAssets);
         token.safeTransfer(_msgSender(), token.balanceOf(address(this)));
     }
 

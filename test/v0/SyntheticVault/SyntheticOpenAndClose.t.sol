@@ -12,7 +12,7 @@ contract SyntheticOpenAndClose is SyntheticBaseTests {
         giveEthUnderlyingAndApprove(_signer2);
         giveEthUnderlyingAndApprove(_amphorLabs);
         giveEthUnderlyingAndApprove(address(this));
-        _synthVault.setFees(20 * 100);   
+        _synthVault.setFee(20 * 100);   
         _synthVault.deposit(5_000 * 10 ** _underlyingDecimals, _signer);
     }
 
@@ -53,7 +53,7 @@ contract SyntheticOpenAndClose is SyntheticBaseTests {
     }
 
     function test_surplusOpen() public {
-        _synthVault.setFees(20 * 100);
+        _synthVault.setFee(20 * 100);
         _synthVault.close();
         uint256 ownerUnderlyingBalance = 10_000 * 10 ** _underlyingDecimals;
         uint256 amountToGiveBackToTheVault = ownerUnderlyingBalance / 2;
@@ -65,7 +65,7 @@ contract SyntheticOpenAndClose is SyntheticBaseTests {
         IERC20(_underlying).approve(
             address(_synthVault), ownerUnderlyingBalance
         );
-        uint16 perfFees = _synthVault.feesInBps();
+        uint16 perfFees = _synthVault.feeInBps();
         _synthVault.open(amountToGiveBackToTheVault);
 
         uint256 profits = amountToGiveBackToTheVault - _synthVault.totalAssets();
@@ -269,12 +269,12 @@ contract SyntheticOpenAndClose is SyntheticBaseTests {
     }
 
     function test_UserProfitsWithFunkyFees() public {
-        _synthVault.setFees(1243);
+        _synthVault.setFee(1243);
         test_UserProfits();
     }
 
     function test_UserProfitsWithFees0() public {
-        _synthVault.setFees(0);
+        _synthVault.setFee(0);
         test_UserProfits();
     }
 
@@ -288,7 +288,7 @@ contract SyntheticOpenAndClose is SyntheticBaseTests {
             10000 + underlyingIncreaseInBips, 10000, Math.Rounding.Ceil
         );
         uint256 feesTaken = (underlyingIncreaseAmountWithoutFees - userDeposit)
-            .mulDiv(_synthVault.feesInBps(), 10000, Math.Rounding.Ceil);
+            .mulDiv(_synthVault.feeInBps(), 10000, Math.Rounding.Ceil);
         uint256 amountToReceive = underlyingIncreaseAmountWithoutFees
             - feesTaken - 1 + profitFromDonation;
         uint256 userPotentialWithdraw =
@@ -343,7 +343,7 @@ contract SyntheticOpenAndClose is SyntheticBaseTests {
     }
 
     function test_UserLossesWithoutFees() public {
-        _synthVault.setFees(0);
+        _synthVault.setFee(0);
         test_UserLosses();
     }
 
