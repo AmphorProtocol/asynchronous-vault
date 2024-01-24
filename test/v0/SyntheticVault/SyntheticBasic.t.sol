@@ -43,7 +43,7 @@ contract SyntheticBasicTests is SyntheticBaseTests {
 
     function test_perfFeesOver30() public {
         vm.expectRevert(SynthVault.FeesTooHigh.selector);
-        _synthVault.setFees(31 * 100);
+        _synthVault.setFee(31 * 100);
     }
 
     function test_claimUnderlying() public {
