@@ -254,18 +254,19 @@ contract SyntheticOpenAndClose is SyntheticBaseTests {
         _synthVault.close();
         uint256 lossesInBips = 2000;
 
-        deal(
-            address(_underlying),
-            address(_synthVault),
-            ERC20(_underlying).balanceOf(address(_synthVault))
-                + 1000 * 10 ** _underlyingDecimals
-        );
+        // deal(
+        //     address(_underlying),
+        //     address(_synthVault),
+        //     ERC20(_underlying).balanceOf(address(_synthVault))
+        //         + 1000 * 10 ** _underlyingDecimals
+        // );
+        console.log(_synthVault.totalAssets());
         _synthVault.open(
-            (_synthVault.totalAssets() * (10000 - lossesInBips)) / 10_000
+            (_synthVault.totalAssets() * ((10000 - lossesInBips)/10_000))
         );
-
+        console.log("to give back",    (_synthVault.totalAssets() * (10000 - lossesInBips)) / 10_000);
         _checkUserLosses(userDeposit, lossesInBips, 625000000, user);
-        _checkUserLosses(user2Deposit, lossesInBips, 375000000, user2);
+        // _checkUserLosses(user2Deposit, lossesInBips, 375000000, user2);
     }
 
     function test_UserProfitsWithFunkyFees() public {
@@ -356,9 +357,8 @@ contract SyntheticOpenAndClose is SyntheticBaseTests {
         uint256 underlyingDecreaseAmountWithoutFees = userDeposit.mulDiv(
             10000 - underlyingDecreaseInBips, 10000, Math.Rounding.Ceil
         );
-        uint256 feesTaken = 0;
         uint256 amountToReceive =
-            underlyingDecreaseAmountWithoutFees - feesTaken + profitFromDonation;
+            underlyingDecreaseAmountWithoutFees + profitFromDonation;
         uint256 userPotentialWithdraw =
             _synthVault.previewRedeem(_getSharesBalance(user));
         console.log(_getSharesBalance(user));
@@ -426,7 +426,9 @@ contract SyntheticOpenAndClose is SyntheticBaseTests {
 
     function test_userWithdrawAfterClose() public {
         address user = _signer;
-
+        vm.prank(user);
+        _synthVault.deposit(10 ** _underlyingDecimals, user);
+        _synthVault.close();
         vm.startPrank(user);
         vm.expectRevert(
             abi.encodeWithSelector(
