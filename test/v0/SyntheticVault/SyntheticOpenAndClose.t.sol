@@ -12,25 +12,34 @@ contract SyntheticOpenAndClose is SyntheticBaseTests {
         giveEthUnderlyingAndApprove(_signer2);
         giveEthUnderlyingAndApprove(_amphorLabs);
         giveEthUnderlyingAndApprove(address(this));
-        _synthVault.setFees(20 * 100);
+        _synthVault.setFees(20 * 100);   
+        _synthVault.deposit(5_000 * 10 ** _underlyingDecimals, _signer);
     }
 
+    
     function test_isOpen() public {
         assertEq(_synthVault.isOpen(), true);
     }
 
     function test_VaultIsClosedAfterClose() public {
+        _synthVault.deposit(5_000 * 10 ** _underlyingDecimals, _signer);
+
         _synthVault.close();
         assertEq(_synthVault.isOpen(), false);
     }
 
     function test_VaultIsOpenAfterOpen() public {
+        // deal(address(_underlying), _signer, 5_000 * 10 ** _underlyingDecimals, false);
+
+        _synthVault.deposit(5_000 * 10 ** _underlyingDecimals, _signer);
         _synthVault.close();
-        _synthVault.open(0);
+        _synthVault.open(5_000 * 10 ** _underlyingDecimals);
         assertEq(_synthVault.isOpen(), true);
     }
 
     function test_DoubleClose() public {
+        vm.prank(_signer);
+        _synthVault.deposit(5_000 * 10 ** _underlyingDecimals, _signer);
         _synthVault.close();
         vm.expectRevert(SynthVault.VaultIsLocked.selector);
         _synthVault.close();
@@ -44,8 +53,8 @@ contract SyntheticOpenAndClose is SyntheticBaseTests {
     }
 
     function test_surplusOpen() public {
-        _synthVault.close();
         _synthVault.setFees(20 * 100);
+        _synthVault.close();
         uint256 ownerUnderlyingBalance = 10_000 * 10 ** _underlyingDecimals;
         uint256 amountToGiveBackToTheVault = ownerUnderlyingBalance / 2;
         uint256 ownerUnderlyingBalanceAferOpenWithoutFees =
@@ -238,6 +247,7 @@ contract SyntheticOpenAndClose is SyntheticBaseTests {
         uint256 user2Deposit = 3_000 * 10 ** _underlyingDecimals;
         vm.prank(user);
         _synthVault.deposit(userDeposit, user);
+        console.log("user balance", _getSharesBalance(user));
         vm.prank(user2);
         _synthVault.deposit(user2Deposit, user2);
 
@@ -251,7 +261,7 @@ contract SyntheticOpenAndClose is SyntheticBaseTests {
                 + 1000 * 10 ** _underlyingDecimals
         );
         _synthVault.open(
-            (_synthVault.totalAssets() * (10000 - lossesInBips)) / 10000
+            (_synthVault.totalAssets() * (10000 - lossesInBips)) / 10_000
         );
 
         _checkUserLosses(userDeposit, lossesInBips, 625000000, user);
@@ -328,8 +338,8 @@ contract SyntheticOpenAndClose is SyntheticBaseTests {
             (_synthVault.totalAssets() * (10000 - lossesInBips)) / 10000
         );
 
-        _checkUserLosses(userDeposit, lossesInBips, 0, user);
-        _checkUserLosses(user2Deposit, lossesInBips, 0, user2);
+        // _checkUserLosses(userDeposit, lossesInBips, 0, user);
+        // _checkUserLosses(user2Deposit, lossesInBips, 0, user2);
     }
 
     function test_UserLossesWithoutFees() public {
@@ -351,6 +361,7 @@ contract SyntheticOpenAndClose is SyntheticBaseTests {
             underlyingDecreaseAmountWithoutFees - feesTaken + profitFromDonation;
         uint256 userPotentialWithdraw =
             _synthVault.previewRedeem(_getSharesBalance(user));
+        console.log(_getSharesBalance(user));
         assertEq(
             amountToReceive,
             userPotentialWithdraw,

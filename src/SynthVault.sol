@@ -21,6 +21,8 @@ import {SafeERC20} from
 import {ERC20Permit} from
     "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import "forge-std/console.sol"; //todo remove
+
 
 
 /*
@@ -522,8 +524,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
      * @dev The `maxDeposit` function is used to calculate the maximum deposit.
      * @notice If the vault is locked or paused, users are not allowed to mint,
      * the maxMint is 0. //todo add some details
-     * @return Amount of the maximum underlying assets deposit amount.
-    */
+     * @return Amount of the maximum underlying assets deposit amount. */
     function maxDeposit(address) public view returns (uint256) {
         return isOpen() && !paused() ? type(uint256).max : 0;
     }
@@ -532,8 +533,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
      * @dev The `maxMint` function is used to calculate the maximum amount of
      * shares you can mint.
      * @notice If the vault is locked or paused, the maxMint is 0. // todo add details
-     * @return Amount of the maximum shares mintable for the specified address.
-    */
+     * @return Amount of the maximum shares mintable for the specified address. */
     function maxMint(address) public view returns (uint256) {
         return isOpen() && !paused() ? type(uint256).max : 0;
     }
@@ -542,8 +542,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
      * @dev See {IERC4626-maxWithdraw}.
      * @notice If the function is called during the lock period the maxWithdraw
      * is `0`. // todo add details
-     * @return Amount of the maximum number of withdrawable underlying assets.
-    */
+     * @return Amount of the maximum number of withdrawable underlying assets. */
     function maxWithdraw(address owner) public view returns (uint256) {
         return isOpen() && !paused() ? _convertToAssets(
                 balanceOf(owner),
@@ -556,15 +555,13 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
      * @notice If the function is called during the lock period the maxRedeem is
      * `0`. // todo add details
      * @param owner The address of the owner.
-     * @return Amount of the maximum number of redeemable shares.
-    */
+     * @return Amount of the maximum number of redeemable shares. */
     function maxRedeem(address owner) public view returns (uint256) {
         return isOpen() && !paused() ? balanceOf(owner) : 0;
     }
 
     /*
-     * @dev See {IERC4626-previewDeposit}.
-    */
+     * @dev See {IERC4626-previewDeposit}. */
     function previewDeposit(uint256 assets) public view returns (uint256) {
         return _convertToShares(assets, Math.Rounding.Floor);
     }
@@ -752,7 +749,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         returns (uint256)
     {
         uint256 _totalAssets = totalAssets;
-        return _totalAssets == 0 ? 0 :
+        return _totalAssets == 0 ? assets :
             assets.mulDiv(totalSupply(), _totalAssets, rounding);
     }
 
@@ -877,7 +874,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         if (_totalAssets == 0) revert VaultIsEmpty();
 
         _asset.safeTransfer(owner(), _totalAssets);
-
+        _isOpen = false;
         emit EpochStart(block.timestamp, _totalAssets, totalSupply());
     }
 
@@ -919,8 +916,9 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
             fees,
             totalSupply()
         );
-        
+        _isOpen = true;
         _execRequests();
+        epochNonce++;
     }
 
     function _execRequests() internal {
@@ -946,7 +944,6 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
 
         underlyingExcessAssets = _asset.balanceOf(address(this)) - (totalAssets + redeemedAssets);
 
-        epochNonce++;
     }
 
     function restruct(uint256 virtualReturnedAsset) external onlyOwner {
