@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.19;
+pragma solidity 0.8.21;
 
 import {Script, console} from "forge-std/Script.sol";
 import {
-    AmphorSyntheticVaultWithPermit,
-    ERC20,
-    IERC20
-} from "../../src/AmphorSyntheticVaultWithPermit.sol";
+    SynthVaultPermit,
+    ERC20
+} from "../src/SynthVaultPermit.sol";
 
 contract GOERLI_DeployAmphorSynthetic is Script {
     function run() external {
@@ -21,21 +20,20 @@ contract GOERLI_DeployAmphorSynthetic is Script {
 
         vm.startBroadcast(privateKey);
 
-        SynthVault vault =
+        SynthVaultPermit vault =
         new SynthVaultPermit(
                 underlying,
                 vaultName,
-                vaultSymbol,
-                decimalOffset
+                vaultSymbol
             );
 
-        vault.setFees(fees);
+        vault.setFee(fees);
 
-        // amphorSyntheticVault.transferOwnership(amphorlabsAddress);
+        // vault.transferOwnership(amphorlabsAddress);
 
         console.log(
             "Synthetic vault USDC contract address: ",
-            address(amphorSyntheticVault)
+            address(vault)
         );
 
         vm.stopBroadcast();
