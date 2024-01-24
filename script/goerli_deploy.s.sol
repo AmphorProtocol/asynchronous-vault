@@ -5,7 +5,7 @@ import {Script, console} from "forge-std/Script.sol";
 import {
     SynthVaultPermit,
     ERC20
-} from "../src/SynthVaultPermit.sol";
+} from "../src/SynthVaultPermit.sol";`
 
 contract GOERLI_DeployAmphorSynthetic is Script {
     function run() external {
@@ -37,5 +37,7 @@ contract GOERLI_DeployAmphorSynthetic is Script {
         );
 
         vm.stopBroadcast();
+
+        //forge script script/goerli_deploy.s.sol:GOERLI_DeployAmphorSynthetic --verifier-url ${VERIFIER_URL_GOERLI} --verify --broadcast
     }
 }
