@@ -923,6 +923,8 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         );
         
         _execRequests();
+        
+        epochNonce++;
     }
 
     function _execRequests() internal {
@@ -947,8 +949,6 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         epoch[epochNonce].totalAssetsSnapshot = totalAssets;
 
         excessAssets = _asset.balanceOf(address(this)) - (totalAssets + redeemedAssets);
-
-        epochNonce++;
     }
 
     function restruct(uint256 virtualReturnedAsset) external onlyOwner {
