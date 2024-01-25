@@ -56,7 +56,7 @@ contract SyntheticInflationTests is SyntheticBaseTests {
         uint256 attackDepositAmount = 1;
         uint256 attackDonationAmount = 10 ** 3 * victimDepositAmount;
 
-        _testSucceeddingAttack(
+        _testFailingAttack(
             victimDepositAmount,
             attackDepositAmount,
             attackDonationAmount,
@@ -69,7 +69,7 @@ contract SyntheticInflationTests is SyntheticBaseTests {
         uint256 attackDepositAmount = 1;
         uint256 attackDonationAmount = 10 ** 4 * victimDepositAmount;
 
-        _testSucceeddingAttack(
+        _testFailingAttack(
             victimDepositAmount,
             attackDepositAmount,
             attackDonationAmount,
@@ -82,7 +82,7 @@ contract SyntheticInflationTests is SyntheticBaseTests {
         uint256 attackDepositAmount = 1;
         uint256 attackDonationAmount = 10 ** 5 * victimDepositAmount;
 
-        _testSucceeddingAttack(
+        _testFailingAttack(
             victimDepositAmount,
             attackDepositAmount,
             attackDonationAmount,
@@ -95,7 +95,7 @@ contract SyntheticInflationTests is SyntheticBaseTests {
         uint256 attackDepositAmount = 1;
         uint256 attackDonationAmount = 10 ** 6 * victimDepositAmount;
 
-        _testSucceeddingAttack(
+        _testFailingAttack(
             victimDepositAmount,
             attackDepositAmount,
             attackDonationAmount,
@@ -108,7 +108,7 @@ contract SyntheticInflationTests is SyntheticBaseTests {
         uint256 attackDepositAmount = 1;
         uint256 attackDonationAmount = 10 ** 7 * victimDepositAmount;
 
-        _testSucceeddingAttack(
+        _testFailingAttack(
             victimDepositAmount,
             attackDepositAmount,
             attackDonationAmount,
@@ -121,7 +121,7 @@ contract SyntheticInflationTests is SyntheticBaseTests {
         uint256 attackDepositAmount = 1;
         uint256 attackDonationAmount = 10 ** 8 * victimDepositAmount;
 
-        _testSucceeddingAttack(
+        _testFailingAttack(
             victimDepositAmount,
             attackDepositAmount,
             attackDonationAmount,
@@ -135,7 +135,7 @@ contract SyntheticInflationTests is SyntheticBaseTests {
         uint256 attackDepositAmount = 1;
         uint256 attackDonationAmount = victimDepositAmount
             ** (_decimalOffset + _baseDepositDecimalsCount + 1);
-        _testSucceeddingAttack(
+        _testFailingAttack(
             victimDepositAmount,
             attackDepositAmount,
             attackDonationAmount,
@@ -276,8 +276,16 @@ contract SyntheticInflationTests is SyntheticBaseTests {
         vm.prank(_victim);
         _synthVault.deposit(victimDepositAmount, _victim);
 
+        console.log(
+            "victimDepositAmount",
+            victimDepositAmount
+        );
+        console.log(
+            "Victim's final balance",
+            _synthVault.previewRedeem(_getSharesBalance(_victim))
+        );
         assertEq(
-            victimDepositAmount - 1, // -1 because of the Math.Rounding.Floor
+            victimDepositAmount, // -1 because of the Math.Rounding.Floor
             _synthVault.previewRedeem(_getSharesBalance(_victim)),
             "Victim should have an appropriate underlying tokens amount"
         );
