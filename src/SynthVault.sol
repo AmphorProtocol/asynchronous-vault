@@ -194,13 +194,13 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     IERC20 internal immutable _asset; // underlying
     uint256 public epochNonce = 1;
     uint256 public totalAssets; // total underlying assets
-    uint256 internal totalPendingDepositRequest; // total underlying assets pre-deposited
-    uint256 internal totalPendingRedeemRequest; // total shares pre-redeemed
+    uint256 internal totalPendingDepositRequest; // total underlying assets pre-deposited // todo remove this
+    uint256 internal totalPendingRedeemRequest; // total shares pre-redeemed // todo remove this
     uint256 public excessAssets; // donated underlying // todo remove this
     bool public _isOpen; // vault is open or closed
     mapping(uint256 => Epoch) internal epoch; // epochNonce => Epoch
-    mapping(address => uint256) lastDepositRequestId; // user => epochNonce // todo remove this
-    mapping(address => uint256) lastRedeemRequestId; // user => epochNonce // todo remove this
+    mapping(address => uint256) lastDepositRequestId; // user => epochNonce 
+    mapping(address => uint256) lastRedeemRequestId; // user => epochNonce
 
     /**
      * ##############################
