@@ -11,14 +11,15 @@ pragma solidity 0.8.21;
 | )   ( || )   ( || )      | )   ( || (___) || ) \ \__
 |/     \||/     \||/       |/     \|(_______)|/   \__/
  _______           _       _________          _______ __________________ _______
-(  ____ \|\     /|( (    /|\__   __/|\     /|(  ____ \\__   __/\__   __/(  ____ \
+(  ____ \|\     /|( (    /|\__   __/|\     /|(  ____ \\__   __/\__   __/(  ____
+\
 | (    \/( \   / )|  \  ( |   ) (   | )   ( || (    \/   ) (      ) (   | (    \/
 | (_____  \ (_) / |   \ | |   | |   | (___) || (__       | |      | |   | |
 (_____  )  \   /  | (\ \) |   | |   |  ___  ||  __)      | |      | |   | |
       ) |   ) (   | | \   |   | |   | (   ) || (         | |      | |   | |
-/\____) |   | |   | )  \  |   | |   | )   ( || (____/\   | |   ___) (___| (____/\
-\_______)   \_/   |/    )_)   )_(   |/     \|(_______/   )_(   \_______/(_______/
-*/
+/\____) |   | |   | )  \  |   | |   | )   ( || (____/\   | |   ___) (___|
+(____/\
+\_______)   \_/   |/    )_)   )_(   |/     \|(_______/   )_(   \_______/(_______/*/
 
 import "./AmphorSyntheticVaultImp.sol";
 
@@ -63,15 +64,17 @@ contract AmphorSyntheticVaultPermitImp is AmphorSyntheticVaultImp {
             _decimalsOffset,
             _amprWithdrawReceipt
         )
-    {}
+    { }
 
     /**
-     * @dev The `depositWithPermit` function is used to deposit underlying assets
+     * @dev The `depositWithPermit` function is used to deposit underlying
+     * assets
      * into the vault using a permit for approval.
      * @param assets The underlying assets amount to be converted into
      * shares.
      * @param receiver The address of the shares receiver.
-     * @param permitParams The permit struct containing the permit signature and data.
+     * @param permitParams The permit struct containing the permit signature and
+     * data.
      * @return Amount of shares received in exchange of the specified underlying
      * assets amount.
      */
@@ -79,7 +82,10 @@ contract AmphorSyntheticVaultPermitImp is AmphorSyntheticVaultImp {
         uint256 assets,
         address receiver,
         PermitParams calldata permitParams
-    ) external returns (uint256) {
+    )
+        external
+        returns (uint256)
+    {
         if (_asset.allowance(msg.sender, address(this)) < assets) {
             execPermit(_msgSender(), address(this), permitParams);
         }
@@ -92,10 +98,12 @@ contract AmphorSyntheticVaultPermitImp is AmphorSyntheticVaultImp {
      * @param assets The underlying assets amount to be converted into
      * shares.
      * @param receiver The address of the shares receiver.
-     * @param minShares The minimum amount of shares to be received in exchange of
+    * @param minShares The minimum amount of shares to be received in exchange
+    of
      * the specified underlying assets amount.
-     * @param permitParams The permit struct containing the permit signature and data.
-     * @return Amount of shares received in exchange of the specified underlying
+    * @param permitParams The permit struct containing the permit signature and
+    data.
+    * @return Amount of shares received in exchange of the specified underlying
      * assets amount.
      */
     function depositWithPermitMinShares(
@@ -103,7 +111,10 @@ contract AmphorSyntheticVaultPermitImp is AmphorSyntheticVaultImp {
         address receiver,
         uint256 minShares,
         PermitParams calldata permitParams
-    ) external returns (uint256) {
+    )
+        external
+        returns (uint256)
+    {
         if (_asset.allowance(msg.sender, address(this)) < assets) {
             execPermit(_msgSender(), address(this), permitParams);
         }
@@ -114,17 +125,23 @@ contract AmphorSyntheticVaultPermitImp is AmphorSyntheticVaultImp {
      * @dev The `mintWithPermit` function is used to mint the specified shares
      * amount in exchange of the corresponding underlying assets amount from
      * `_msgSender()` using a permit for approval.
-     * @param shares The amount of shares to be converted into underlying assets.
+     * @param shares The amount of shares to be converted into underlying
+     * assets.
      * @param receiver The address of the shares receiver.
-     * @param permitParams The permit struct containing the permit signature and data.
-     * @return Amount of underlying assets deposited in exchange of the specified
+     * @param permitParams The permit struct containing the permit signature and
+     * data.
+     * @return Amount of underlying assets deposited in exchange of the
+     * specified
      * shares amount.
      */
     function mintWithPermit(
         uint256 shares,
         address receiver,
         PermitParams calldata permitParams
-    ) external returns (uint256) {
+    )
+        external
+        returns (uint256)
+    {
         if (_asset.allowance(msg.sender, address(this)) < previewMint(shares)) {
             execPermit(_msgSender(), address(this), permitParams);
         }
@@ -135,12 +152,15 @@ contract AmphorSyntheticVaultPermitImp is AmphorSyntheticVaultImp {
      * @dev The `mintWithPermit` function is used to mint the specified shares
      * amount in exchange of the corresponding underlying assets amount from
      * `_msgSender()` using a permit for approval.
-     * @param shares The amount of shares to be converted into underlying assets.
+     * @param shares The amount of shares to be converted into underlying
+     * assets.
      * @param receiver The address of the shares receiver.
      * @param maxAssets The maximum amount of underlying assets to be deposited
      * in exchange of the specified shares amount.
-     * @param permitParams The permit struct containing the permit signature and data.
-     * @return Amount of underlying assets deposited in exchange of the specified
+     * @param permitParams The permit struct containing the permit signature and
+     * data.
+     * @return Amount of underlying assets deposited in exchange of the
+     * specified
      * shares amount.
      */
     function mintWithPermitMaxAssets(
@@ -148,7 +168,10 @@ contract AmphorSyntheticVaultPermitImp is AmphorSyntheticVaultImp {
         address receiver,
         uint256 maxAssets,
         PermitParams calldata permitParams
-    ) external returns (uint256) {
+    )
+        external
+        returns (uint256)
+    {
         if (_asset.allowance(msg.sender, address(this)) < previewMint(shares)) {
             execPermit(_msgSender(), address(this), permitParams);
         }
@@ -156,16 +179,19 @@ contract AmphorSyntheticVaultPermitImp is AmphorSyntheticVaultImp {
     }
 
     /*
-     * @dev The `execPermit` function is used to execute a permit for approval.
+    * @dev The `execPermit` function is used to execute a permit for approval.
      * @param owner The owner of the funds.
      * @param spender The spender of the funds.
-     * @param permitParams The permit struct containing the permit signature and data.
+    * @param permitParams The permit struct containing the permit signature and
+    data.
      */
     function execPermit(
         address owner,
         address spender,
         PermitParams calldata permitParams
-    ) internal {
+    )
+        internal
+    {
         ERC20Permit(address(_asset)).permit(
             owner,
             spender,

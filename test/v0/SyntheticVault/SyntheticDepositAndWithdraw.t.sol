@@ -7,7 +7,8 @@ contract SyntheticDepositAndWithdrawTests is SyntheticBaseTests {
     using Math for uint256;
 
     function test_SimpleDepositAndWithdraw() public {
-        uint256 depositAmount = 10 ** _underlyingDecimals; // 1 ETH / 100 000 000 000.00000 USDC
+        uint256 depositAmount = 10 ** _underlyingDecimals; // 1 ETH / 100 000
+            // 000 000.00000 USDC
         uint256 vaultUnderlyingBalance =
             IERC20(_underlying).balanceOf(address(_synthVault));
 
@@ -126,11 +127,11 @@ contract SyntheticDepositAndWithdrawTests is SyntheticBaseTests {
         uint256 sharesPreview = _synthVault.previewDeposit(toDeposit);
 
         uint256 sharesMinted = _synthVault.depositMinShares(
-            toDeposit.mulDiv(9900, 10000),
+            toDeposit.mulDiv(9900, 10_000),
             _signer,
-            sharesPreview.mulDiv(9900, 10000)
+            sharesPreview.mulDiv(9900, 10_000)
         );
-        assertGe(sharesMinted, sharesPreview.mulDiv(9900, 10000));
+        assertGe(sharesMinted, sharesPreview.mulDiv(9900, 10_000));
     }
 
     function test_depositMinSharesNotEnough() public {
@@ -139,19 +140,19 @@ contract SyntheticDepositAndWithdrawTests is SyntheticBaseTests {
         uint256 toDeposit = 10 * 10 ** ERC20(_underlying).decimals();
         uint256 sharesPreview = _synthVault.previewDeposit(toDeposit);
         uint256 actualShares =
-            _synthVault.previewDeposit(toDeposit.mulDiv(9899, 10000));
+            _synthVault.previewDeposit(toDeposit.mulDiv(9899, 10_000));
         vm.expectRevert(
             abi.encodeWithSelector(
                 SynthVault.ERC4626NotEnoughSharesMinted.selector,
                 _signer,
                 actualShares,
-                sharesPreview.mulDiv(9900, 10000)
+                sharesPreview.mulDiv(9900, 10_000)
             )
         );
         _synthVault.depositMinShares(
-            toDeposit.mulDiv(9899, 10000),
+            toDeposit.mulDiv(9899, 10_000),
             _signer,
-            sharesPreview.mulDiv(9900, 10000)
+            sharesPreview.mulDiv(9900, 10_000)
         );
     }
 
@@ -187,10 +188,12 @@ contract SyntheticDepositAndWithdrawTests is SyntheticBaseTests {
     function test_advancedDepositAndWithdraw() public {
         // 10 ** 18 // 1 ETH / 10 000 000 000 000.00000 USDC
         _testAdvancedDepositAndWithdraw(
-            10 ** 18, type(uint256).max, 34545678908765, 9876546789
+            10 ** 18, type(uint256).max, 34_545_678_908_765, 9_876_546_789
         ); // 34545678908765 is a random number
-            // _testAdvancedDepositAndWithdraw(3456789, 34545678908765); // 34545678908765 > 3456789 are both random numbers
-            // _testAdvancedDepositAndWithdraw(34545678908765, 3456789); // 34545678908765 > 3456789 are both random numbers
+            // _testAdvancedDepositAndWithdraw(3456789, 34545678908765); //
+            // 34545678908765 > 3456789 are both random numbers
+            // _testAdvancedDepositAndWithdraw(34545678908765, 3456789); //
+            // 34545678908765 > 3456789 are both random numbers
     }
 
     function _testAdvancedDepositAndWithdraw(
@@ -198,14 +201,18 @@ contract SyntheticDepositAndWithdrawTests is SyntheticBaseTests {
         uint256 approvalAmount,
         uint256 depositAmount,
         uint256 withdrawAmount
-    ) internal {
+    )
+        internal
+    {
         uint256 vaultUnderlyingBalance =
             IERC20(_underlying).balanceOf(address(_synthVault));
 
-        // Fund the vault with some underlying, and mint the corresponding shares tokens
+        // Fund the vault with some underlying, and mint the corresponding
+        // shares tokens
         deal(address(_underlying), _signer, balanceAmount, false);
         vm.startPrank(_signer);
-        IERC20(_underlying).approve(address(_synthVault), approvalAmount); // Max approval, just to test an eventual edge case
+        IERC20(_underlying).approve(address(_synthVault), approvalAmount); // Max
+            // approval, just to test an eventual edge case
         _synthVault.deposit(depositAmount, _signer);
         assertEq(
             IERC20(_synthVault).balanceOf(_signer),
@@ -388,12 +395,14 @@ contract SyntheticDepositAndWithdrawTests is SyntheticBaseTests {
     //     assertEq(
     //         mintReturn,
     //         underlyingPreview,
-    //         "Mint return should be equal to the amount of underlying originally deposited"
+    //         "Mint return should be equal to the amount of underlying
+    // originally deposited"
     //     );
     //     assertEq(
     //         underlyingAfter,
     //         underlyingBefore - mintReturn,
-    //         "Mint return should be equal to the amount of underlying actually deposited"
+    //         "Mint return should be equal to the amount of underlying actually
+    // deposited"
     //     );
     // }
 

@@ -23,7 +23,8 @@ contract SyntheticInflationTests is SyntheticBaseTests {
     }
 
     function test_classicAttack() public {
-        // here donation is just victimDepositAmount + 1, so the attack should not work
+        // here donation is just victimDepositAmount + 1, so the attack should
+        // not work
 
         uint256 victimDepositAmount = 10;
         uint256 attackDepositAmount = 1;
@@ -130,7 +131,8 @@ contract SyntheticInflationTests is SyntheticBaseTests {
     }
 
     function test_attackWithExtremlyHighDonation() public {
-        // Testing inflation with an over big donation (so the attack should work)
+        // Testing inflation with an over big donation (so the attack should
+        // work)
         uint256 victimDepositAmount = 10;
         uint256 attackDepositAmount = 1;
         uint256 attackDonationAmount = victimDepositAmount
@@ -148,8 +150,10 @@ contract SyntheticInflationTests is SyntheticBaseTests {
             donationPowerFactor < _decimalOffset + _baseDepositDecimalsCount + 1
         );
         // Test inflation with only the base underlying amount in the vault
-        // This will try the attack with an amount up to vaults decimals + bootstrap decimal + 1 (+99%)
-        // For usdc, this means that with a 24 offset and a 10k USDC bootstrap we can go up to a 35 decimals amount
+        // This will try the attack with an amount up to vaults decimals +
+        // bootstrap decimal + 1 (+99%)
+        // For usdc, this means that with a 24 offset and a 10k USDC bootstrap
+        // we can go up to a 35 decimals amount
         // up to  10 ** 29 . 000 000 USDC
 
         uint256 victimDepositAmount = 10;
@@ -170,8 +174,11 @@ contract SyntheticInflationTests is SyntheticBaseTests {
         uint256 attackDepositAmount,
         uint256 attackDonationAmount,
         uint256 underlyingBaseDeposit
-    ) private {
-        // Fund the vault with some (vaultStartBalanceAddon) underlying, and mint the corresponding shares tokens
+    )
+        private
+    {
+        // Fund the vault with some (vaultStartBalanceAddon) underlying, and
+        // mint the corresponding shares tokens
         if (underlyingBaseDeposit > 0) {
             deal(
                 address(_underlying),
@@ -247,7 +254,9 @@ contract SyntheticInflationTests is SyntheticBaseTests {
         uint256 attackDepositAmount,
         uint256 attackDonationAmount,
         uint256 underlyingBaseDeposit
-    ) private {
+    )
+        private
+    {
         if (underlyingBaseDeposit > 0) {
             deal(
                 address(_underlying),
@@ -276,10 +285,7 @@ contract SyntheticInflationTests is SyntheticBaseTests {
         vm.prank(_victim);
         _synthVault.deposit(victimDepositAmount, _victim);
 
-        console.log(
-            "victimDepositAmount",
-            victimDepositAmount
-        );
+        console.log("victimDepositAmount", victimDepositAmount);
         console.log(
             "Victim's final balance",
             _synthVault.previewRedeem(_getSharesBalance(_victim))

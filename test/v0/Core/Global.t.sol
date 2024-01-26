@@ -4,10 +4,12 @@ pragma solidity 0.8.21;
 import "../../../lib/forge-std/src/console.sol";
 import "../../../lib/forge-std/src/Test.sol";
 
-import {ERC4626, IERC4626} from
-    "openzeppelin-contracts/contracts/token/ERC20/extensions/ERC4626.sol";
+import {
+    ERC4626,
+    IERC4626
+} from "openzeppelin-contracts/contracts/token/ERC20/extensions/ERC4626.sol";
 
-import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
+import { Math } from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 
 import "../../../src/SynthVaultPermit.sol";
 

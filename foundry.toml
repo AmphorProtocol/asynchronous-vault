@@ -27,3 +27,10 @@ goerli = "https://ethereum-goerli.publicnode.com"
 
 [fmt]
 line_length = 80
+bracket_spacing = true
+int_types = "long"
+multiline_func_header = "all"
+number_underscore = "thousands"
+quote_style = "double"
+tab_width = 4
+wrap_comments = true

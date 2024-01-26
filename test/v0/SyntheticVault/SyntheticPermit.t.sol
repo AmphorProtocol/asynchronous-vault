@@ -204,7 +204,8 @@ contract SyntheticPermit is SyntheticBaseTests {
     // function test_MintWithPermitTooMuch() public {
     //     uint256 sharesExpected = 1_000_000 * 10 ** _decimalOffset;
     //     uint256 underlying = _synthVault.previewMint(sharesExpected);
-    //     uint256 tooMuchUnderlying = _synthVault.previewMint(sharesExpected * 10);
+    //     uint256 tooMuchUnderlying = _synthVault.previewMint(sharesExpected *
+    // 10);
     //     (uint8 v, bytes32 r, bytes32 s) = _signPermit(
     //         address(_synthVault), underlying, _usdc.nonces(_user), _deadline
     //     );
@@ -226,7 +227,8 @@ contract SyntheticPermit is SyntheticBaseTests {
     //     uint256 underlying = _getUnderlyingBalance(_user);
     //     address _spender = address(_synthVault);
     //     (uint8 v, bytes32 r, bytes32 s) =
-    //         _signPermit(_spender, underlying, _usdc.nonces(_user), _deadline);
+    //         _signPermit(_spender, underlying, _usdc.nonces(_user),
+    // _deadline);
     //     address randomSpender = vm.addr(0x1234);
     //     vm.expectRevert("EIP2612: invalid signature");
     //     _usdc.permit(_user, randomSpender, underlying, _deadline, v, r, s);
@@ -286,7 +288,7 @@ contract SyntheticPermit is SyntheticBaseTests {
     // }
 
     function test_MintWithPermitMaxAssets() public {
-        uint256 sharesExpected = 1_000 * 10 ** _synthVault.decimals();
+        uint256 sharesExpected = 1000 * 10 ** _synthVault.decimals();
         uint256 underlying = _synthVault.previewMint(sharesExpected);
         uint256 underlyingBefore = _getUnderlyingBalance(_user);
         (uint8 v, bytes32 r, bytes32 s) = _signPermit(
@@ -308,7 +310,7 @@ contract SyntheticPermit is SyntheticBaseTests {
     }
 
     function test_MintWithPermitMaxAssetsTooMuch() public {
-        uint256 sharesExpected = 1_000 * 10 ** _synthVault.decimals();
+        uint256 sharesExpected = 1000 * 10 ** _synthVault.decimals();
         uint256 underlying = _synthVault.previewMint(sharesExpected);
         _getUnderlyingBalance(_user);
         (uint8 v, bytes32 r, bytes32 s) = _signPermit(
@@ -346,7 +348,11 @@ contract SyntheticPermit is SyntheticBaseTests {
         uint256 _value,
         uint256 _nonce,
         uint256 deadline
-    ) internal view returns (uint8 v, bytes32 r, bytes32 s) {
+    )
+        internal
+        view
+        returns (uint8 v, bytes32 r, bytes32 s)
+    {
         SigUtils.Permit memory permit = SigUtils.Permit({
             owner: _user,
             spender: _spender,
@@ -374,7 +380,8 @@ contract SyntheticPermit is SyntheticBaseTests {
     //         s: s
     //     });
 
-    //     // The attacker use the permit with the same nonce in order to consume it
+    //     // The attacker use the permit with the same nonce in order to
+    // consume it
     //     uint256 nonceBefore = _usdc.nonces(_user);
     //     _usdc.permit(
     //         _user,
@@ -390,13 +397,15 @@ contract SyntheticPermit is SyntheticBaseTests {
     //     assertEq(_usdc.nonces(_user), nonceBefore + 1);
 
     //     // The user try to use the permit but it is already consumed
-    //     vm.expectRevert(); // The deposit will fail because the permit is already consumed
+    //     vm.expectRevert(); // The deposit will fail because the permit is
+    // already consumed
     //     _synthVault.depositWithPermit(underlying, _user, params);
     //     vm.expectRevert(); // As well as the deposit MinShares
     //     _synthVault.depositWithPermitMinShares(
     //         underlying, _user, previewShares, params
     //     );
-    //     vm.expectRevert(); // The deposit will fail because the permit is already consumed
+    //     vm.expectRevert(); // The deposit will fail because the permit is
+    // already consumed
     //     _synthVault.mintWithPermit(previewShares, _user, params);
     //     vm.expectRevert(); // As well as the mint MaxAssets
     //     _synthVault.mintWithPermitMaxAssets(

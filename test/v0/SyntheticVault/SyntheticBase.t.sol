@@ -6,21 +6,29 @@ import "@src/SynthVaultPermit.sol";
 
 contract SyntheticBaseTests is BaseVaultTest {
     /*
-        _                          _                        ____                    _     _              _     _            _                  _         
-       / \     _ __ ___    _ __   | |__     ___    _ __    / ___|   _   _   _ __   | |_  | |__     ___  | |_  (_)   ___    | |_    ___   ___  | |_   ___ 
-      / _ \   | '_ ` _ \  | '_ \  | '_ \   / _ \  | '__|   \___ \  | | | | | '_ \  | __| | '_ \   / _ \ | __| | |  / __|   | __|  / _ \ / __| | __| / __|
-     / ___ \  | | | | | | | |_) | | | | | | (_) | | |       ___) | | |_| | | | | | | |_  | | | | |  __/ | |_  | | | (__    | |_  |  __/ \__ \ | |_  \__ \
-    /_/   \_\ |_| |_| |_| | .__/  |_| |_|  \___/  |_|      |____/   \__, | |_| |_|  \__| |_| |_|  \___|  \__| |_|  \___|    \__|  \___| |___/  \__| |___/
-                          |_|                                       |___/                                                                                
+    _                          _                        ____                    _     _              _     _            _                  _         
+    / \     _ __ ___    _ __   | |__     ___    _ __    / ___|   _   _   _ __   |
+    |_  | |__     ___  | |_  (_)   ___    | |_    ___   ___  | |_   ___ 
+    / _ \   | '_ ` _ \  | '_ \  | '_ \   / _ \  | '__|   \___ \  | | | | | '_ \  |
+    __| | '_ \   / _ \ | __| | |  / __|   | __|  / _ \ / __| | __| / __|
+    / ___ \  | | | | | | | |_) | | | | | | (_) | | |       ___) | | |_| | | | |
+    | | |_  | | | | |  __/ | |_  | | | (__    | |_  |  __/ \__ \ | |_  \__ \
+    /_/   \_\ |_| |_| |_| | .__/  |_| |_|  \___/  |_|      |____/   \__, | |_|
+    |_|  \__| |_| |_|  \___|  \__| |_|  \___|    \__|  \___| |___/  \__| |___/
+    |_|                                       |___/                                                                                
     */
 
     // Declare global attributes here
     SynthVaultPermit internal _synthVault;
-    ERC20 internal USDC = ERC20(vm.envAddress("USDC_MAINNET")); // can also be vm.envAddress("WETH_MAINNET") or vm.envAddress("WBTC_MAINNET")
-    ERC20 internal _underlying = ERC20(vm.envAddress("DAI_MAINNET")); // can also be vm.envAddress("WETH_MAINNET") or vm.envAddress("WBTC_MAINNET")
+    ERC20 internal USDC = ERC20(vm.envAddress("USDC_MAINNET")); // can also be
+        // vm.envAddress("WETH_MAINNET") or vm.envAddress("WBTC_MAINNET")
+    ERC20 internal _underlying = ERC20(vm.envAddress("DAI_MAINNET")); // can
+        // also be vm.envAddress("WETH_MAINNET") or
+        // vm.envAddress("WBTC_MAINNET")
     uint256 internal _underlyingDecimals = ERC20(_underlying).decimals();
     uint8 internal _decimalOffset = 0;
-    //_underlying == vm.envAddress("DAI_MAINNET") ? 24 : 35; // 24 for USDC, 35 for WETH, 35 for WBTC -> we should put less
+    //_underlying == vm.envAddress("DAI_MAINNET") ? 24 : 35; // 24 for USDC, 35
+    // for WETH, 35 for WBTC -> we should put less
     address internal _usdt = vm.envAddress("USDT_MAINNET");
     // Declare AmphorLabs wallet address here
     address internal _amphorLabs = 0xa51337F0B984B28E3363616563e11457a7498BB6;
@@ -31,16 +39,17 @@ contract SyntheticBaseTests is BaseVaultTest {
 
     function setUp() public virtual {
         // Deploy the SynthVault contract
-        _synthVault = new SynthVaultPermit(
-            _underlying,
-            "Amphor Synthetic Vault",
-            "ASV"
-        );
+        _synthVault =
+            new SynthVaultPermit(_underlying, "Amphor Synthetic Vault", "ASV");
 
         _additionnalSetup();
+
+        // if (true) {
+        //     _decimalOffset = 1;
+        // }
     }
 
-    function _additionnalSetup() internal virtual {}
+    function _additionnalSetup() internal virtual { }
 
     function _getUnderlyingBalance(address user)
         internal
@@ -63,7 +72,10 @@ contract SyntheticBaseTests is BaseVaultTest {
         );
     }
 
-    function giveEthUnderlyingAndApprove(address user, uint256 amount)
+    function giveEthUnderlyingAndApprove(
+        address user,
+        uint256 amount
+    )
         public
         returns (uint256)
     {
@@ -74,7 +86,10 @@ contract SyntheticBaseTests is BaseVaultTest {
         return amount;
     }
 
-    function assertUnderlyingBalance(address owner, uint256 expectedBalance)
+    function assertUnderlyingBalance(
+        address owner,
+        uint256 expectedBalance
+    )
         public
     {
         assertEq(
@@ -84,7 +99,10 @@ contract SyntheticBaseTests is BaseVaultTest {
         );
     }
 
-    function assertSharesBalance(address owner, uint256 expectedBalance)
+    function assertSharesBalance(
+        address owner,
+        uint256 expectedBalance
+    )
         public
     {
         assertEq(

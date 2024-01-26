@@ -107,7 +107,10 @@ abstract contract BaseProperties is GlobalTest {
         uint256 assets,
         uint256 vaultAssets,
         uint256 userSharesAmount
-    ) public virtual {
+    )
+        public
+        virtual
+    {
         vm.assume(vaultAssets < _underlying.totalSupply());
         vm.assume(userSharesAmount <= vaultAssets);
         vm.assume(assets <= vaultAssets);
@@ -169,7 +172,9 @@ abstract contract BaseProperties is GlobalTest {
         address receiver,
         uint256 vaultAssets,
         uint256 sharesSupply
-    ) public {
+    )
+        public
+    {
         vm.assume(shares <= sharesSupply);
         vm.assume(shares <= _vault.maxMint(receiver));
         vm.assume(sharesSupply <= shares);
@@ -199,7 +204,10 @@ abstract contract BaseProperties is GlobalTest {
         uint256 assets,
         address receiver,
         address owner
-    ) public virtual {
+    )
+        public
+        virtual
+    {
         vm.assume(owner != 0x0000000000000000000000000000000000000000);
         vm.assume(receiver != 0x0000000000000000000000000000000000000000);
         vm.assume(vaultAssets < _underlying.totalSupply());
@@ -240,7 +248,10 @@ abstract contract BaseProperties is GlobalTest {
         uint256 vaultAssets,
         address receiver,
         address owner
-    ) public virtual {
+    )
+        public
+        virtual
+    {
         vm.assume(owner != 0x0000000000000000000000000000000000000000);
         vm.assume(receiver != 0x0000000000000000000000000000000000000000);
         vm.assume(vaultAssets <= _underlying.totalSupply());

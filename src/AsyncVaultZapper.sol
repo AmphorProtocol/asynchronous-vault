@@ -5,15 +5,15 @@ import {
     Ownable2Step,
     Ownable
 } from "@openzeppelin/contracts/access/Ownable2Step.sol";
-import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
-import {SafeERC20} from
+import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
+import { SafeERC20 } from
     "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {IERC7540} from "./interfaces/IERC7540.sol";
-import {PermitParams} from "./SynthVaultPermit.sol";
-import {ERC20Permit} from
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import { IERC7540 } from "./interfaces/IERC7540.sol";
+import { PermitParams } from "./SynthVaultPermit.sol";
+import { ERC20Permit } from
     "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
-import {Address} from "@openzeppelin/contracts/utils/Address.sol";
+import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 import {
     IPermit2, ISignatureTransfer
 } from "permit2/src/interfaces/IPermit2.sol";
@@ -93,7 +93,8 @@ contract AsyncVaultZapper is Ownable2Step, Pausable {
      * been sent to the vault.
      * @notice The `claimToken` function is used to claim other tokens that have
      * been sent to the vault.
-     * It can only be called by the owner of the contract (`onlyOwner` modifier).
+     * It can only be called by the owner of the contract (`onlyOwner`
+     * modifier).
      * @param token The IERC20 token to be claimed.
      */
     function withdrawToken(IERC20 token) external onlyOwner {
@@ -112,7 +113,10 @@ contract AsyncVaultZapper is Ownable2Step, Pausable {
         _unpause();
     }
 
-    function approveTokenForRouter(IERC20 token, address router)
+    function approveTokenForRouter(
+        IERC20 token,
+        address router
+    )
         public
         onlyOwner
         onlyAllowedRouter(router)
@@ -142,7 +146,9 @@ contract AsyncVaultZapper is Ownable2Step, Pausable {
         address router,
         uint256 amount,
         bytes calldata data
-    ) internal {
+    )
+        internal
+    {
         uint256 expectedBalance; // of tokenIn (currently)
 
         if (msg.value == 0) {
@@ -159,7 +165,8 @@ contract AsyncVaultZapper is Ownable2Step, Pausable {
             : address(this).balance;
 
         if (balanceAfterZap > expectedBalance) {
-            // Our balance is higher than expected, we shouldn't have received any token
+            // Our balance is higher than expected, we shouldn't have received
+            // any token
             revert InconsistantSwapData({
                 expectedTokenInBalance: expectedBalance,
                 actualTokenInBalance: balanceAfterZap
@@ -183,7 +190,8 @@ contract AsyncVaultZapper is Ownable2Step, Pausable {
     // returns (uint256) // request receipt tokens amount minted
     {
         uint256 initialTokenOutBalance =
-            IERC20(vault.asset()).balanceOf(address(this)); // tokenOut balance to deposit, not final value
+            IERC20(vault.asset()).balanceOf(address(this)); // tokenOut balance to
+            // deposit, not final value
 
         // Zap
         _zapIn(tokenIn, router, amount, swapData);
@@ -209,7 +217,9 @@ contract AsyncVaultZapper is Ownable2Step, Pausable {
         address router,
         IERC20 tokenIn,
         uint256 amount
-    ) private {
+    )
+        private
+    {
         tokenIn.safeTransferFrom(_msgSender(), address(this), amount);
         if (tokenIn.allowance(_msgSender(), router) < amount) {
             tokenIn.forceApprove(router, amount);
@@ -236,7 +246,8 @@ contract AsyncVaultZapper is Ownable2Step, Pausable {
         uint256 assets =
             IERC7540(vault).redeem(shares, address(this), _msgSender());
 
-        // Once the assets are out of the vault, we can zap them into the desired asset
+        // Once the assets are out of the vault, we can zap them into the
+        // desired asset
         _execute(router, data);
 
         uint256 balanceAfterSwap =
@@ -262,7 +273,10 @@ contract AsyncVaultZapper is Ownable2Step, Pausable {
         bytes calldata data,
         bytes calldata swapData,
         PermitParams calldata permitParams
-    ) public payable /*returns (uint256)*/ {
+    )
+        public
+        payable /*returns (uint256)*/
+    {
         if (tokenIn.allowance(_msgSender(), address(this)) < amount) {
             _executePermit(tokenIn, _msgSender(), address(this), permitParams);
         }
@@ -276,7 +290,9 @@ contract AsyncVaultZapper is Ownable2Step, Pausable {
         uint256 shares, // shares to redeem
         bytes calldata data,
         PermitParams calldata permitParams
-    ) public {
+    )
+        public
+    {
         if (IERC20(vault).allowance(_msgSender(), address(this)) < shares) {
             _executePermit(
                 IERC20(vault), _msgSender(), address(this), permitParams
@@ -285,11 +301,15 @@ contract AsyncVaultZapper is Ownable2Step, Pausable {
         claimRedeemAndZap(vault, router, shares, data);
     }
 
-    function _execute(address target, bytes memory data)
+    function _execute(
+        address target,
+        bytes memory data
+    )
         private
         returns (bytes memory response)
     {
-        (bool success, bytes memory _data) = target.call{value: msg.value}(data);
+        (bool success, bytes memory _data) =
+            target.call{ value: msg.value }(data);
         if (!success) {
             if (data.length > 0) revert SwapFailed(string(_data));
             else revert SwapFailed("Unknown reason");
@@ -302,7 +322,9 @@ contract AsyncVaultZapper is Ownable2Step, Pausable {
         address owner,
         address spender,
         PermitParams calldata permitParams
-    ) private {
+    )
+        private
+    {
         ERC20Permit(address(token)).permit(
             owner,
             spender,
@@ -357,7 +379,9 @@ contract AsyncVaultZapper is Ownable2Step, Pausable {
         bytes calldata data,
         bytes calldata swapData,
         Permit2Params calldata permit2Params
-    ) external {
+    )
+        external
+    {
         if (tokenIn.allowance(_msgSender(), address(this)) < amount) {
             execPermit2(permit2Params);
         }

@@ -7,9 +7,8 @@ import "@openzeppelin/contracts/utils/Pausable.sol";
 import "../../utils/SigUtils.sol";
 import "./SyntheticBase.t.sol";
 
-
 contract SyntheticPausableTests is SyntheticBaseTests {
-      SigUtils internal _sigUtils;
+    SigUtils internal _sigUtils;
     ERC20Permit internal _usdc = ERC20Permit(address(_underlying));
     uint256 internal _userPrivKey;
     uint256 internal _deadline = block.timestamp + 1000;
@@ -20,7 +19,11 @@ contract SyntheticPausableTests is SyntheticBaseTests {
         uint256 _value,
         uint256 _nonce,
         uint256 deadline
-    ) internal view returns (uint8 v, bytes32 r, bytes32 s) {
+    )
+        internal
+        view
+        returns (uint8 v, bytes32 r, bytes32 s)
+    {
         SigUtils.Permit memory permit = SigUtils.Permit({
             owner: _user,
             spender: _spender,
@@ -38,7 +41,6 @@ contract SyntheticPausableTests is SyntheticBaseTests {
         _user = vm.addr(_userPrivKey);
         giveEthUnderlyingAndApprove(_user);
     }
-
 
     function test_OwnerCanPause() public {
         _synthVault.pause();
@@ -86,10 +88,7 @@ contract SyntheticPausableTests is SyntheticBaseTests {
         vm.startPrank(_user);
         vm.expectRevert(
             abi.encodeWithSelector(
-                SynthVault.ERC4626ExceededMaxDeposit.selector,
-                _user,
-                1,
-                0
+                SynthVault.ERC4626ExceededMaxDeposit.selector, _user, 1, 0
             )
         );
         _synthVault.deposit(1, _user);
@@ -123,14 +122,11 @@ contract SyntheticPausableTests is SyntheticBaseTests {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                SynthVault.ERC4626ExceededMaxDeposit.selector,
-                _user,
-                1,
-                0
+                SynthVault.ERC4626ExceededMaxDeposit.selector, _user, 1, 0
             )
         );
         PermitParams memory params =
-            PermitParams({value: 1, deadline: _deadline, v: v, r: r, s: s});
+            PermitParams({ value: 1, deadline: _deadline, v: v, r: r, s: s });
         _synthVault.depositWithPermit(1, _user, params);
     }
 
@@ -150,13 +146,13 @@ contract SyntheticPausableTests is SyntheticBaseTests {
             // )
         );
         PermitParams memory params =
-            PermitParams({value: 1, deadline: _deadline, v: v, r: r, s: s});
+            PermitParams({ value: 1, deadline: _deadline, v: v, r: r, s: s });
 
         _synthVault.mintWithPermit(1, _user, params);
     }
 
     function test_userCanWithdraw() public {
-        uint256 amount = 1_000 * 10 ** 6;
+        uint256 amount = 1000 * 10 ** 6;
         giveEthUnderlyingAndApprove(_user);
         vm.prank(_user);
         _synthVault.deposit(amount, _user);
@@ -167,7 +163,7 @@ contract SyntheticPausableTests is SyntheticBaseTests {
     }
 
     function test_userCantRedeem() public {
-        uint256 amount = 1_000 * 10 ** 6;
+        uint256 amount = 1000 * 10 ** 6;
         giveEthUnderlyingAndApprove(_user);
         vm.prank(_user);
         _synthVault.deposit(amount, _user);
@@ -175,7 +171,7 @@ contract SyntheticPausableTests is SyntheticBaseTests {
         vm.startPrank(_user);
         uint256 shares = _getSharesBalance(_user);
         vm.expectRevert(
-                // ERC20Pausable.EnforcedPause.selector
+            // ERC20Pausable.EnforcedPause.selector
         );
         _synthVault.redeem(shares, _user, _user);
     }
@@ -191,12 +187,13 @@ contract SyntheticPausableTests is SyntheticBaseTests {
             _signPermit(address(_synthVault), 1, _usdc.nonces(_user), _deadline);
         vm.startPrank(_user);
         PermitParams memory params =
-            PermitParams({value: 1, deadline: _deadline, v: v, r: r, s: s});
+            PermitParams({ value: 1, deadline: _deadline, v: v, r: r, s: s });
         _synthVault.mintWithPermit(1, _user, params);
         (v, r, s) =
             _signPermit(address(_synthVault), 1, _usdc.nonces(_user), _deadline);
         vm.startPrank(_user);
-        params = PermitParams({value: 1, deadline: _deadline, v: v, r: r, s: s});
+        params =
+            PermitParams({ value: 1, deadline: _deadline, v: v, r: r, s: s });
         _synthVault.depositWithPermit(1, _user, params);
         _synthVault.withdraw(1, _user, _user);
         _synthVault.redeem(1, _user, _user);

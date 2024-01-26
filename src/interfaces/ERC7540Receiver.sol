@@ -7,12 +7,16 @@ interface ERC7540Receiver {
         address owner,
         uint256 requestId,
         bytes memory data
-    ) external returns (bytes4);
+    )
+        external
+        returns (bytes4);
 
     function onERC7540RedeemReceived(
         address operator,
         address owner,
         uint256 requestId,
         bytes memory data
-    ) external returns (bytes4);
+    )
+        external
+        returns (bytes4);
 }

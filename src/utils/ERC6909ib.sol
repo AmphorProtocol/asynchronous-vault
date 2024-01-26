@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import {ERC6909} from "./ERC6909.sol";
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {SafeERC20} from
+import { ERC6909 } from "./ERC6909.sol";
+import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import { SafeERC20 } from
     "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
+import { FixedPointMathLib } from "solmate/utils/FixedPointMathLib.sol";
 
 /// @title Interest bearing ERC6909
 /// @author mergd (@mergd)
@@ -62,7 +62,11 @@ abstract contract ERC6909ib is ERC6909 {
     /// @param assets The amount of assets to deposit.
     /// @param receiver The address of the receiver.
     /// @return shares The amount of shares minted.
-    function deposit(uint256 tokenId, uint256 assets, address receiver)
+    function deposit(
+        uint256 tokenId,
+        uint256 assets,
+        address receiver
+    )
         public
         virtual
         returns (uint256 shares)
@@ -85,12 +89,17 @@ abstract contract ERC6909ib is ERC6909 {
     /// @param shares The amount of shares to mint.
     /// @param receiver The address of the receiver.
     /// @return assets The amount of assets minted.
-    function mint(uint256 tokenId, uint256 shares, address receiver)
+    function mint(
+        uint256 tokenId,
+        uint256 shares,
+        address receiver
+    )
         public
         virtual
         returns (uint256 assets)
     {
-        assets = previewMint(tokenId, shares); // No need to check for rounding error, previewMint rounds up.
+        assets = previewMint(tokenId, shares); // No need to check for rounding
+            // error, previewMint rounds up.
 
         ERC20 _asset = asset(tokenId);
 
@@ -115,11 +124,17 @@ abstract contract ERC6909ib is ERC6909 {
         uint256 assets,
         address receiver,
         address owner
-    ) public virtual returns (uint256 shares) {
-        shares = previewWithdraw(tokenId, assets); // No need to check for rounding error, previewWithdraw rounds up.
+    )
+        public
+        virtual
+        returns (uint256 shares)
+    {
+        shares = previewWithdraw(tokenId, assets); // No need to check for
+            // rounding error, previewWithdraw rounds up.
         ERC20 _asset = asset(tokenId);
         if (msg.sender != owner) {
-            uint256 allowed = allowance[owner][msg.sender][tokenId]; // Saves gas for limited approvals.
+            uint256 allowed = allowance[owner][msg.sender][tokenId]; // Saves
+                // gas for limited approvals.
 
             if (allowed != type(uint256).max) {
                 allowance[owner][msg.sender][tokenId] = allowed - shares;
@@ -146,9 +161,14 @@ abstract contract ERC6909ib is ERC6909 {
         uint256 shares,
         address receiver,
         address owner
-    ) public virtual returns (uint256 assets) {
+    )
+        public
+        virtual
+        returns (uint256 assets)
+    {
         if (msg.sender != owner) {
-            uint256 allowed = allowance[owner][msg.sender][tokenId]; // Saves gas for limited approvals.
+            uint256 allowed = allowance[owner][msg.sender][tokenId]; // Saves
+                // gas for limited approvals.
 
             if (allowed != type(uint256).max) {
                 allowance[owner][msg.sender][tokenId] = allowed - shares;
@@ -188,13 +208,17 @@ abstract contract ERC6909ib is ERC6909 {
     /// @param tokenId The id of the token.
     /// @param assets The amount of assets.
     /// @return shares The conversion of the assets to shares.
-    function convertToShares(uint256 tokenId, uint256 assets)
+    function convertToShares(
+        uint256 tokenId,
+        uint256 assets
+    )
         public
         view
         virtual
         returns (uint256)
     {
-        uint256 supply = totalSupply[tokenId]; // Saves an extra SLOAD if totalSupply is non-zero.
+        uint256 supply = totalSupply[tokenId]; // Saves an extra SLOAD if
+            // totalSupply is non-zero.
 
         return supply == 0
             ? assets
@@ -205,13 +229,17 @@ abstract contract ERC6909ib is ERC6909 {
     /// @param tokenId The id of the token.
     /// @param shares The amount of shares.
     /// @return assets The conversion of the shares to assets.
-    function convertToAssets(uint256 tokenId, uint256 shares)
+    function convertToAssets(
+        uint256 tokenId,
+        uint256 shares
+    )
         public
         view
         virtual
         returns (uint256)
     {
-        uint256 supply = totalSupply[tokenId]; // Saves an extra SLOAD if totalSupply is non-zero.
+        uint256 supply = totalSupply[tokenId]; // Saves an extra SLOAD if
+            // totalSupply is non-zero.
 
         return supply == 0
             ? shares
@@ -222,7 +250,10 @@ abstract contract ERC6909ib is ERC6909 {
     /// @param tokenId The id of the token.
     /// @param assets The amount of shares.
     /// @return shares Preview of the conversion of the assets to shares.
-    function previewDeposit(uint256 tokenId, uint256 assets)
+    function previewDeposit(
+        uint256 tokenId,
+        uint256 assets
+    )
         public
         view
         virtual
@@ -235,13 +266,17 @@ abstract contract ERC6909ib is ERC6909 {
     /// @param tokenId The id of the token.
     /// @param shares The number of shares to preview.
     /// @return preview Preview of the mint.
-    function previewMint(uint256 tokenId, uint256 shares)
+    function previewMint(
+        uint256 tokenId,
+        uint256 shares
+    )
         public
         view
         virtual
         returns (uint256)
     {
-        uint256 supply = totalSupply[tokenId]; // Saves an extra SLOAD if totalSupply is non-zero.
+        uint256 supply = totalSupply[tokenId]; // Saves an extra SLOAD if
+            // totalSupply is non-zero.
 
         return
             supply == 0 ? shares : shares.mulDivUp(totalAssets(tokenId), supply);
@@ -251,13 +286,17 @@ abstract contract ERC6909ib is ERC6909 {
     /// @param tokenId The id of the token.
     /// @param assets The number of assets to preview.
     /// @return withdrawal Preview of the withdrawal.
-    function previewWithdraw(uint256 tokenId, uint256 assets)
+    function previewWithdraw(
+        uint256 tokenId,
+        uint256 assets
+    )
         public
         view
         virtual
         returns (uint256)
     {
-        uint256 supply = totalSupply[tokenId]; // Saves an extra SLOAD if totalSupply is non-zero.
+        uint256 supply = totalSupply[tokenId]; // Saves an extra SLOAD if
+            // totalSupply is non-zero.
 
         return
             supply == 0 ? assets : assets.mulDivUp(supply, totalAssets(tokenId));
@@ -267,7 +306,10 @@ abstract contract ERC6909ib is ERC6909 {
     /// @param tokenId The id of the token.
     /// @param shares The number of shares to preview.
     /// @return redeemable The amount redeemable.
-    function previewRedeem(uint256 tokenId, uint256 shares)
+    function previewRedeem(
+        uint256 tokenId,
+        uint256 shares
+    )
         public
         view
         virtual
@@ -278,7 +320,10 @@ abstract contract ERC6909ib is ERC6909 {
 
     /// @notice Returns the maximum amount of assets that can be deposited.
     /// @return max Maximum deposit.
-    function maxDeposit(uint256, address)
+    function maxDeposit(
+        uint256,
+        address
+    )
         public
         view
         virtual
@@ -297,7 +342,10 @@ abstract contract ERC6909ib is ERC6909 {
     /// @param tokenId The id of the token.
     /// @param owner The owner of the assets.
     /// @return max Maximum withdrawal.
-    function maxWithdraw(uint256 tokenId, address owner)
+    function maxWithdraw(
+        uint256 tokenId,
+        address owner
+    )
         public
         view
         virtual
@@ -309,7 +357,10 @@ abstract contract ERC6909ib is ERC6909 {
     /// @notice Returns the maximum amount of shares that can be redeemed.
     /// @param tokenId The id of the token.
     /// @param owner The owner of the balance.
-    function maxRedeem(uint256 tokenId, address owner)
+    function maxRedeem(
+        uint256 tokenId,
+        address owner
+    )
         public
         view
         virtual
@@ -322,25 +373,37 @@ abstract contract ERC6909ib is ERC6909 {
     /// @param tokenId The id of the token.
     /// @param assets The number of assets.
     /// @param shares The number of shares.
-    function beforeWithdraw(uint256 tokenId, uint256 assets, uint256 shares)
+    function beforeWithdraw(
+        uint256 tokenId,
+        uint256 assets,
+        uint256 shares
+    )
         internal
         virtual
-    {}
+    { }
 
     /// @dev Hook called after deposit. Validate if tokenId is valid here.
     /// @param tokenId The id of the token.
     /// @param assets The number of assets.
     /// @param shares The number of shares.
-    function afterDeposit(uint256 tokenId, uint256 assets, uint256 shares)
+    function afterDeposit(
+        uint256 tokenId,
+        uint256 assets,
+        uint256 shares
+    )
         internal
         virtual
-    {}
+    { }
 
     /// @dev Mints shares for an account. Solmate's 6909 already has this.
     /// @param account The address of the account.
     /// @param tokenId The id of the token.
     /// @param shares The amount of shares to mint.
-    function _mint(address account, uint256 tokenId, uint256 shares)
+    function _mint(
+        address account,
+        uint256 tokenId,
+        uint256 shares
+    )
         internal
         virtual
     {
@@ -356,7 +419,11 @@ abstract contract ERC6909ib is ERC6909 {
     /// @param account The address of the account.
     /// @param tokenId The id of the token.
     /// @param shares The amount of shares to burn.
-    function _burn(address account, uint256 tokenId, uint256 shares)
+    function _burn(
+        address account,
+        uint256 tokenId,
+        uint256 shares
+    )
         internal
         virtual
     {

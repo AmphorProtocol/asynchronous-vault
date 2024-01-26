@@ -12,34 +12,34 @@ contract SyntheticOpenAndClose is SyntheticBaseTests {
         giveEthUnderlyingAndApprove(_signer2);
         giveEthUnderlyingAndApprove(_amphorLabs);
         giveEthUnderlyingAndApprove(address(this));
-        _synthVault.setFee(20 * 100);   
-        _synthVault.deposit(5_000 * 10 ** _underlyingDecimals, _signer);
+        _synthVault.setFee(20 * 100);
+        _synthVault.deposit(5000 * 10 ** _underlyingDecimals, _signer);
     }
 
-    
     function test_isOpen() public {
         assertEq(_synthVault.isOpen(), true);
     }
 
     function test_VaultIsClosedAfterClose() public {
-        _synthVault.deposit(5_000 * 10 ** _underlyingDecimals, _signer);
+        _synthVault.deposit(5000 * 10 ** _underlyingDecimals, _signer);
 
         _synthVault.close();
         assertEq(_synthVault.isOpen(), false);
     }
 
     function test_VaultIsOpenAfterOpen() public {
-        // deal(address(_underlying), _signer, 5_000 * 10 ** _underlyingDecimals, false);
+        // deal(address(_underlying), _signer, 5_000 * 10 **
+        // _underlyingDecimals, false);
 
-        _synthVault.deposit(5_000 * 10 ** _underlyingDecimals, _signer);
+        _synthVault.deposit(5000 * 10 ** _underlyingDecimals, _signer);
         _synthVault.close();
-        _synthVault.open(5_000 * 10 ** _underlyingDecimals);
+        _synthVault.open(5000 * 10 ** _underlyingDecimals);
         assertEq(_synthVault.isOpen(), true);
     }
 
     function test_DoubleClose() public {
         vm.prank(_signer);
-        _synthVault.deposit(5_000 * 10 ** _underlyingDecimals, _signer);
+        _synthVault.deposit(5000 * 10 ** _underlyingDecimals, _signer);
         _synthVault.close();
         vm.expectRevert(SynthVault.VaultIsLocked.selector);
         _synthVault.close();
@@ -75,13 +75,13 @@ contract SyntheticOpenAndClose is SyntheticBaseTests {
         assertEq(
             afterOpenOwnerUnderlyingBalance,
             ownerUnderlyingBalanceAferOpenWithoutFees
-                + profits.mulDiv(perfFees, 10000, Math.Rounding.Ceil)
+                + profits.mulDiv(perfFees, 10_000, Math.Rounding.Ceil)
         );
     }
 
     function test_minusOpen() public {
         vm.prank(_signer);
-        _synthVault.deposit(5_000 * 10 ** _underlyingDecimals, _signer);
+        _synthVault.deposit(5000 * 10 ** _underlyingDecimals, _signer);
         _synthVault.close();
         uint256 lastSavedBalance = _synthVault.totalAssets();
         uint256 ownerUnderlyingBalanceBeforeOpen =
@@ -100,7 +100,7 @@ contract SyntheticOpenAndClose is SyntheticBaseTests {
 
     function test_OpenWithZero() public {
         vm.prank(_signer);
-        _synthVault.deposit(5_000 * 10 ** _underlyingDecimals, _signer);
+        _synthVault.deposit(5000 * 10 ** _underlyingDecimals, _signer);
         _synthVault.close();
         uint256 ownerUnderlyingBalanceBeforeOpen =
             _getUnderlyingBalance(address(this));
@@ -148,7 +148,8 @@ contract SyntheticOpenAndClose is SyntheticBaseTests {
     //     _synthVault.close();
 
     //     assertEq(
-    //         _getUnderlyingBalance(address(this)) - ownerUnderlyingBeforeClose,
+    //         _getUnderlyingBalance(address(this)) -
+    // ownerUnderlyingBeforeClose,
     //         5_000 * 10 ** _underlyingDecimals
     //             + 3_000 * 10 ** _underlyingDecimals
     //     );
@@ -264,7 +265,8 @@ contract SyntheticOpenAndClose is SyntheticBaseTests {
     //     _synthVault.open(
     //         (_synthVault.totalAssets() * ((10000 - lossesInBips)/10_000))
     //     );
-    //     console.log("to give back",    (_synthVault.totalAssets() * (10000 - lossesInBips)) / 10_000);
+    //     console.log("to give back",    (_synthVault.totalAssets() * (10000 -
+    // lossesInBips)) / 10_000);
     //     _checkUserLosses(userDeposit, lossesInBips, 625000000, user);
     //     // _checkUserLosses(user2Deposit, lossesInBips, 375000000, user2);
     // }
@@ -284,12 +286,14 @@ contract SyntheticOpenAndClose is SyntheticBaseTests {
         uint256 underlyingIncreaseInBips,
         uint256 profitFromDonation,
         address user
-    ) internal {
+    )
+        internal
+    {
         uint256 underlyingIncreaseAmountWithoutFees = userDeposit.mulDiv(
-            10000 + underlyingIncreaseInBips, 10000, Math.Rounding.Ceil
+            10_000 + underlyingIncreaseInBips, 10_000, Math.Rounding.Ceil
         );
         uint256 feesTaken = (underlyingIncreaseAmountWithoutFees - userDeposit)
-            .mulDiv(_synthVault.feeInBps(), 10000, Math.Rounding.Ceil);
+            .mulDiv(_synthVault.feeInBps(), 10_000, Math.Rounding.Ceil);
         uint256 amountToReceive = underlyingIncreaseAmountWithoutFees
             - feesTaken - 1 + profitFromDonation;
         uint256 userPotentialWithdraw =
@@ -306,9 +310,11 @@ contract SyntheticOpenAndClose is SyntheticBaseTests {
         uint256 underlyingDecreaseInBips,
         uint256 profitFromDonation,
         address user
-    ) internal {
+    )
+        internal
+    {
         uint256 underlyingIncreaseAmountWithoutFees = userDeposit.mulDiv(
-            10000 - underlyingDecreaseInBips, 10000, Math.Rounding.Ceil
+            10_000 - underlyingDecreaseInBips, 10_000, Math.Rounding.Ceil
         );
         uint256 amountToReceive =
             underlyingIncreaseAmountWithoutFees + profitFromDonation;
@@ -326,8 +332,8 @@ contract SyntheticOpenAndClose is SyntheticBaseTests {
         address user2 = _signer2;
         giveEthUnderlyingAndApprove(user);
         giveEthUnderlyingAndApprove(user2);
-        uint256 userDeposit = 5_000 * 10 ** _underlyingDecimals;
-        uint256 user2Deposit = 3_000 * 10 ** _underlyingDecimals;
+        uint256 userDeposit = 5000 * 10 ** _underlyingDecimals;
+        uint256 user2Deposit = 3000 * 10 ** _underlyingDecimals;
         vm.prank(user);
         _synthVault.deposit(userDeposit, user);
         vm.prank(user2);
@@ -336,7 +342,7 @@ contract SyntheticOpenAndClose is SyntheticBaseTests {
         _synthVault.close();
         uint256 lossesInBips = 2000;
         _synthVault.open(
-            (_synthVault.totalAssets() * (10000 - lossesInBips)) / 10000
+            (_synthVault.totalAssets() * (10_000 - lossesInBips)) / 10_000
         );
 
         // _checkUserLosses(userDeposit, lossesInBips, 0, user);
@@ -353,9 +359,11 @@ contract SyntheticOpenAndClose is SyntheticBaseTests {
         uint256 underlyingDecreaseInBips,
         uint256 profitFromDonation,
         address user
-    ) internal {
+    )
+        internal
+    {
         uint256 underlyingDecreaseAmountWithoutFees = userDeposit.mulDiv(
-            10000 - underlyingDecreaseInBips, 10000, Math.Rounding.Ceil
+            10_000 - underlyingDecreaseInBips, 10_000, Math.Rounding.Ceil
         );
         uint256 amountToReceive =
             underlyingDecreaseAmountWithoutFees + profitFromDonation;
@@ -415,10 +423,7 @@ contract SyntheticOpenAndClose is SyntheticBaseTests {
         vm.startPrank(user);
         vm.expectRevert(
             abi.encodeWithSelector(
-                SynthVault.ERC4626ExceededMaxRedeem.selector,
-                user,
-                1,
-                0
+                SynthVault.ERC4626ExceededMaxRedeem.selector, user, 1, 0
             )
         );
         _synthVault.redeem(1, user, user);
@@ -432,10 +437,7 @@ contract SyntheticOpenAndClose is SyntheticBaseTests {
         vm.startPrank(user);
         vm.expectRevert(
             abi.encodeWithSelector(
-                SynthVault.ERC4626ExceededMaxWithdraw.selector,
-                user,
-                1,
-                0
+                SynthVault.ERC4626ExceededMaxWithdraw.selector, user, 1, 0
             )
         );
         _synthVault.withdraw(1, user, user);
@@ -468,20 +470,14 @@ contract SyntheticOpenAndClose is SyntheticBaseTests {
         vm.startPrank(user);
         vm.expectRevert(
             abi.encodeWithSelector(
-                SynthVault.ERC4626ExceededMaxWithdraw.selector,
-                user,
-                1,
-                0
+                SynthVault.ERC4626ExceededMaxWithdraw.selector, user, 1, 0
             )
         );
         _synthVault.withdraw(1, user, user);
         vm.startPrank(user);
         vm.expectRevert(
             abi.encodeWithSelector(
-                SynthVault.ERC4626ExceededMaxRedeem.selector,
-                user,
-                1,
-                0
+                SynthVault.ERC4626ExceededMaxRedeem.selector, user, 1, 0
             )
         );
         _synthVault.redeem(1, user, user);
@@ -591,7 +587,8 @@ contract SyntheticOpenAndClose is SyntheticBaseTests {
     //     assertEq(
     //         _synthVault.totalAssets(),
     //         vaultBalance,
-    //         "Vault should have 1352 * 10 ** 5 underlying (see {vaultBalance})"
+    //         "Vault should have 1352 * 10 ** 5 underlying (see
+    // {vaultBalance})"
     //     );
     // }
 }

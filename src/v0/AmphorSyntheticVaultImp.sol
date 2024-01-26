@@ -10,14 +10,14 @@ import {
     IERC20,
     IERC20Metadata
 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
-import {SafeERC20} from
+import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
+import { IERC4626 } from "@openzeppelin/contracts/interfaces/IERC4626.sol";
+import { SafeERC20 } from
     "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
-import {ERC20Permit} from
+import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
+import { ERC20Permit } from
     "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
-import {AmprWithdrawReceipt} from "./amprWithdrawReceipt.sol";
+import { AmprWithdrawReceipt } from "./amprWithdrawReceipt.sol";
 
 /*
  _______  _______  _______           _______  _______
@@ -29,14 +29,15 @@ import {AmprWithdrawReceipt} from "./amprWithdrawReceipt.sol";
 | )   ( || )   ( || )      | )   ( || (___) || ) \ \__
 |/     \||/     \||/       |/     \|(_______)|/   \__/
  _______           _       _________          _______ __________________ _______
-(  ____ \|\     /|( (    /|\__   __/|\     /|(  ____ \\__   __/\__   __/(  ____ \
+(  ____ \|\     /|( (    /|\__   __/|\     /|(  ____ \\__   __/\__   __/(  ____
+\
 | (    \/( \   / )|  \  ( |   ) (   | )   ( || (    \/   ) (      ) (   | (    \/
 | (_____  \ (_) / |   \ | |   | |   | (___) || (__       | |      | |   | |
 (_____  )  \   /  | (\ \) |   | |   |  ___  ||  __)      | |      | |   | |
       ) |   ) (   | | \   |   | |   | (   ) || (         | |      | |   | |
-/\____) |   | |   | )  \  |   | |   | )   ( || (____/\   | |   ___) (___| (____/\
-\_______)   \_/   |/    )_)   )_(   |/     \|(_______/   )_(   \_______/(_______/
-*/
+/\____) |   | |   | )  \  |   | |   | )   ( || (____/\   | |   ___) (___|
+(____/\
+\_______)   \_/   |/    )_)   )_(   |/     \|(_______/   )_(   \_______/(_______/*/
 
 struct SignatureParams {
     uint256 nonce;
@@ -120,8 +121,9 @@ contract AmphorSyntheticVaultImp is
     bool public vaultIsOpen;
 
     /*
-     * @dev Tells if an address is authorized to sign in order to accept an exit
-     * @notice Tells if an address is authorized to sign in order to accept an exit
+    * @dev Tells if an address is authorized to sign in order to accept an exit
+    * @notice Tells if an address is authorized to sign in order to accept an
+    exit
      * @return True if the address is authorized to sign, false otherwise
      * @param signer The address to check
     */
@@ -285,7 +287,11 @@ contract AmphorSyntheticVaultImp is
         string memory symbol,
         uint8 _decimalsOffset,
         AmprWithdrawReceipt _amprWithdrawReceipt
-    ) ERC20(name, symbol) ERC20Permit(name) Ownable(_msgSender()) {
+    )
+        ERC20(name, symbol)
+        ERC20Permit(name)
+        Ownable(_msgSender())
+    {
         _oldShareToken = oldShareToken;
         _asset = underlying;
         decimalsOffset = _decimalsOffset;
@@ -320,7 +326,6 @@ contract AmphorSyntheticVaultImp is
      * when the vault is paused (`whenPaused`).
      * It will enable further deposits.
      */
-
     function unpause() external onlyOwner {
         _unpause();
     }
@@ -353,7 +358,7 @@ contract AmphorSyntheticVaultImp is
     */
 
     /*
-     * @dev The `asset` function is used to return the address of the underlying
+    * @dev The `asset` function is used to return the address of the underlying
      * @return address of the underlying asset.
      */
     function asset() public view returns (address) {
@@ -500,7 +505,10 @@ contract AmphorSyntheticVaultImp is
      * @return Amount of shares received in exchange of the
      * specified underlying assets amount.
      */
-    function deposit(uint256 assets, address receiver)
+    function deposit(
+        uint256 assets,
+        address receiver
+    )
         public
         returns (uint256)
     {
@@ -517,7 +525,8 @@ contract AmphorSyntheticVaultImp is
 
     /**
      * @dev The `depositMinShares` function is used to deposit underlying assets
-     * into the vault. It also checks that the amount of shares minted is greater
+     * into the vault. It also checks that the amount of shares minted is
+     * greater
      * or equal to the specified minimum amount.
      * @param assets The underlying assets amount to be converted into shares.
      * @param receiver The address of the shares receiver.
@@ -529,7 +538,10 @@ contract AmphorSyntheticVaultImp is
         uint256 assets,
         address receiver,
         uint256 minShares
-    ) public returns (uint256) {
+    )
+        public
+        returns (uint256)
+    {
         uint256 sharesAmount = deposit(assets, receiver);
         if (sharesAmount < minShares) {
             revert ERC4626NotEnoughSharesMinted(
@@ -540,11 +552,13 @@ contract AmphorSyntheticVaultImp is
     }
 
     /**
-     * @dev The `mint` function is used to mint the specified amount of shares in
+     * @dev The `mint` function is used to mint the specified amount of shares
+     * in
      * exchange of the corresponding assets amount from owner.
      * @param shares The shares amount to be converted into underlying assets.
      * @param receiver The address of the shares receiver.
-     * @return Amount of underlying assets deposited in exchange of the specified
+     * @return Amount of underlying assets deposited in exchange of the
+     * specified
      * amount of shares.
      */
     function mint(uint256 shares, address receiver) public returns (uint256) {
@@ -562,15 +576,21 @@ contract AmphorSyntheticVaultImp is
     /**
      * @dev The `mintMaxAssets` function is used to mint the specified amount of
      * shares in exchange of the corresponding underlying assets amount from
-     * owner. It also checks that the amount of assets deposited is less or equal
+     * owner. It also checks that the amount of assets deposited is less or
+     * equal
      * to the specified maximum amount.
      * @param shares The shares amount to be converted into underlying assets.
      * @param receiver The address of the shares receiver.
      * @param maxAssets The maximum amount of assets to be deposited.
-     * @return Amount of underlying assets deposited in exchange of the specified
+     * @return Amount of underlying assets deposited in exchange of the
+     * specified
      * amount of shares.
      */
-    function mintMaxAssets(uint256 shares, address receiver, uint256 maxAssets)
+    function mintMaxAssets(
+        uint256 shares,
+        address receiver,
+        uint256 maxAssets
+    )
         public
         returns (uint256)
     {
@@ -593,7 +613,11 @@ contract AmphorSyntheticVaultImp is
      * @return Amount of shares received in exchange of the specified underlying
      * assets amount.
      */
-    function withdraw(uint256 assets, address receiver, address owner)
+    function withdraw(
+        uint256 assets,
+        address receiver,
+        address owner
+    )
         external
         returns (uint256)
     {
@@ -618,7 +642,11 @@ contract AmphorSyntheticVaultImp is
      * @return Amount of underlying assets received in exchange of the specified
      * amount of shares.
      */
-    function redeem(uint256 shares, address receiver, address owner)
+    function redeem(
+        uint256 shares,
+        address receiver,
+        address owner
+    )
         external
         returns (uint256)
     {
@@ -654,7 +682,10 @@ contract AmphorSyntheticVaultImp is
      * @return Amount of shares received in exchange of the specified underlying
      * assets amount.
      */
-    function _convertToShares(uint256 assets, Math.Rounding rounding)
+    function _convertToShares(
+        uint256 assets,
+        Math.Rounding rounding
+    )
         internal
         view
         returns (uint256)
@@ -672,7 +703,10 @@ contract AmphorSyntheticVaultImp is
      * @return Amount of underlying assets received in exchange of the
      * specified amount of shares.
      */
-    function _convertToAssets(uint256 shares, Math.Rounding rounding)
+    function _convertToAssets(
+        uint256 shares,
+        Math.Rounding rounding
+    )
         internal
         view
         returns (uint256)
@@ -695,7 +729,9 @@ contract AmphorSyntheticVaultImp is
         address receiver,
         uint256 assets,
         uint256 shares
-    ) internal {
+    )
+        internal
+    {
         // If _asset is ERC777, transferFrom can trigger a reentrancy BEFORE the
         // transfer happens through the tokensToSend hook. On the other hand,
         // the tokenReceived hook, that is triggered after the transfer,calls
@@ -713,7 +749,8 @@ contract AmphorSyntheticVaultImp is
 
     /**
      * @dev The function `_withdraw` is used to withdraw the specified
-     * underlying assets amount in exchange of a proportionnal amount of shares by
+     * underlying assets amount in exchange of a proportionnal amount of shares
+     * by
      * specifying all the params.
      * @notice The `withdraw` function is used to withdraw the specified
      * underlying assets amount in exchange of a proportionnal amount of shares.
@@ -727,7 +764,9 @@ contract AmphorSyntheticVaultImp is
         address owner,
         uint256 assets,
         uint256 shares
-    ) internal {
+    )
+        internal
+    {
         if (_msgSender() != owner) {
             _spendAllowance(owner, _msgSender(), shares);
         }
@@ -779,7 +818,7 @@ contract AmphorSyntheticVaultImp is
             unchecked {
                 profits = assetReturned - lastSavedBalance;
             }
-            fees = (profits).mulDiv(feesInBps, 10000, Math.Rounding.Ceil);
+            fees = (profits).mulDiv(feesInBps, 10_000, Math.Rounding.Ceil);
         }
 
         SafeERC20.safeTransferFrom(
@@ -813,7 +852,8 @@ contract AmphorSyntheticVaultImp is
     /**
      * @dev The `setFees` function is used to modify the protocol fees.
      * @notice The `setFees` function is used to modify the perf fees.
-     * It can only be called by the owner of the contract (`onlyOwner` modifier).
+     * It can only be called by the owner of the contract (`onlyOwner`
+     * modifier).
      * It can't exceed 30% (3000 in BPS).
      * @param newFees The new perf fees to be applied.
      */
@@ -828,7 +868,8 @@ contract AmphorSyntheticVaultImp is
      * been sent to the vault.
      * @notice The `claimToken` function is used to claim other tokens that have
      * been sent to the vault.
-     * It can only be called by the owner of the contract (`onlyOwner` modifier).
+     * It can only be called by the owner of the contract (`onlyOwner`
+     * modifier).
      * @param token The IERC20 token to be claimed.
      */
     function claimToken(IERC20 token) external onlyOwner {
@@ -838,8 +879,10 @@ contract AmphorSyntheticVaultImp is
 
     /**
      * @dev The `buy` function is used to mint the specified sharesAmount in
-     * exchange of the corresponding underlyingAmount from the earlySellLiquidityPocket.
-     * It can only be called by the owner of the contract (`onlyOwner` modifier).
+     * exchange of the corresponding underlyingAmount from the
+     * earlySellLiquidityPocket.
+     * It can only be called by the owner of the contract (`onlyOwner`
+     * modifier).
      */
     function buy(
         address buyer,
@@ -847,7 +890,9 @@ contract AmphorSyntheticVaultImp is
         uint256 sharesAmount,
         uint256 underlyingAmount,
         SignatureParams calldata signatureParams
-    ) public {
+    )
+        public
+    {
         bytes32 unprovedMessage = keccak256(
             abi.encodePacked(
                 buyer,
@@ -875,14 +920,18 @@ contract AmphorSyntheticVaultImp is
     }
 
     /*
-     * @dev The `earlySell()` function is used to redeem the specified sharesAmount in exchange of the corresponding
+    * @dev The `earlySell()` function is used to redeem the specified
+    sharesAmount in exchange of the corresponding
      * assetsAmount from the earlySellLiquidityPocket.
-     * @notice The `earlySell()` function is used to redeem the specified sharesAmount in exchange of the corresponding
+    * @notice The `earlySell()` function is used to redeem the specified
+    sharesAmount in exchange of the corresponding
      * assetsAmount from the earlySellLiquidityPocket.
      * @param owner The address of the owner
-     * @param recipient The address of the recipient of the underlying tokens
-     * @param sharesAmount The amount of shares to be converted into underlying token
-     * @param underlyingAmount The amount of underlying token to be converted into shares
+    * @param recipient The address of the recipient of the underlying tokens
+    * @param sharesAmount The amount of shares to be converted into underlying
+    token
+    * @param underlyingAmount The amount of underlying token to be converted
+    into shares
      * @param timestamp The timestamp of the transaction
      * @param v The v value of the signature
      * @param r The r value of the signature
@@ -894,7 +943,9 @@ contract AmphorSyntheticVaultImp is
         uint256 sharesAmount,
         uint256 underlyingAmount,
         SignatureParams calldata signatureParams
-    ) public {
+    )
+        public
+    {
         bytes32 unprovedMessage = keccak256(
             abi.encodePacked(
                 owner,
@@ -934,8 +985,10 @@ contract AmphorSyntheticVaultImp is
     }
 
     /*
-     * @dev The `getEarlySellLiquidityPocket()` function is used to get the address of the earlySellLiquidityPocket.
-     * @notice The `getEarlySellLiquidityPocket()` function is used to get the address of the earlySellLiquidityPocket.
+    * @dev The `getEarlySellLiquidityPocket()` function is used to get the
+    address of the earlySellLiquidityPocket.
+    * @notice The `getEarlySellLiquidityPocket()` function is used to get the
+    address of the earlySellLiquidityPocket.
      * @return The address of the earlySellLiquidityPocket
     */
     function getEarlySellLiquidityPocket()
@@ -948,9 +1001,12 @@ contract AmphorSyntheticVaultImp is
     }
 
     /*
-     * @dev The `setEarlySellLiquidityPocket()` function is used to set the address of the earlySellLiquidityPocket.
-     * @notice The `setEarlySellLiquidityPocket()` function is used to set the address of the earlySellLiquidityPocket.
-     * @param _earlySellLiquidityPocket The address of the earlySellLiquidityPocket
+    * @dev The `setEarlySellLiquidityPocket()` function is used to set the
+    address of the earlySellLiquidityPocket.
+    * @notice The `setEarlySellLiquidityPocket()` function is used to set the
+    address of the earlySellLiquidityPocket.
+    * @param _earlySellLiquidityPocket The address of the
+    earlySellLiquidityPocket
     */
     function setEarlySellLiquidityPocket(address earlySellLiquidityPocket)
         external
@@ -960,8 +1016,10 @@ contract AmphorSyntheticVaultImp is
     }
 
     /*
-     * @dev The `isSignerWhitelisted()` function is used to check if an address is whitelisted as signer.
-     * @notice The `isSignerWhitelisted()` function is used to check if an address is whitelisted as signer.
+    * @dev The `isSignerWhitelisted()` function is used to check if an address
+    is whitelisted as signer.
+    * @notice The `isSignerWhitelisted()` function is used to check if an
+    address is whitelisted as signer.
      * @param signer The address of the signer
      * @return True if the signer is whitelisted, false otherwise
     */
@@ -975,8 +1033,9 @@ contract AmphorSyntheticVaultImp is
     }
 
     /*
-     * @dev The `addSigner()` function is used to add a signer to the whitelist.
-     * @notice The `addSigner()` function is used to add a signer to the whitelist.
+    * @dev The `addSigner()` function is used to add a signer to the whitelist.
+    * @notice The `addSigner()` function is used to add a signer to the
+    whitelist.
      * @param signer The address of the signer
     */
     function addSigner(address signer) external onlyOwner {
@@ -984,8 +1043,10 @@ contract AmphorSyntheticVaultImp is
     }
 
     /*
-     * @dev The `removeSigner()` function is used to remove a signer from the whitelist.
-     * @notice The `removeSigner()` function is used to remove a signer from the whitelist.
+    * @dev The `removeSigner()` function is used to remove a signer from the
+    whitelist.
+    * @notice The `removeSigner()` function is used to remove a signer from the
+    whitelist.
      * @param signer The address of the signer
     */
     function removeSigner(address signer) external onlyOwner {

@@ -11,7 +11,7 @@ import {
     IERC20,
     IERC20Metadata
 } from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
-import {SafeERC20} from
+import { SafeERC20 } from
     "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract AmprWithdrawReceipt is ERC4626, Ownable2Step {
@@ -115,14 +115,19 @@ contract AmprWithdrawReceipt is ERC4626, Ownable2Step {
      * @param underlying The underlying asset token.
      * @param name The name of the vault.
      * @param symbol The symbol of the vault.
-     * @param treasuryWallet The address of the treasuryWallet where the underlying is located.
+     * @param treasuryWallet The address of the treasuryWallet where the
+     * underlying is located.
      */
     constructor(
         ERC20 underlying,
         string memory name,
         string memory symbol,
         address treasuryWallet
-    ) ERC4626(underlying) ERC20(name, symbol) Ownable(_msgSender()) {
+    )
+        ERC4626(underlying)
+        ERC20(name, symbol)
+        Ownable(_msgSender())
+    {
         _treasuryWallet = treasuryWallet;
     }
 
@@ -231,7 +236,10 @@ contract AmprWithdrawReceipt is ERC4626, Ownable2Step {
      * @return Amount of shares received in exchange of the
      * specified underlying assets amount.
      */
-    function deposit(uint256 assets, address receiver)
+    function deposit(
+        uint256 assets,
+        address receiver
+    )
         public
         override
         returns (uint256)
@@ -247,14 +255,19 @@ contract AmprWithdrawReceipt is ERC4626, Ownable2Step {
     }
 
     /**
-     * @dev The `mint` function is used to mint the specified amount of shares in
+     * @dev The `mint` function is used to mint the specified amount of shares
+     * in
      * exchange of the corresponding assets amount from owner.
      * @param shares The shares amount to be converted into underlying assets.
      * @param receiver The address of the shares receiver.
-     * @return Amount of underlying assets deposited in exchange of the specified
+     * @return Amount of underlying assets deposited in exchange of the
+     * specified
      * amount of shares.
      */
-    function mint(uint256 shares, address receiver)
+    function mint(
+        uint256 shares,
+        address receiver
+    )
         public
         override
         returns (uint256)
@@ -278,7 +291,11 @@ contract AmprWithdrawReceipt is ERC4626, Ownable2Step {
      * @return Amount of shares received in exchange of the specified underlying
      * assets amount.
      */
-    function withdraw(uint256 assets, address receiver, address owner)
+    function withdraw(
+        uint256 assets,
+        address receiver,
+        address owner
+    )
         public
         override
         returns (uint256)
@@ -304,7 +321,11 @@ contract AmprWithdrawReceipt is ERC4626, Ownable2Step {
      * @return Amount of underlying assets received in exchange of the specified
      * amount of shares.
      */
-    function redeem(uint256 shares, address receiver, address owner)
+    function redeem(
+        uint256 shares,
+        address receiver,
+        address owner
+    )
         public
         override
         returns (uint256)
@@ -331,7 +352,8 @@ contract AmprWithdrawReceipt is ERC4626, Ownable2Step {
      * been sent to the vault.
      * @notice The `claimToken` function is used to claim other tokens that have
      * been sent to the vault.
-     * It can only be called by the owner of the contract (`onlyOwner` modifier).
+     * It can only be called by the owner of the contract (`onlyOwner`
+     * modifier).
      * @param token The IERC20 token to be claimed.
      */
     function claimToken(IERC20 token) external onlyOwner {

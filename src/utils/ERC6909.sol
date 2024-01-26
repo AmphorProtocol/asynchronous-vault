@@ -27,7 +27,11 @@ contract ERC6909 is IERC6909 {
     /// @param receiver The address of the receiver.
     /// @param id The id of the token.
     /// @param amount The amount of the token.
-    function transfer(address receiver, uint256 id, uint256 amount)
+    function transfer(
+        address receiver,
+        uint256 id,
+        uint256 amount
+    )
         public
         virtual
         returns (bool)
@@ -49,7 +53,11 @@ contract ERC6909 is IERC6909 {
         address receiver,
         uint256 id,
         uint256 amount
-    ) public virtual returns (bool) {
+    )
+        public
+        virtual
+        returns (bool)
+    {
         if (sender != msg.sender && !isOperator[sender][msg.sender]) {
             uint256 senderAllowance = allowance[sender][msg.sender][id];
             if (senderAllowance < amount) revert InsufficientPermission();
@@ -68,7 +76,11 @@ contract ERC6909 is IERC6909 {
     /// @param spender The address of the spender.
     /// @param id The id of the token.
     /// @param amount The amount of the token.
-    function approve(address spender, uint256 id, uint256 amount)
+    function approve(
+        address spender,
+        uint256 id,
+        uint256 amount
+    )
         public
         returns (bool)
     {
@@ -80,7 +92,10 @@ contract ERC6909 is IERC6909 {
     /// @notice Sets or unsets a spender as an operator for the caller.
     /// @param spender The address of the spender.
     /// @param approved The approval status.
-    function setOperator(address spender, bool approved)
+    function setOperator(
+        address spender,
+        bool approved
+    )
         public
         returns (bool)
     {

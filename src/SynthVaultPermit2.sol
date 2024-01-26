@@ -1,11 +1,10 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import {SynthVault, ERC20} from "./SynthVault.sol";
+import { SynthVault, ERC20 } from "./SynthVault.sol";
 import {
     IPermit2, ISignatureTransfer
 } from "permit2/src/interfaces/IPermit2.sol";
-
 
 struct Permit2Params {
     uint256 amount;
@@ -24,7 +23,9 @@ contract SynthVaultPermit2 is SynthVault {
         string memory name,
         string memory symbol,
         IPermit2 _permit2
-    ) SynthVault(underlying, name, symbol) {
+    )
+        SynthVault(underlying, name, symbol)
+    {
         permit2 = _permit2;
     }
 
@@ -63,7 +64,9 @@ contract SynthVaultPermit2 is SynthVault {
         address owner,
         bytes memory data,
         Permit2Params calldata permit2Params
-    ) external {
+    )
+        external
+    {
         if (_asset.allowance(owner, address(this)) < assets) {
             execPermit2(permit2Params);
         }
@@ -74,7 +77,10 @@ contract SynthVaultPermit2 is SynthVault {
         uint256 assets,
         address receiver,
         Permit2Params calldata permit2Params
-    ) external returns (uint256) {
+    )
+        external
+        returns (uint256)
+    {
         if (_asset.allowance(_msgSender(), address(this)) < assets) {
             execPermit2(permit2Params);
         }
@@ -86,7 +92,10 @@ contract SynthVaultPermit2 is SynthVault {
         address receiver,
         uint256 minShares,
         Permit2Params calldata permit2Params
-    ) external returns (uint256) {
+    )
+        external
+        returns (uint256)
+    {
         if (_asset.allowance(_msgSender(), address(this)) < assets) {
             execPermit2(permit2Params);
         }
@@ -97,7 +106,10 @@ contract SynthVaultPermit2 is SynthVault {
         uint256 shares,
         address receiver,
         Permit2Params calldata permit2Params
-    ) external returns (uint256) {
+    )
+        external
+        returns (uint256)
+    {
         if (_asset.allowance(_msgSender(), address(this)) < previewMint(shares))
         {
             execPermit2(permit2Params);
@@ -110,7 +122,10 @@ contract SynthVaultPermit2 is SynthVault {
         address receiver,
         uint256 maxAssets,
         Permit2Params calldata permit2Params
-    ) external returns (uint256) {
+    )
+        external
+        returns (uint256)
+    {
         if (_asset.allowance(_msgSender(), address(this)) < previewMint(shares))
         {
             execPermit2(permit2Params);

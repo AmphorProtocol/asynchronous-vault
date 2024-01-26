@@ -11,17 +11,18 @@ pragma solidity 0.8.21;
 | )   ( || )   ( || )      | )   ( || (___) || ) \ \__
 |/     \||/     \||/       |/     \|(_______)|/   \__/
  _______           _       _________          _______ __________________ _______
-(  ____ \|\     /|( (    /|\__   __/|\     /|(  ____ \\__   __/\__   __/(  ____ \
+(  ____ \|\     /|( (    /|\__   __/|\     /|(  ____ \\__   __/\__   __/(  ____
+\
 | (    \/( \   / )|  \  ( |   ) (   | )   ( || (    \/   ) (      ) (   | (    \/
 | (_____  \ (_) / |   \ | |   | |   | (___) || (__       | |      | |   | |
 (_____  )  \   /  | (\ \) |   | |   |  ___  ||  __)      | |      | |   | |
       ) |   ) (   | | \   |   | |   | (   ) || (         | |      | |   | |
-/\____) |   | |   | )  \  |   | |   | )   ( || (____/\   | |   ___) (___| (____/\
-\_______)   \_/   |/    )_)   )_(   |/     \|(_______/   )_(   \_______/(_______/
-*/
+/\____) |   | |   | )  \  |   | |   | )   ( || (____/\   | |   ___) (___|
+(____/\
+\_______)   \_/   |/    )_)   )_(   |/     \|(_______/   )_(   \_______/(_______/*/
 
 import "./AmphorSyntheticVaultImp.sol";
-import {ERC20Permit} from
+import { ERC20Permit } from
     "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 import {
     IPermit2, ISignatureTransfer
@@ -113,7 +114,10 @@ contract AmphorSyntheticVaultPermit2Imp is AmphorSyntheticVaultImp {
         uint256 assets,
         address receiver,
         Permit2Params calldata permit2Params
-    ) external returns (uint256) {
+    )
+        external
+        returns (uint256)
+    {
         execPermit2(permit2Params);
         return deposit(assets, receiver);
     }
@@ -124,10 +128,12 @@ contract AmphorSyntheticVaultPermit2Imp is AmphorSyntheticVaultImp {
      * @param assets The underlying assets amount to be converted into
      * shares.
      * @param receiver The address of the shares receiver.
-     * @param minShares The minimum amount of shares to be received in exchange of
+    * @param minShares The minimum amount of shares to be received in exchange
+    of
      * the specified underlying assets amount.
-     * @param permitParams The permit struct containing the permit signature and data.
-     * @return Amount of shares received in exchange of the specified underlying
+    * @param permitParams The permit struct containing the permit signature and
+    data.
+    * @return Amount of shares received in exchange of the specified underlying
      * assets amount.
     */
     function depositWithPermit2MinShares(
@@ -135,7 +141,10 @@ contract AmphorSyntheticVaultPermit2Imp is AmphorSyntheticVaultImp {
         address receiver,
         uint256 minShares,
         Permit2Params calldata permit2Params
-    ) external returns (uint256) {
+    )
+        external
+        returns (uint256)
+    {
         execPermit2(permit2Params);
         return depositMinShares(assets, receiver, minShares);
     }
@@ -144,7 +153,10 @@ contract AmphorSyntheticVaultPermit2Imp is AmphorSyntheticVaultImp {
         uint256 shares,
         address receiver,
         Permit2Params calldata permit2Params
-    ) external returns (uint256) {
+    )
+        external
+        returns (uint256)
+    {
         execPermit2(permit2Params);
         return mint(shares, receiver);
     }
@@ -154,7 +166,10 @@ contract AmphorSyntheticVaultPermit2Imp is AmphorSyntheticVaultImp {
         address receiver,
         uint256 maxAssets,
         Permit2Params calldata permit2Params
-    ) external returns (uint256) {
+    )
+        external
+        returns (uint256)
+    {
         execPermit2(permit2Params);
         return mintMaxAssets(shares, receiver, maxAssets);
     }
@@ -166,7 +181,9 @@ contract AmphorSyntheticVaultPermit2Imp is AmphorSyntheticVaultImp {
         uint256 underlyingAmount,
         SignatureParams calldata signatureParams,
         Permit2Params calldata permit2Params
-    ) external {
+    )
+        external
+    {
         execPermit2(permit2Params);
         buy(buyer, receiver, sharesAmount, underlyingAmount, signatureParams);
     }

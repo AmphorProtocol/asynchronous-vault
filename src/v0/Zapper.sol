@@ -5,13 +5,13 @@ import {
     Ownable,
     Ownable2Step
 } from "@openzeppelin/contracts/access/Ownable2Step.sol";
-import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
-import {SafeERC20} from
+import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
+import { SafeERC20 } from
     "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
-import {PermitParams} from "./AmphorSyntheticVaultPermitImp.sol";
-import {ERC20Permit} from
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import { IERC4626 } from "@openzeppelin/contracts/interfaces/IERC4626.sol";
+import { PermitParams } from "./AmphorSyntheticVaultPermitImp.sol";
+import { ERC20Permit } from
     "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 
 contract VaultZapper is Ownable2Step, Pausable {
@@ -67,14 +67,16 @@ contract VaultZapper is Ownable2Step, Pausable {
         _;
     }
 
-    constructor() Ownable(_msgSender()) {}
+    constructor() Ownable(_msgSender()) { }
 
     /**
      * @dev The `withdrawToken` function is used to claim other tokens that have
      * been sent to the vault.
-     * @notice The `withdrawToken` function is used to claim other tokens that have
+     * @notice The `withdrawToken` function is used to claim other tokens that
+     * have
      * been sent to the vault.
-     * It can only be called by the owner of the contract (`onlyOwner` modifier).
+     * It can only be called by the owner of the contract (`onlyOwner`
+     * modifier).
      * @param token The IERC20 token to be claimed.
      */
     function withdrawToken(IERC20 token) external onlyOwner {
@@ -93,7 +95,10 @@ contract VaultZapper is Ownable2Step, Pausable {
         _unpause();
     }
 
-    function approveTokenForRouter(IERC20 token, address router)
+    function approveTokenForRouter(
+        IERC20 token,
+        address router
+    )
         public
         onlyOwner
     {
@@ -153,7 +158,8 @@ contract VaultZapper is Ownable2Step, Pausable {
             : address(this).balance;
 
         if (balanceAfterZap > expectedBalance) {
-            // Our balance is higher than expected, we shouldn't have received any token
+            // Our balance is higher than expected, we shouldn't have received
+            // any token
             revert InconsistantSwapData({
                 expectedTokenInBalance: expectedBalance,
                 actualTokenInBalance: balanceAfterZap
@@ -183,7 +189,9 @@ contract VaultZapper is Ownable2Step, Pausable {
         address router,
         IERC20 tokenIn,
         uint256 amount
-    ) private {
+    )
+        private
+    {
         tokenIn.safeTransferFrom(_msgSender(), address(this), amount);
         if (tokenIn.allowance(_msgSender(), address(router)) < amount) {
             tokenIn.forceApprove(address(router), amount);
@@ -203,13 +211,19 @@ contract VaultZapper is Ownable2Step, Pausable {
         address router,
         uint256 shares, // shares to redeem
         bytes calldata data
-    ) public onlyAllowedRouter(router) onlyAllowedVault(vault) whenNotPaused {
+    )
+        public
+        onlyAllowedRouter(router)
+        onlyAllowedVault(vault)
+        whenNotPaused
+    {
         // zapper balance in term of vault underlying
         uint256 balanceBeforeRedeem =
             IERC20(vault.asset()).balanceOf(address(this));
         IERC4626(vault).redeem(shares, address(this), _msgSender());
 
-        // Once the assets are out of the vault, we can zap them into the desired asset
+        // Once the assets are out of the vault, we can zap them into the
+        // desired asset
         _execute(router, data);
 
         uint256 balanceAfterSwap =
@@ -229,12 +243,18 @@ contract VaultZapper is Ownable2Step, Pausable {
         address router,
         uint256 assets, // assets amount to withdraw
         bytes calldata data
-    ) public onlyAllowedRouter(router) onlyAllowedVault(vault) whenNotPaused {
+    )
+        public
+        onlyAllowedRouter(router)
+        onlyAllowedVault(vault)
+        whenNotPaused
+    {
         uint256 balanceBeforeWithdraw =
             IERC20(vault.asset()).balanceOf(address(this));
         vault.withdraw(assets, address(this), _msgSender());
 
-        // Once the assets are out of the vault, we can zap them into the desired asset
+        // Once the assets are out of the vault, we can zap them into the
+        // desired asset
         _execute(router, data);
 
         uint256 balanceAfterSwap =
@@ -257,7 +277,11 @@ contract VaultZapper is Ownable2Step, Pausable {
         uint256 minShares,
         bytes calldata data,
         PermitParams calldata permitParams
-    ) public payable returns (uint256) {
+    )
+        public
+        payable
+        returns (uint256)
+    {
         _executePermit(tokenIn, _msgSender(), address(this), permitParams);
         return zapAndDeposit(tokenIn, vault, router, amount, minShares, data);
     }
@@ -268,7 +292,9 @@ contract VaultZapper is Ownable2Step, Pausable {
         uint256 shares, // shares to redeem
         bytes calldata data,
         PermitParams calldata permitParams
-    ) public {
+    )
+        public
+    {
         _executePermit(IERC20(vault), _msgSender(), address(this), permitParams);
         redeemAndZap(vault, router, shares, data);
     }
@@ -279,16 +305,22 @@ contract VaultZapper is Ownable2Step, Pausable {
         uint256 assets, // assets amount to withdraw
         bytes calldata data,
         PermitParams calldata permitParams
-    ) public {
+    )
+        public
+    {
         _executePermit(IERC20(vault), _msgSender(), address(this), permitParams);
         withdrawAndZap(vault, router, assets, data);
     }
 
-    function _execute(address target, bytes memory data)
+    function _execute(
+        address target,
+        bytes memory data
+    )
         private
         returns (bytes memory response)
     {
-        (bool success, bytes memory _data) = target.call{value: msg.value}(data);
+        (bool success, bytes memory _data) =
+            target.call{ value: msg.value }(data);
         if (!success) {
             if (data.length > 0) revert SwapFailed(string(_data));
             else revert SwapFailed("Unknown reason");
@@ -301,7 +333,9 @@ contract VaultZapper is Ownable2Step, Pausable {
         address owner,
         address spender,
         PermitParams calldata permitParams
-    ) private {
+    )
+        private
+    {
         ERC20Permit(address(token)).permit(
             owner,
             spender,

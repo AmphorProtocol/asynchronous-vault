@@ -80,7 +80,7 @@ contract SyntheticBasicTests is SyntheticBaseTests {
     function test_MaxDepositAfterClose() public {
         giveEthUnderlyingAndApprove(_signer);
         vm.prank(_signer);
-        _synthVault.deposit(5_000 * 10 ** _underlyingDecimals, _signer);
+        _synthVault.deposit(5000 * 10 ** _underlyingDecimals, _signer);
 
         _synthVault.close();
         assertEq(
@@ -101,7 +101,7 @@ contract SyntheticBasicTests is SyntheticBaseTests {
     function test_MaxMintAfterClose() public {
         giveEthUnderlyingAndApprove(_signer);
         vm.prank(_signer);
-        _synthVault.deposit(5_000 * 10 ** _underlyingDecimals, _signer);
+        _synthVault.deposit(5000 * 10 ** _underlyingDecimals, _signer);
         _synthVault.close();
         assertEq(
             _synthVault.maxMint(address(0)),
@@ -121,8 +121,8 @@ contract SyntheticBasicTests is SyntheticBaseTests {
     function test_maxWithdrawAfterClose() public {
         giveEthUnderlyingAndApprove(_signer);
 
-         vm.prank(_signer);
-        _synthVault.deposit(5_000 * 10 ** _underlyingDecimals, _signer);
+        vm.prank(_signer);
+        _synthVault.deposit(5000 * 10 ** _underlyingDecimals, _signer);
 
         _synthVault.close();
         assertEq(
@@ -133,7 +133,6 @@ contract SyntheticBasicTests is SyntheticBaseTests {
     }
 
     function test_MaxRedeem() public {
-
         assertEq(
             _synthVault.maxRedeem(address(this)),
             ERC20(_synthVault).balanceOf(address(this)),
