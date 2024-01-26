@@ -1,4 +1,4 @@
-# Compiler files
+:wq# Compiler files
 cache/
 out/
 
@@ -16,3 +16,4 @@ docs/
 
 # Node modules
 node_modules/
+node_modules
