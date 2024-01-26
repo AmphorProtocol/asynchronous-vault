@@ -78,7 +78,6 @@ uint256 constant MAX_FEES = 3000; // 30%
 
 contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
 
-
     /**
      * ####################################
      * # AMPHOR SYNTHETIC RELATED STORAGE #
@@ -95,11 +94,10 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     uint256 internal totalPendingRedeemRequest; // total shares pre-redeemed //
         // todo remove this
     uint256 public excessAssets; // donated underlying // todo remove this
-    bool public _isOpen; // vault is open or closed
+    bool public _isOpen; // vault is open or closed // todo remove this
     mapping(uint256 epochNonce => Epoch epoch) internal epoch; // epochNonce => Epoch
     mapping(address user => uint256 epochNonce) internal lastDepositRequestId; // user => epochNonce
     mapping(address user => uint256 epochNonce) internal lastRedeemRequestId; // user => epochNonce
-
 
     /**
      * ##########
@@ -888,15 +886,15 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
 
     /*
      * @dev The function `_withdraw` is used to withdraw the specified
-    * underlying assets amount in exchange of a proportionnal amount of shares
-    by
+     * underlying assets amount in exchange of a proportionnal amount of shares
+     * by
      * specifying all the params.
      * @notice The `withdraw` function is used to withdraw the specified
-    * underlying assets amount in exchange of a proportionnal amount of shares.
+     * underlying assets amount in exchange of a proportionnal amount of shares.
      * @param receiver The address of the shares receiver.
      * @param owner The address of the owner.
-    * @param assets The underlying assets amount to be converted into shares.
-    * @param shares The shares amount to be converted into underlying assets.
+     * @param assets The underlying assets amount to be converted into shares.
+     * @param shares The shares amount to be converted into underlying assets.
     */
     function _withdraw(
         address receiver,
