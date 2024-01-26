@@ -191,6 +191,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     error VaultIsEmpty(); // We cannot start an epoch with an empty vault
     error ClaimableRequestPending();
     error MustClaimFirst();
+    error ReceiverFailed();
 
     /**
      * ##############################
@@ -265,14 +266,10 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
             lastDepositRequestId[receiver] = epochNonce;
         }
 
-        if (data.length > 0) {
-            require( // todo error
-                ERC7540Receiver(receiver).onERC7540DepositReceived(
+        if (data.length > 0 && ERC7540Receiver(receiver).onERC7540DepositReceived(
                     _msgSender(), owner, epochNonce, data
-                ) == ERC7540Receiver.onERC7540DepositReceived.selector,
-                "receiver failed"
-            );
-        }
+                ) != ERC7540Receiver.onERC7540DepositReceived.selector)
+            revert ReceiverFailed();
 
         emit DepositRequest(receiver, owner, epochNonce, _msgSender(), assets);
     }
@@ -399,14 +396,10 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         epoch[epochNonce].redeemRequestBalance[receiver] += shares;
         lastRedeemRequestId[owner] = epochNonce;
 
-        if (data.length > 0) {
-            require(
-                ERC7540Receiver(receiver).onERC7540RedeemReceived(
+        if (data.length > 0 && ERC7540Receiver(receiver).onERC7540RedeemReceived(
                     _msgSender(), owner, epochNonce, data
-                ) == ERC7540Receiver.onERC7540RedeemReceived.selector,
-                "receiver failed"
-            ); // todo error
-        }
+                ) != ERC7540Receiver.onERC7540RedeemReceived.selector)
+            revert ReceiverFailed();
 
         emit DepositRequest(receiver, owner, epochNonce, _msgSender(), shares);
     }
