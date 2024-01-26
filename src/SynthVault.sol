@@ -192,8 +192,8 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     uint256 public excessAssets; // donated underlying // todo remove this
     bool public _isOpen; // vault is open or closed
     mapping(uint256 epochNonce => Epoch) internal epoch; // epochNonce => Epoch
-    mapping(address user => uint256) lastDepositRequestId; // user => epochNonce
-    mapping(address user => uint256) lastRedeemRequestId; // user => epochNonce
+    mapping(address user => uint256 epochNonce) internal lastDepositRequestId; // user => epochNonce
+    mapping(address user => uint256 epochNonce) internal lastRedeemRequestId; // user => epochNonce
 
     /**
      * ##############################
@@ -263,7 +263,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         }
 
         if (data.length > 0) {
-            require(
+            require( // todo error
                 ERC7540Receiver(receiver).onERC7540DepositReceived(
                     _msgSender(), owner, epochNonce, data
                 ) == ERC7540Receiver.onERC7540DepositReceived.selector,
@@ -402,7 +402,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
                     _msgSender(), owner, epochNonce, data
                 ) == ERC7540Receiver.onERC7540RedeemReceived.selector,
                 "receiver failed"
-            );
+            ); // todo error
         }
 
         emit DepositRequest(receiver, owner, epochNonce, _msgSender(), shares);
