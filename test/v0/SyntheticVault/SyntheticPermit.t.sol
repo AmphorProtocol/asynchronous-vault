@@ -6,7 +6,7 @@ import "../../utils/SigUtils.sol";
 
 contract SyntheticPermit is SyntheticBaseTests {
     SigUtils internal _sigUtils;
-    ERC20Permit internal _usdc = ERC20Permit(USDC);
+    ERC20Permit internal _usdc = ERC20Permit(address(USDC));
     uint256 internal _userPrivKey;
     uint256 internal _deadline = block.timestamp + 1000;
     address internal _user;
@@ -176,7 +176,7 @@ contract SyntheticPermit is SyntheticBaseTests {
 
         // Vault profit
         deal(
-            address(_usdc),
+            address(_underlying),
             address(_synthVault),
             _usdc.balanceOf(address(_synthVault)) + 100
         );
