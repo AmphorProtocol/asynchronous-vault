@@ -1,0 +1,37 @@
+# See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options[profile.default]
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib"]
+solc = "0.8.21"
+remappings = ["@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/"]
+
+[profile.production]
+src = 'src'
+out = 'out'
+libs = ['lib']
+solc = "0.8.21"
+# eth-rpc-url = "https://eth-mainnet.g.alchemy.com/v2/"
+optimizer-runs = 10_000_000
+
+[profile.ci]
+src = 'src'
+out = 'out'
+libs = ['lib']
+solc = "0.8.19"
+# ffi = true
+optimizer-runs = 10_000_000
+
+[rpc_endpoints]
+goerli = "https://ethereum-goerli.publicnode.com"
+# See .env for mainnet network
+
+[fmt]
+line_length = 80
+bracket_spacing = true
+int_types = "long"
+multiline_func_header = "all"
+number_underscore = "thousands"
+quote_style = "double"
+tab_width = 4
+wrap_comments = true
