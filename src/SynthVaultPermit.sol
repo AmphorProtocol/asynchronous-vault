@@ -40,7 +40,7 @@ contract SynthVaultPermit is SynthVault {
         external
         returns (uint256)
     {
-        if (_asset.allowance(msg.sender, address(this)) < assets) {
+        if (_ASSET.allowance(msg.sender, address(this)) < assets) {
             execPermit(_msgSender(), address(this), permitParams);
         }
         return deposit(assets, receiver);
@@ -69,7 +69,7 @@ contract SynthVaultPermit is SynthVault {
         external
         returns (uint256)
     {
-        if (_asset.allowance(msg.sender, address(this)) < assets) {
+        if (_ASSET.allowance(msg.sender, address(this)) < assets) {
             execPermit(_msgSender(), address(this), permitParams);
         }
         return depositMinShares(assets, receiver, minShares);
@@ -96,7 +96,7 @@ contract SynthVaultPermit is SynthVault {
         external
         returns (uint256)
     {
-        if (_asset.allowance(msg.sender, address(this)) < previewMint(shares)) {
+        if (_ASSET.allowance(msg.sender, address(this)) < previewMint(shares)) {
             execPermit(_msgSender(), address(this), permitParams);
         }
         return mint(shares, receiver);
@@ -126,7 +126,7 @@ contract SynthVaultPermit is SynthVault {
         external
         returns (uint256)
     {
-        if (_asset.allowance(msg.sender, address(this)) < previewMint(shares)) {
+        if (_ASSET.allowance(msg.sender, address(this)) < previewMint(shares)) {
             execPermit(_msgSender(), address(this), permitParams);
         }
         return mintMaxAssets(shares, receiver, maxAssets);
@@ -141,7 +141,7 @@ contract SynthVaultPermit is SynthVault {
     )
         external
     {
-        if (_asset.allowance(owner, address(this)) < assets) {
+        if (_ASSET.allowance(owner, address(this)) < assets) {
             execPermit(owner, address(this), permitParams);
         }
         return super.requestDeposit(assets, receiver, owner, data);
@@ -154,7 +154,7 @@ contract SynthVaultPermit is SynthVault {
     )
         internal
     {
-        ERC20Permit(address(_asset)).permit(
+        ERC20Permit(address(_ASSET)).permit(
             owner,
             spender,
             permitParams.value,

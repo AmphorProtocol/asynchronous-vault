@@ -19,7 +19,7 @@ import { ERC20Permit } from
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import "forge-std/console.sol"; //todo remove
 
-/*
+/**
         @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
         @@@@@@@@@@@@@@@@@@@@%=::::::=%@@@@@@@@@@@@@@@@@@@@
         @@@@@@@@@@@@@@@@@@@@+=#---=*=*@@@@@@@@@@@@@@@@@@@@
@@ -58,30 +58,54 @@ import "forge-std/console.sol"; //todo remove
                                888
 */
 
-contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
-    struct Epoch {
-        uint256 totalSupplySnapshot;
-        uint256 totalAssetsSnapshot;
-        mapping(address => uint256) depositRequestBalance;
-        mapping(address => uint256) redeemRequestBalance;
-    }
+/**
+ * ########
+ * # LIBS #
+ * ########
+*/
+using Math for uint256; // only used for `mulDiv` operations.
+using SafeERC20 for IERC20; // `safeTransfer` and `safeTransferFrom`
 
-    uint256 internal constant BPS_DIVIDER = 10_000;
-    uint256 internal constant MAX_FEES = 3000; // 30%
+struct Epoch {
+    uint256 totalSupplySnapshot;
+    uint256 totalAssetsSnapshot;
+    mapping(address => uint256) depositRequestBalance;
+    mapping(address => uint256) redeemRequestBalance;
+}
+
+uint256 constant BPS_DIVIDER = 10_000;
+uint256 constant MAX_FEES = 3000; // 30%
+
+contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
+
 
     /**
-     * ########
-     * # LIBS #
-     * ########
+     * ####################################
+     * # AMPHOR SYNTHETIC RELATED STORAGE #
+     * ####################################
      */
-    using Math for uint256; // only used for `mulDiv` operations.
-    using SafeERC20 for IERC20; // `safeTransfer` and `safeTransferFrom`
+
+    // @return Amount of the perf fees applied on the positive yield.
+    uint16 public feeInBps;
+    IERC20 internal immutable _ASSET; // underlying
+    uint256 public epochNonce = 1;
+    uint256 public totalAssets; // total underlying assets
+    uint256 internal totalPendingDepositRequest; // total underlying assets
+        // pre-deposited // todo remove this
+    uint256 internal totalPendingRedeemRequest; // total shares pre-redeemed //
+        // todo remove this
+    uint256 public excessAssets; // donated underlying // todo remove this
+    bool public _isOpen; // vault is open or closed
+    mapping(uint256 epochNonce => Epoch epoch) internal epoch; // epochNonce => Epoch
+    mapping(address user => uint256 epochNonce) internal lastDepositRequestId; // user => epochNonce
+    mapping(address user => uint256 epochNonce) internal lastRedeemRequestId; // user => epochNonce
+
 
     /**
      * ##########
      * # EVENTS #
      * ##########
-     */
+    */
     event EpochStart(
         uint256 indexed timestamp, uint256 lastSavedBalance, uint256 totalShares
     );
@@ -168,37 +192,17 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     error ClaimableRequestPending();
     error MustClaimFirst();
 
-    modifier whenClosed() {
-        if (isOpen()) revert VaultIsOpen();
-        _;
-    }
-
-    /**
-     * #######################################
-     * # AMPHOR SYNTHETIC RELATED ATTRIBUTES #
-     * #######################################
-     */
-
-    // @return Amount of the perf fees applied on the positive yield.
-    uint16 public feeInBps;
-    IERC20 internal immutable _ASSET; // underlying
-    uint256 public epochNonce = 1;
-    uint256 public totalAssets; // total underlying assets
-    uint256 internal totalPendingDepositRequest; // total underlying assets
-        // pre-deposited // todo remove this
-    uint256 internal totalPendingRedeemRequest; // total shares pre-redeemed //
-        // todo remove this
-    uint256 public excessAssets; // donated underlying // todo remove this
-    bool public _isOpen; // vault is open or closed
-    mapping(uint256 epochNonce => Epoch epoch) internal epoch; // epochNonce => Epoch
-    mapping(address user => uint256 epochNonce) internal lastDepositRequestId; // user => epochNonce
-    mapping(address user => uint256 epochNonce) internal lastRedeemRequestId; // user => epochNonce
-
     /**
      * ##############################
      * # AMPHOR SYNTHETIC FUNCTIONS #
      * ##############################
      */
+
+    modifier whenClosed() {
+        if (isOpen()) revert VaultIsOpen();
+        _;
+    }
+
     constructor(
         ERC20 underlying,
         string memory name,
