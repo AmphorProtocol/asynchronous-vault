@@ -4,7 +4,7 @@ pragma solidity >=0.8.0 <0.9.0;
 import "erc4626-tests/ERC4626.test.sol";
 
 import { PermitERC20 as ERC20Mock } from "../../utils/PermitERC20.sol";
-import { SynthVaultPermit as ERC4626Mock } from "@src/SynthVaultPermit.sol";
+import { SynthVaultPermit as ERC4626Mock } from "src/SynthVaultPermit.sol";
 
 contract A16zERC4626Tests {
 //  is ERC4626Test

@@ -93,13 +93,10 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     uint256 internal totalPendingRedeemRequest; // total shares pre-redeemed //
         // todo remove this
     uint256 public excessAssets; // donated underlying // todo remove this
-    bool public _isOpen; // vault is open or closed
-    mapping(uint256 epochNonce => Epoch epoch) internal epoch; // epochNonce =>
-        // Epoch
-    mapping(address user => uint256 epochNonce) internal lastDepositRequestId; // user
-        // => epochNonce
-    mapping(address user => uint256 epochNonce) internal lastRedeemRequestId; // user
-        // => epochNonce
+    bool public _isOpen; // vault is open or closed // todo remove this
+    mapping(uint256 epochNonce => Epoch epoch) internal epoch;
+    mapping(address user => uint256 epochNonce) internal lastDepositRequestId;
+    mapping(address user => uint256 epochNonce) internal lastRedeemRequestId;
 
     /**
      * ##########
@@ -191,6 +188,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     error VaultIsEmpty(); // We cannot start an epoch with an empty vault
     error ClaimableRequestPending();
     error MustClaimFirst();
+    error ReceiverFailed();
 
     /**
      * ##############################
@@ -264,13 +262,13 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
             lastDepositRequestId[receiver] = epochNonce;
         }
 
-        if (data.length > 0) {
-            require( // todo error
-                ERC7540Receiver(receiver).onERC7540DepositReceived(
+        if (
+            data.length > 0
+                && ERC7540Receiver(receiver).onERC7540DepositReceived(
                     _msgSender(), owner, epochNonce, data
-                ) == ERC7540Receiver.onERC7540DepositReceived.selector,
-                "receiver failed"
-            );
+                ) != ERC7540Receiver.onERC7540DepositReceived.selector
+        ) {
+            revert ReceiverFailed();
         }
 
         emit DepositRequest(receiver, owner, epochNonce, _msgSender(), assets);
@@ -398,13 +396,13 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         epoch[epochNonce].redeemRequestBalance[receiver] += shares;
         lastRedeemRequestId[owner] = epochNonce;
 
-        if (data.length > 0) {
-            require(
-                ERC7540Receiver(receiver).onERC7540RedeemReceived(
+        if (
+            data.length > 0
+                && ERC7540Receiver(receiver).onERC7540RedeemReceived(
                     _msgSender(), owner, epochNonce, data
-                ) == ERC7540Receiver.onERC7540RedeemReceived.selector,
-                "receiver failed"
-            ); // todo error
+                ) != ERC7540Receiver.onERC7540RedeemReceived.selector
+        ) {
+            revert ReceiverFailed();
         }
 
         emit DepositRequest(receiver, owner, epochNonce, _msgSender(), shares);
@@ -895,7 +893,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     /*
      * @dev The function `_withdraw` is used to withdraw the specified
     * underlying assets amount in exchange of a proportionnal amount of shares
-    by
+     * by
      * specifying all the params.
      * @notice The `withdraw` function is used to withdraw the specified
     * underlying assets amount in exchange of a proportionnal amount of shares.

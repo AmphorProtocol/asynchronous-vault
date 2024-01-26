@@ -2,7 +2,7 @@
 pragma solidity 0.8.21;
 
 import "../BaseVault/BaseVault.t.sol";
-import "@src/SynthVaultPermit.sol";
+import "src/SynthVaultPermit.sol";
 
 contract SyntheticBaseTests is BaseVaultTest {
     /*
