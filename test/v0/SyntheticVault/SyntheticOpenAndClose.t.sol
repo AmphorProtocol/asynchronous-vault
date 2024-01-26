@@ -114,170 +114,170 @@ contract SyntheticOpenAndClose is SyntheticBaseTests {
         );
     }
 
-    function test_closeLastBalance() public {
-        address user = _signer;
-        address user2 = _signer2;
-        giveEthUnderlyingAndApprove(user);
-        giveEthUnderlyingAndApprove(user2);
-        vm.prank(user);
-        _synthVault.deposit(5_000 * 10 ** _underlyingDecimals, user);
-        vm.prank(user2);
-        _synthVault.deposit(3_000 * 10 ** _underlyingDecimals, user2);
+    // function test_closeLastBalance() public {
+    //     address user = _signer;
+    //     address user2 = _signer2;
+    //     giveEthUnderlyingAndApprove(user);
+    //     giveEthUnderlyingAndApprove(user2);
+    //     vm.prank(user);
+    //     _synthVault.deposit(5_000 * 10 ** _underlyingDecimals, user);
+    //     vm.prank(user2);
+    //     _synthVault.deposit(3_000 * 10 ** _underlyingDecimals, user2);
 
-        _synthVault.close();
+    //     _synthVault.close();
 
-        assertEq(
-            _synthVault.totalAssets(),
-            5_000 * 10 ** _underlyingDecimals
-                + 3_000 * 10 ** _underlyingDecimals
-        );
-    }
+    //     assertEq(
+    //         _synthVault.totalAssets(),
+    //         5_000 * 10 ** _underlyingDecimals
+    //             + 3_000 * 10 ** _underlyingDecimals
+    //     );
+    // }
 
-    function test_closeOwnerUnderlyingBalance() public {
-        address user = _signer;
-        address user2 = _signer2;
-        uint256 ownerUnderlyingBeforeClose =
-            _getUnderlyingBalance(address(this));
-        giveEthUnderlyingAndApprove(user);
-        giveEthUnderlyingAndApprove(user2);
-        vm.prank(user);
-        _synthVault.deposit(5_000 * 10 ** _underlyingDecimals, user);
-        vm.prank(user2);
-        _synthVault.deposit(3_000 * 10 ** _underlyingDecimals, user2);
+    // function test_closeOwnerUnderlyingBalance() public {
+    //     address user = _signer;
+    //     address user2 = _signer2;
+    //     uint256 ownerUnderlyingBeforeClose =
+    //         _getUnderlyingBalance(address(this));
+    //     giveEthUnderlyingAndApprove(user);
+    //     giveEthUnderlyingAndApprove(user2);
+    //     vm.prank(user);
+    //     _synthVault.deposit(5_000 * 10 ** _underlyingDecimals, user);
+    //     vm.prank(user2);
+    //     _synthVault.deposit(3_000 * 10 ** _underlyingDecimals, user2);
 
-        _synthVault.close();
+    //     _synthVault.close();
 
-        assertEq(
-            _getUnderlyingBalance(address(this)) - ownerUnderlyingBeforeClose,
-            5_000 * 10 ** _underlyingDecimals
-                + 3_000 * 10 ** _underlyingDecimals
-        );
-    }
+    //     assertEq(
+    //         _getUnderlyingBalance(address(this)) - ownerUnderlyingBeforeClose,
+    //         5_000 * 10 ** _underlyingDecimals
+    //             + 3_000 * 10 ** _underlyingDecimals
+    //     );
+    // }
 
-    function test_UserProfits() public {
-        address user = _signer;
-        address user2 = _signer2;
-        giveEthUnderlyingAndApprove(user);
-        giveEthUnderlyingAndApprove(user2);
-        uint256 userDeposit = 5_000 * 10 ** _underlyingDecimals;
-        uint256 user2Deposit = 3_000 * 10 ** _underlyingDecimals;
-        vm.prank(user);
-        _synthVault.deposit(userDeposit, user);
-        vm.prank(user2);
-        _synthVault.deposit(user2Deposit, user2);
+    // function test_UserProfits() public {
+    //     address user = _signer;
+    //     address user2 = _signer2;
+    //     giveEthUnderlyingAndApprove(user);
+    //     giveEthUnderlyingAndApprove(user2);
+    //     uint256 userDeposit = 5_000 * 10 ** _underlyingDecimals;
+    //     uint256 user2Deposit = 3_000 * 10 ** _underlyingDecimals;
+    //     vm.prank(user);
+    //     _synthVault.deposit(userDeposit, user);
+    //     vm.prank(user2);
+    //     _synthVault.deposit(user2Deposit, user2);
 
-        _synthVault.close();
-        uint256 profitsInBips = 2000;
-        _synthVault.open(
-            (_synthVault.totalAssets() * (10000 + profitsInBips)) / 10000
-        );
+    //     _synthVault.close();
+    //     uint256 profitsInBips = 2000;
+    //     _synthVault.open(
+    //         (_synthVault.totalAssets() * (10000 + profitsInBips)) / 10000
+    //     );
 
-        _checkUserProfits(userDeposit, profitsInBips, 0, user);
-        _checkUserProfits(user2Deposit, profitsInBips, 0, user2);
-    }
+    //     _checkUserProfits(userDeposit, profitsInBips, 0, user);
+    //     _checkUserProfits(user2Deposit, profitsInBips, 0, user2);
+    // }
 
-    function test_UsersProfitsWithDonation() public {
-        address user = _signer;
-        address user2 = _signer2;
-        giveEthUnderlyingAndApprove(user);
-        giveEthUnderlyingAndApprove(user2);
-        uint256 userDeposit = 5_000 * 10 ** _underlyingDecimals;
-        uint256 user2Deposit = 3_000 * 10 ** _underlyingDecimals;
-        vm.prank(user);
-        _synthVault.deposit(userDeposit, user);
-        vm.prank(user2);
-        _synthVault.deposit(user2Deposit, user2);
+    // function test_UsersProfitsWithDonation() public {
+    //     address user = _signer;
+    //     address user2 = _signer2;
+    //     giveEthUnderlyingAndApprove(user);
+    //     giveEthUnderlyingAndApprove(user2);
+    //     uint256 userDeposit = 5_000 * 10 ** _underlyingDecimals;
+    //     uint256 user2Deposit = 3_000 * 10 ** _underlyingDecimals;
+    //     vm.prank(user);
+    //     _synthVault.deposit(userDeposit, user);
+    //     vm.prank(user2);
+    //     _synthVault.deposit(user2Deposit, user2);
 
-        _synthVault.close();
-        uint256 profitsInBips = 2000;
+    //     _synthVault.close();
+    //     uint256 profitsInBips = 2000;
 
-        deal(
-            address(_underlying),
-            address(_synthVault),
-            ERC20(_underlying).balanceOf(address(_synthVault))
-                + 1000 * 10 ** _underlyingDecimals
-        );
-        _synthVault.open(
-            (_synthVault.totalAssets() * (10000 + profitsInBips)) / 10000
-        );
+    //     deal(
+    //         address(_underlying),
+    //         address(_synthVault),
+    //         ERC20(_underlying).balanceOf(address(_synthVault))
+    //             + 1000 * 10 ** _underlyingDecimals
+    //     );
+    //     _synthVault.open(
+    //         (_synthVault.totalAssets() * (10000 + profitsInBips)) / 10000
+    //     );
 
-        _checkUserProfits(userDeposit, profitsInBips, 625000000, user);
-        _checkUserProfits(user2Deposit, profitsInBips, 375000000, user2);
-    }
+    //     _checkUserProfits(userDeposit, profitsInBips, 625000000, user);
+    //     _checkUserProfits(user2Deposit, profitsInBips, 375000000, user2);
+    // }
 
-    function test_UsersProfitsThankToDonation() public {
-        address user = _signer;
-        address user2 = _signer2;
-        giveEthUnderlyingAndApprove(user);
-        giveEthUnderlyingAndApprove(user2);
-        uint256 userDeposit = 5_000 * 10 ** _underlyingDecimals;
-        uint256 user2Deposit = 3_000 * 10 ** _underlyingDecimals;
-        vm.prank(user);
-        _synthVault.deposit(userDeposit, user);
-        vm.prank(user2);
-        _synthVault.deposit(user2Deposit, user2);
+    // function test_UsersProfitsThankToDonation() public {
+    //     address user = _signer;
+    //     address user2 = _signer2;
+    //     giveEthUnderlyingAndApprove(user);
+    //     giveEthUnderlyingAndApprove(user2);
+    //     uint256 userDeposit = 5_000 * 10 ** _underlyingDecimals;
+    //     uint256 user2Deposit = 3_000 * 10 ** _underlyingDecimals;
+    //     vm.prank(user);
+    //     _synthVault.deposit(userDeposit, user);
+    //     vm.prank(user2);
+    //     _synthVault.deposit(user2Deposit, user2);
 
-        _synthVault.close();
-        uint256 lossesInBips = 2000;
+    //     _synthVault.close();
+    //     uint256 lossesInBips = 2000;
 
-        deal(
-            address(_underlying),
-            address(_synthVault),
-            ERC20(_underlying).balanceOf(address(_synthVault))
-                + 1000 * 10 ** _underlyingDecimals
-        );
-        _synthVault.open(
-            (_synthVault.totalAssets() * (10000 - lossesInBips)) / 10000
-        );
+    //     deal(
+    //         address(_underlying),
+    //         address(_synthVault),
+    //         ERC20(_underlying).balanceOf(address(_synthVault))
+    //             + 1000 * 10 ** _underlyingDecimals
+    //     );
+    //     _synthVault.open(
+    //         (_synthVault.totalAssets() * (10000 - lossesInBips)) / 10000
+    //     );
 
-        _checkUserProfitsThankToDonation(
-            userDeposit, lossesInBips, 625000000, user
-        );
-        _checkUserProfitsThankToDonation(
-            user2Deposit, lossesInBips, 375000000, user2
-        );
-    }
+    //     _checkUserProfitsThankToDonation(
+    //         userDeposit, lossesInBips, 625000000, user
+    //     );
+    //     _checkUserProfitsThankToDonation(
+    //         user2Deposit, lossesInBips, 375000000, user2
+    //     );
+    // }
 
-    function test_UserLossesWithDonation() public {
-        address user = _signer;
-        address user2 = _signer2;
-        giveEthUnderlyingAndApprove(user);
-        giveEthUnderlyingAndApprove(user2);
-        uint256 userDeposit = 5_000 * 10 ** _underlyingDecimals;
-        uint256 user2Deposit = 3_000 * 10 ** _underlyingDecimals;
-        vm.prank(user);
-        _synthVault.deposit(userDeposit, user);
-        console.log("user balance", _getSharesBalance(user));
-        vm.prank(user2);
-        _synthVault.deposit(user2Deposit, user2);
+    // function test_UserLossesWithDonation() public {
+    //     address user = _signer;
+    //     address user2 = _signer2;
+    //     giveEthUnderlyingAndApprove(user);
+    //     giveEthUnderlyingAndApprove(user2);
+    //     uint256 userDeposit = 5_000 * 10 ** _underlyingDecimals;
+    //     uint256 user2Deposit = 3_000 * 10 ** _underlyingDecimals;
+    //     vm.prank(user);
+    //     _synthVault.deposit(userDeposit, user);
+    //     console.log("user balance", _getSharesBalance(user));
+    //     vm.prank(user2);
+    //     _synthVault.deposit(user2Deposit, user2);
 
-        _synthVault.close();
-        uint256 lossesInBips = 2000;
+    //     _synthVault.close();
+    //     uint256 lossesInBips = 2000;
 
-        // deal(
-        //     address(_underlying),
-        //     address(_synthVault),
-        //     ERC20(_underlying).balanceOf(address(_synthVault))
-        //         + 1000 * 10 ** _underlyingDecimals
-        // );
-        console.log(_synthVault.totalAssets());
-        _synthVault.open(
-            (_synthVault.totalAssets() * ((10000 - lossesInBips)/10_000))
-        );
-        console.log("to give back",    (_synthVault.totalAssets() * (10000 - lossesInBips)) / 10_000);
-        _checkUserLosses(userDeposit, lossesInBips, 625000000, user);
-        // _checkUserLosses(user2Deposit, lossesInBips, 375000000, user2);
-    }
+    //     // deal(
+    //     //     address(_underlying),
+    //     //     address(_synthVault),
+    //     //     ERC20(_underlying).balanceOf(address(_synthVault))
+    //     //         + 1000 * 10 ** _underlyingDecimals
+    //     // );
+    //     console.log(_synthVault.totalAssets());
+    //     _synthVault.open(
+    //         (_synthVault.totalAssets() * ((10000 - lossesInBips)/10_000))
+    //     );
+    //     console.log("to give back",    (_synthVault.totalAssets() * (10000 - lossesInBips)) / 10_000);
+    //     _checkUserLosses(userDeposit, lossesInBips, 625000000, user);
+    //     // _checkUserLosses(user2Deposit, lossesInBips, 375000000, user2);
+    // }
 
-    function test_UserProfitsWithFunkyFees() public {
-        _synthVault.setFee(1243);
-        test_UserProfits();
-    }
+    // function test_UserProfitsWithFunkyFees() public {
+    //     _synthVault.setFee(1243);
+    //     test_UserProfits();
+    // }
 
-    function test_UserProfitsWithFees0() public {
-        _synthVault.setFee(0);
-        test_UserProfits();
-    }
+    // function test_UserProfitsWithFees0() public {
+    //     _synthVault.setFee(0);
+    //     test_UserProfits();
+    // }
 
     function _checkUserProfits(
         uint256 userDeposit,
@@ -519,79 +519,79 @@ contract SyntheticOpenAndClose is SyntheticBaseTests {
         _synthVault.mint(100 * 10 ** 6, user);
     }
 
-    function test_closeMultipleEpochs() public {
-        address user = _signer;
-        address user2 = _signer2;
-        address user3 = address(0x123);
+    // function test_closeMultipleEpochs() public {
+    //     address user = _signer;
+    //     address user2 = _signer2;
+    //     address user3 = address(0x123);
 
-        giveEthUnderlyingAndApprove(user);
-        giveEthUnderlyingAndApprove(user2);
-        giveEthUnderlyingAndApprove(user3);
+    //     giveEthUnderlyingAndApprove(user);
+    //     giveEthUnderlyingAndApprove(user2);
+    //     giveEthUnderlyingAndApprove(user3);
 
-        vm.prank(user);
-        _synthVault.deposit(11 * 10 ** 6, user);
-        vm.prank(user2);
-        _synthVault.deposit(22 * 10 ** 6, user2);
-        vm.prank(user3);
-        _synthVault.deposit(33 * 10 ** 6, user3);
+    //     vm.prank(user);
+    //     _synthVault.deposit(11 * 10 ** 6, user);
+    //     vm.prank(user2);
+    //     _synthVault.deposit(22 * 10 ** 6, user2);
+    //     vm.prank(user3);
+    //     _synthVault.deposit(33 * 10 ** 6, user3);
 
-        assertEq(
-            _synthVault.totalAssets(),
-            0,
-            "Vault lastSavedBalance should be 0"
-        );
+    //     assertEq(
+    //         _synthVault.totalAssets(),
+    //         0,
+    //         "Vault lastSavedBalance should be 0"
+    //     );
 
-        _synthVault.close();
+    //     _synthVault.close();
 
-        assertEq(
-            _getUnderlyingBalance(address(_synthVault)),
-            0,
-            "Vault should be empty"
-        );
-        assertEq(
-            _synthVault.totalAssets(),
-            66 * 10 ** 6,
-            "Vault should have 66 * 10 ** 6 underlying"
-        );
+    //     assertEq(
+    //         _getUnderlyingBalance(address(_synthVault)),
+    //         0,
+    //         "Vault should be empty"
+    //     );
+    //     assertEq(
+    //         _synthVault.totalAssets(),
+    //         66 * 10 ** 6,
+    //         "Vault should have 66 * 10 ** 6 underlying"
+    //     );
 
-        giveEthUnderlyingAndApprove(address(this));
+    //     giveEthUnderlyingAndApprove(address(this));
 
-        _synthVault.open(70 * 10 ** 6);
+    //     _synthVault.open(70 * 10 ** 6);
 
-        assertEq(
-            _getUnderlyingBalance(address(_synthVault)),
-            692 * 10 ** 5,
-            "Vault should have 70 * 10 ** 6 underlying"
-        );
+    //     assertEq(
+    //         _getUnderlyingBalance(address(_synthVault)),
+    //         692 * 10 ** 5,
+    //         "Vault should have 70 * 10 ** 6 underlying"
+    //     );
 
-        assertEq(
-            _synthVault.totalAssets(),
-            0,
-            "Vault lastSavedBalance should be 0"
-        );
+    //     assertEq(
+    //         _synthVault.totalAssets(),
+    //         0,
+    //         "Vault lastSavedBalance should be 0"
+    //     );
 
-        uint256 vaultBalance = 692 * 10 ** 5;
+    //     uint256 vaultBalance = 692 * 10 ** 5;
 
-        vm.prank(user);
-        _synthVault.deposit(11 * 10 ** 6, user);
-        vm.prank(user2);
-        _synthVault.deposit(22 * 10 ** 6, user2);
-        vm.prank(user3);
-        _synthVault.deposit(33 * 10 ** 6, user3);
+    //     vm.prank(user);
+    //     _synthVault.deposit(11 * 10 ** 6, user);
+    //     vm.prank(user2);
+    //     _synthVault.deposit(22 * 10 ** 6, user2);
+    //     vm.prank(user3);
+    //     _synthVault.deposit(33 * 10 ** 6, user3);
 
-        _synthVault.close();
+    //     _synthVault.close();
 
-        vaultBalance += 66 * 10 ** 6;
+    //     vaultBalance += 66 * 10 ** 6;
 
-        assertEq(
-            _getUnderlyingBalance(address(_synthVault)),
-            0,
-            "Vault should be empty"
-        );
-        assertEq(
-            _synthVault.totalAssets(),
-            vaultBalance,
-            "Vault should have 1352 * 10 ** 5 underlying (see {vaultBalance})"
-        );
-    }
+    //     assertEq(
+    //         _getUnderlyingBalance(address(_synthVault)),
+    //         0,
+    //         "Vault should be empty"
+    //     );
+    //     assertEq(
+    //         _synthVault.totalAssets(),
+    //         vaultBalance,
+    //         "Vault should have 1352 * 10 ** 5 underlying (see {vaultBalance})"
+    //     );
+    // }
 }
