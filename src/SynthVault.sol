@@ -10,7 +10,6 @@ import {
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {
     ERC20Pausable,
-    Pausable,
     ERC20
 } from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
 import { SafeERC20 } from
@@ -20,7 +19,7 @@ import { ERC20Permit } from
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import "forge-std/console.sol"; //todo remove
 
-/*
+/**
         @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
         @@@@@@@@@@@@@@@@@@@@%=::::::=%@@@@@@@@@@@@@@@@@@@@
         @@@@@@@@@@@@@@@@@@@@+=#---=*=*@@@@@@@@@@@@@@@@@@@@
@@ -59,30 +58,54 @@ import "forge-std/console.sol"; //todo remove
                                888
 */
 
-contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
-    struct Epoch {
-        uint256 totalSupplySnapshot;
-        uint256 totalAssetsSnapshot;
-        mapping(address => uint256) depositRequestBalance;
-        mapping(address => uint256) redeemRequestBalance;
-    }
+/**
+ * ########
+ * # LIBS #
+ * ########
+*/
+using Math for uint256; // only used for `mulDiv` operations.
+using SafeERC20 for IERC20; // `safeTransfer` and `safeTransferFrom`
 
-    uint256 constant BPS_DIVIDER = 10_000;
-    uint256 constant MAX_FEES = 3000; // 30%
+struct Epoch {
+    uint256 totalSupplySnapshot;
+    uint256 totalAssetsSnapshot;
+    mapping(address => uint256) depositRequestBalance;
+    mapping(address => uint256) redeemRequestBalance;
+}
+
+uint256 constant BPS_DIVIDER = 10_000;
+uint256 constant MAX_FEES = 3000; // 30%
+
+contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
+
 
     /**
-     * ########
-     * # LIBS #
-     * ########
+     * ####################################
+     * # AMPHOR SYNTHETIC RELATED STORAGE #
+     * ####################################
      */
-    using Math for uint256; // only used for `mulDiv` operations.
-    using SafeERC20 for IERC20; // `safeTransfer` and `safeTransferFrom`
+
+    // @return Amount of the perf fees applied on the positive yield.
+    uint16 public feeInBps;
+    IERC20 internal immutable _ASSET; // underlying
+    uint256 public epochNonce = 1;
+    uint256 public totalAssets; // total underlying assets
+    uint256 internal totalPendingDepositRequest; // total underlying assets
+        // pre-deposited // todo remove this
+    uint256 internal totalPendingRedeemRequest; // total shares pre-redeemed //
+        // todo remove this
+    uint256 public excessAssets; // donated underlying // todo remove this
+    bool public _isOpen; // vault is open or closed
+    mapping(uint256 epochNonce => Epoch epoch) internal epoch; // epochNonce => Epoch
+    mapping(address user => uint256 epochNonce) internal lastDepositRequestId; // user => epochNonce
+    mapping(address user => uint256 epochNonce) internal lastRedeemRequestId; // user => epochNonce
+
 
     /**
      * ##########
      * # EVENTS #
      * ##########
-     */
+    */
     event EpochStart(
         uint256 indexed timestamp, uint256 lastSavedBalance, uint256 totalShares
     );
@@ -169,37 +192,17 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     error ClaimableRequestPending();
     error MustClaimFirst();
 
-    modifier whenClosed() {
-        if (isOpen()) revert VaultIsOpen();
-        _;
-    }
-
-    /**
-     * #######################################
-     * # AMPHOR SYNTHETIC RELATED ATTRIBUTES #
-     * #######################################
-     */
-
-    // @return Amount of the perf fees applied on the positive yield.
-    uint16 public feeInBps;
-    IERC20 internal immutable _asset; // underlying
-    uint256 public epochNonce = 1;
-    uint256 public totalAssets; // total underlying assets
-    uint256 internal totalPendingDepositRequest; // total underlying assets
-        // pre-deposited // todo remove this
-    uint256 internal totalPendingRedeemRequest; // total shares pre-redeemed //
-        // todo remove this
-    uint256 public excessAssets; // donated underlying // todo remove this
-    bool public _isOpen; // vault is open or closed
-    mapping(uint256 epochNonce => Epoch) internal epoch; // epochNonce => Epoch
-    mapping(address user => uint256) lastDepositRequestId; // user => epochNonce
-    mapping(address user => uint256) lastRedeemRequestId; // user => epochNonce
-
     /**
      * ##############################
      * # AMPHOR SYNTHETIC FUNCTIONS #
      * ##############################
      */
+
+    modifier whenClosed() {
+        if (isOpen()) revert VaultIsOpen();
+        _;
+    }
+
     constructor(
         ERC20 underlying,
         string memory name,
@@ -209,7 +212,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         Ownable(_msgSender())
         ERC20Permit(name)
     {
-        _asset = IERC20(underlying);
+        _ASSET = IERC20(underlying);
         _isOpen = true;
     }
 
@@ -254,7 +257,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     )
         internal
     {
-        _asset.safeTransferFrom(owner, address(this), assets);
+        _ASSET.safeTransferFrom(owner, address(this), assets);
         totalPendingDepositRequest += assets;
         epoch[epochNonce].depositRequestBalance[receiver] += assets;
 
@@ -263,7 +266,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         }
 
         if (data.length > 0) {
-            require(
+            require( // todo error
                 ERC7540Receiver(receiver).onERC7540DepositReceived(
                     _msgSender(), owner, epochNonce, data
                 ) == ERC7540Receiver.onERC7540DepositReceived.selector,
@@ -326,7 +329,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         uint256 oldBalance = epoch[epochNonce].depositRequestBalance[owner];
         epoch[epochNonce].depositRequestBalance[owner] -= assets;
         totalPendingDepositRequest -= assets;
-        _asset.safeTransfer(receiver, assets);
+        _ASSET.safeTransfer(receiver, assets);
 
         emit DecreaseDepositRequest(
             epochNonce,
@@ -402,7 +405,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
                     _msgSender(), owner, epochNonce, data
                 ) == ERC7540Receiver.onERC7540RedeemReceived.selector,
                 "receiver failed"
-            );
+            ); // todo error
         }
 
         emit DepositRequest(receiver, owner, epochNonce, _msgSender(), shares);
@@ -497,7 +500,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         uint256 shares = epoch[lastRequestId].redeemRequestBalance[owner];
         epoch[lastRequestId].redeemRequestBalance[owner] = 0;
 
-        _asset.safeTransfer(receiver, assets);
+        _ASSET.safeTransfer(receiver, assets);
 
         emit ClaimRedeem(lastRequestId, owner, receiver, assets, shares);
     }
@@ -510,7 +513,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
 
     // @return address of the underlying asset.
     function asset() public view returns (address) {
-        return address(_asset);
+        return address(_ASSET);
     }
 
     // @dev See {IERC4626-convertToShares}.
@@ -875,7 +878,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     )
         internal
     {
-        // If _asset is ERC777, transferFrom can trigger a reentrancy BEFORE the
+        // If _ASSET is ERC777, transferFrom can trigger a reentrancy BEFORE the
         // transfer happens through the tokensToSend hook. On the other hand,
         // the tokenReceived hook, that is triggered after the transfer,calls
         // the vault, which is assumed not malicious.
@@ -884,7 +887,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         // reentrancy would happen before the assets are transferred and before
         // the shares are minted, which is a valid state.
         // slither-disable-next-line reentrancy-no-eth
-        _asset.safeTransferFrom(caller, address(this), assets);
+        _ASSET.safeTransferFrom(caller, address(this), assets);
         totalAssets += assets;
         _mint(receiver, shares);
         emit Deposit(caller, receiver, assets, shares);
@@ -916,7 +919,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
 
         _burn(owner, shares);
         totalAssets -= assets;
-        _asset.safeTransfer(receiver, assets);
+        _ASSET.safeTransfer(receiver, assets);
 
         emit Withdraw(_msgSender(), receiver, owner, assets, shares);
     }
@@ -938,7 +941,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         uint256 _totalAssets = totalAssets;
         if (_totalAssets == 0) revert VaultIsEmpty();
 
-        _asset.safeTransfer(owner(), _totalAssets);
+        _ASSET.safeTransfer(owner(), _totalAssets);
         _isOpen = false;
         emit EpochStart(block.timestamp, _totalAssets, totalSupply());
     }
@@ -970,7 +973,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         _totalAssets = assetReturned - fees;
         totalAssets = _totalAssets;
 
-        _asset.safeTransferFrom(_msgSender(), address(this), _totalAssets);
+        _ASSET.safeTransferFrom(_msgSender(), address(this), _totalAssets);
 
         emit EpochEnd(
             block.timestamp, _totalAssets, assetReturned, fees, totalSupply()
@@ -1006,7 +1009,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         epoch[epochNonce].totalAssetsSnapshot = totalAssets;
 
         excessAssets =
-            _asset.balanceOf(address(this)) - (totalAssets + redeemedAssets);
+            _ASSET.balanceOf(address(this)) - (totalAssets + redeemedAssets);
     }
 
     function restruct(uint256 virtualReturnedAsset) external onlyOwner {
@@ -1050,7 +1053,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
      * @param token The IERC20 token to be claimed.
     */
     function claimToken(IERC20 token) external onlyOwner {
-        if (token == _asset) {
+        if (token == _ASSET) {
             token.safeTransfer(_msgSender(), excessAssets);
         }
         token.safeTransfer(_msgSender(), token.balanceOf(address(this)));

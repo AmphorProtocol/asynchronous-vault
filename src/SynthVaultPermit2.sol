@@ -67,7 +67,7 @@ contract SynthVaultPermit2 is SynthVault {
     )
         external
     {
-        if (_asset.allowance(owner, address(this)) < assets) {
+        if (_ASSET.allowance(owner, address(this)) < assets) {
             execPermit2(permit2Params);
         }
         return requestDeposit(assets, receiver, owner, data);
@@ -81,7 +81,7 @@ contract SynthVaultPermit2 is SynthVault {
         external
         returns (uint256)
     {
-        if (_asset.allowance(_msgSender(), address(this)) < assets) {
+        if (_ASSET.allowance(_msgSender(), address(this)) < assets) {
             execPermit2(permit2Params);
         }
         return deposit(assets, receiver);
@@ -96,7 +96,7 @@ contract SynthVaultPermit2 is SynthVault {
         external
         returns (uint256)
     {
-        if (_asset.allowance(_msgSender(), address(this)) < assets) {
+        if (_ASSET.allowance(_msgSender(), address(this)) < assets) {
             execPermit2(permit2Params);
         }
         return depositMinShares(assets, receiver, minShares);
@@ -110,7 +110,7 @@ contract SynthVaultPermit2 is SynthVault {
         external
         returns (uint256)
     {
-        if (_asset.allowance(_msgSender(), address(this)) < previewMint(shares))
+        if (_ASSET.allowance(_msgSender(), address(this)) < previewMint(shares))
         {
             execPermit2(permit2Params);
         }
@@ -126,7 +126,7 @@ contract SynthVaultPermit2 is SynthVault {
         external
         returns (uint256)
     {
-        if (_asset.allowance(_msgSender(), address(this)) < previewMint(shares))
+        if (_ASSET.allowance(_msgSender(), address(this)) < previewMint(shares))
         {
             execPermit2(permit2Params);
         }
