@@ -67,8 +67,8 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         mapping(address => uint256) redeemRequestBalance;
     }
 
-    uint256 constant BPS_DIVIDER = 10_000;
-    uint256 constant MAX_FEES = 3000; // 30%
+    uint256 internal constant BPS_DIVIDER = 10_000;
+    uint256 internal constant MAX_FEES = 3000; // 30%
 
     /**
      * ########
