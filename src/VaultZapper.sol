@@ -18,13 +18,19 @@ import {
     IPermit2, ISignatureTransfer
 } from "permit2/src/interfaces/IPermit2.sol";
 
-struct Permit2Params {
-    uint256 amount;
+struct Permit2Info {
+    IPermit2 canonicalContract; // The canonical permit2 contract.
     uint256 nonce;
     uint256 deadline;
-    address token;
     bytes signature;
 }
+
+// struct Permit2Params {
+    // uint256 amount;
+    // address token;
+    // InputTokenInfo[] inputs;
+    // Permit2Info permit2Infos;
+// }
 
 contract AsyncVaultZapper is Ownable2Step, Pausable {
     /**
@@ -40,9 +46,6 @@ contract AsyncVaultZapper is Ownable2Step, Pausable {
 
     mapping(IERC7540 => bool) public authorizedVaults;
     mapping(address => bool) public authorizedRouters;
-
-    // The canonical permit2 contract.
-    IPermit2 public immutable permit2;
 
     error NotRouter(address router);
     error NotVault(IERC7540 vault);
@@ -84,8 +87,7 @@ contract AsyncVaultZapper is Ownable2Step, Pausable {
         _;
     }
 
-    constructor(IPermit2 _permit2) Ownable(_msgSender()) {
-        permit2 = _permit2;
+    constructor() Ownable(_msgSender()) {
     }
 
     /**
@@ -369,24 +371,136 @@ contract AsyncVaultZapper is Ownable2Step, Pausable {
             // the EIP712 hash of `permit`.
             permit2Params.signature
         );
+
+        ISignatureTransfer(permit2.contractAddress).permitTransferFrom(
+      ISignatureTransfer.PermitTransferFrom(
+        ISignatureTransfer.TokenPermissions(
+          tokenInfo.inputToken,
+          tokenInfo.inputAmount
+        ),
+        permit2.nonce,
+        permit2.deadline
+      ),
+      ISignatureTransfer.SignatureTransferDetails(
+        tokenInfo.inputReceiver,
+        tokenInfo.inputAmount
+      ),
+      msg.sender,
+      permit2.signature
+    );
     }
 
     function zapAndRequestDepositWithPermit2(
+        uint256 amountIn,
         IERC20 tokenIn,
         IERC7540 vault,
+        Permit2Info memory permit2,
         address router,
-        uint256 amount,
         bytes calldata data,
-        bytes calldata swapData,
-        Permit2Params calldata permit2Params
+        bytes calldata swapData
     )
         external
     {
-        if (tokenIn.allowance(_msgSender(), address(this)) < amount) {
-            execPermit2(permit2Params);
-        }
-
-        /*return*/
-        zapAndRequestDeposit(tokenIn, vault, router, amount, data, swapData);
+        ISignatureTransfer(permit2.canonicalContract).permitTransferFrom(
+            ISignatureTransfer.PermitTransferFrom(
+                ISignatureTransfer.TokenPermissions(
+                    tokenIn,
+                    amountIn
+                ),
+                permit2.nonce,
+                permit2.deadline
+            ),
+            ISignatureTransfer.SignatureTransferDetails(
+                address(this),
+                tokenInfo.inputAmount
+            ),
+            _msgSender(),
+            permit2.signature
+        );
+        zapAndRequestDeposit(tokenIn, vault, router, amountIn, data, swapData);
     }
+
+    function zapBatchAndRequestDepositWithPermit2(
+        uint256 amountIn,
+        IERC20 tokenIn,
+        IERC7540 vault,
+        Permit2Info memory permit2,
+        address router,
+        bytes calldata data,
+        bytes calldata swapData
+    )
+        external
+    {
+    }
+
+    /// @notice Externally facing interface for swapping between two sets of tokens with Permit2
+    /// @param permit2 All additional info for Permit2 transfers
+    /// @param inputs list of input token structs for the path being executed
+    /// @param outputs list of output token structs for the path being executed
+    /// @param valueOutMin minimum amount of value out the user will accept
+    /// @param pathDefinition Encoded path definition for executor
+    /// @param executor Address of contract that will execute the path
+    /// @param referralCode referral code to specify the source of the swap
+    function swapMultiPermit2(
+        Permit2Info memory permit2,
+        inputTokenInfo[] memory inputs,
+        outputTokenInfo[] memory outputs,
+        uint256 valueOutMin,
+        bytes calldata pathDefinition,
+        address executor,
+        uint32 referralCode
+    )
+        external
+        payable
+        returns (uint256[] memory amountsOut)
+    {
+        ISignatureTransfer.PermitBatchTransferFrom memory permit;
+        ISignatureTransfer.SignatureTransferDetails[] memory transferDetails;
+        {
+        uint256 permit_length = msg.value > 0 ? inputs.length - 1 : inputs.length;
+
+        permit = ISignatureTransfer.PermitBatchTransferFrom(
+            new ISignatureTransfer.TokenPermissions[](permit_length),
+            permit2.nonce,
+            permit2.deadline
+        );
+        transferDetails = 
+            new ISignatureTransfer.SignatureTransferDetails[](permit_length);
+        }
+        {
+        uint256 expected_msg_value = 0;
+        for (uint256 i = 0; i < inputs.length; i++) {
+
+            if (inputs[i].tokenAddress == _ETH) {
+            if (inputs[i].amountIn == 0) {
+                inputs[i].amountIn = msg.value;
+            }
+            expected_msg_value = inputs[i].amountIn;
+            }
+            else {
+            if (inputs[i].amountIn == 0) {
+                inputs[i].amountIn = IERC20(inputs[i].tokenAddress).balanceOf(msg.sender);
+            }
+            uint256 permit_index = expected_msg_value == 0 ? i : i - 1;
+
+            permit.permitted[permit_index].token = inputs[i].tokenAddress;
+            permit.permitted[permit_index].amount = inputs[i].amountIn;
+
+            transferDetails[permit_index].to = inputs[i].receiver;
+            transferDetails[permit_index].requestedAmount = inputs[i].amountIn;
+            }
+        }
+        require(msg.value == expected_msg_value, "Wrong msg.value");
+        }
+        ISignatureTransfer(permit2.contractAddress).permitTransferFrom(
+        permit,
+        transferDetails,
+        msg.sender,
+        permit2.signature
+        );
+        
+        
+        // swap and dep
+    }
+
 }
