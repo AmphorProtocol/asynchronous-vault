@@ -7,4 +7,6 @@ abstract contract Assertions {
     function isInGrossProfit(IERC4626 vault, address owner, uint256 deposited) public view returns (bool) {
         return vault.convertToAssets(vault.balanceOf(owner)) >= deposited ? true : false;
     }
+
+    
 }
