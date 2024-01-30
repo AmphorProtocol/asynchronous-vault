@@ -1,0 +1,5 @@
+AssertionsTest
+├── When the user in profit
+│   └── it should return true
+└── When the user in loss
+    └── it should return false
