@@ -6,33 +6,55 @@ import { Events } from "./utils/Events.sol";
 import { Assertions } from "./utils/Assertions.sol";
 import { Test } from "forge-std/Test.sol";
 import { console } from "forge-std/console.sol";
+import { SynthVaultPermit } from "../../src/SynthVaultPermit.sol";
 
 contract TestBase is Constants, Events, Assertions {
-    function test() public { }
+    // OWNER ACTIONS //
 
-    function usersDealApprove(uint256 userMax) public {
-        userMax = userMax > users.length ? users.length : userMax;
-        for (uint256 i = 0; i < userMax; i++) {
-            _approveVaults(users[i].addr);
-            _dealAssets(users[i].addr);
-            deal(users[i].addr, type(uint256).max);
-        }
+    function open(SynthVaultPermit vault, int256 performanceInBips) public {
+        vm.assume(performanceInBips > -10_000 && performanceInBips < 10_000);
+        performanceInBips = performanceInBips;
+        address owner = vault.owner();
+        deal(owner, type(uint256).max);
+        _dealAssets(owner);
+        _approveVaults(owner);
+        vm.startPrank(owner);
+        int256 lastAssetAmount = int256(vault.totalAssets());
+        int256 performance = lastAssetAmount * performanceInBips;
+        int256 toSendBack = performance / bipsDivider + lastAssetAmount;
+        vault.open(uint256(toSendBack));
+        vm.stopPrank();
     }
+
+    function close(SynthVaultPermit vault) public {
+        address owner = vault.owner();
+        vm.prank(owner);
+        vault.close();
+    }
+
+    // USERS ACTIONS //
+
+    // USERS CONFIGURATION //
 
     function usersDealApproveAndDeposit(uint256 userMax) public {
         userMax = userMax > users.length ? users.length : userMax;
-        for (uint256 i = 0; i < userMax; i++) {
-            _approveVaults(users[i].addr);
-            _dealAssets(users[i].addr);
-            deal(users[i].addr, type(uint256).max);
-            _depositInVaults(users[i].addr);
-        }
+        usersDealApprove(userMax);
+        usersDeposit(userMax);
     }
 
     function usersDeposit(uint256 userMax) public {
         userMax = userMax > users.length ? users.length : userMax;
         for (uint256 i = 0; i < userMax; i++) {
             _depositInVaults(users[i].addr);
+        }
+    }
+
+    function usersDealApprove(uint256 userMax) public {
+        userMax = userMax > users.length ? users.length : userMax;
+        for (uint256 i = 0; i < userMax; i++) {
+            deal(users[i].addr, type(uint256).max);
+            _approveVaults(users[i].addr);
+            _dealAssets(users[i].addr);
         }
     }
 
@@ -45,7 +67,9 @@ contract TestBase is Constants, Events, Assertions {
     }
 
     function _dealAssets(address owner) internal {
-        deal(address(USDC), owner, 1000 * 10 ** USDC.decimals());
+        vm.startPrank(USDC_WHALE);
+        USDC.transfer(owner, 1000 * 10 ** USDC.decimals());
+        vm.stopPrank();
         deal(address(WSTETH), owner, 100 * 10 ** WSTETH.decimals());
         deal(address(WBTC), owner, 10 * 10 ** WBTC.decimals());
     }

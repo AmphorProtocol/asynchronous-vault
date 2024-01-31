@@ -19,6 +19,8 @@ abstract contract Constants is Test {
     ERC20 immutable STETH = ERC20(vm.envAddress("STETH_MAINNET"));
     ERC20 immutable WBTC = ERC20(vm.envAddress("WBTC_MAINNET"));
 
+    //ERC20 whales
+    address immutable USDC_WHALE = vm.envAddress("USDC_WHALE");
     // Future Owner
     address immutable amphorLabs = vm.envAddress("AMPHORLABS_ADDRESS");
 
@@ -59,6 +61,9 @@ abstract contract Constants is Test {
     VmSafe.Wallet user10 = vm.createWallet("user10");
 
     VmSafe.Wallet[] users;
+
+    // Else
+    int256 immutable bipsDivider = 10_000;
 
     constructor() {
         vm.label(address(DAI), "DAI");
