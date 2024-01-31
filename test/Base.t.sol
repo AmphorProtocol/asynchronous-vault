@@ -13,15 +13,14 @@ contract TestBase is Constants, Events, Assertions {
     // OWNER ACTIONS //
     function open(SynthVault vault, int256 performanceInBips) public {
         vm.assume(performanceInBips > -10_000 && performanceInBips < 10_000);
-        performanceInBips = performanceInBips;
-        address owner = vault.owner();
-        deal(owner, type(uint256).max);
-        _dealAssets(owner);
-        _approveVaults(owner);
-        vm.startPrank(owner);
         int256 lastAssetAmount = int256(vault.totalAssets());
         int256 performance = lastAssetAmount * performanceInBips;
         int256 toSendBack = performance / bipsDivider + lastAssetAmount;
+        address owner = vault.owner();
+        deal(owner, type(uint256).max);
+        _approveVaults(owner);
+        vm.startPrank(owner);
+        _dealAsset(address(WSTETH), owner, uint256(toSendBack));
         vault.open(uint256(toSendBack));
         vm.stopPrank();
     }
@@ -139,11 +138,25 @@ contract TestBase is Constants, Events, Assertions {
     }
 
     function _dealAssets(address owner) internal {
-        vm.startPrank(USDC_WHALE);
-        USDC.transfer(owner, 1000 * 10 ** USDC.decimals());
-        vm.stopPrank();
-        deal(address(WSTETH), owner, 100 * 10 ** WSTETH.decimals());
-        deal(address(WBTC), owner, 10 * 10 ** WBTC.decimals());
+        _dealAsset(address(WSTETH), owner, 100 * 10 ** WSTETH.decimals());
+        _dealAsset(address(WBTC), owner, 10 * 10 ** WBTC.decimals());
+        _dealAsset(address(USDC), owner, 1000 * 10 ** USDC.decimals());
+    }
+
+    function _dealAsset(
+        address asset,
+        address owner,
+        uint256 amount
+    )
+        internal
+    {
+        if (asset == address(USDC)) {
+            vm.startPrank(USDC_WHALE);
+            USDC.transfer(owner, amount);
+            vm.stopPrank();
+        } else {
+            deal(asset, owner, amount);
+        }
     }
 
     function _depositInVaults(address owner) internal {
