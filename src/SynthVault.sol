@@ -540,6 +540,14 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         return _convertToAssets(shares, epochId, Math.Rounding.Floor);
     }
 
+    function sharesBalanceInAsset(address owner)
+        public
+        view
+        returns (uint256)
+    {
+        return convertToAssets(balanceOf(owner));
+    }
+
     // @dev See {IERC4626-convertToAssets}.
     function convertToAssets(uint256 shares) public view returns (uint256) {
         return _convertToAssets(shares, epochNonce, Math.Rounding.Floor);
