@@ -6,12 +6,12 @@ import { Events } from "./utils/Events.sol";
 import { Assertions } from "./utils/Assertions.sol";
 import { Test } from "forge-std/Test.sol";
 import { console } from "forge-std/console.sol";
-import { SynthVaultPermit } from "../../src/SynthVaultPermit.sol";
+import { SynthVaultPermit, SynthVault } from "../../src/SynthVaultPermit.sol";
+import { VmSafe } from "forge-std/Vm.sol";
 
 contract TestBase is Constants, Events, Assertions {
     // OWNER ACTIONS //
-
-    function open(SynthVaultPermit vault, int256 performanceInBips) public {
+    function open(SynthVault vault, int256 performanceInBips) public {
         vm.assume(performanceInBips > -10_000 && performanceInBips < 10_000);
         performanceInBips = performanceInBips;
         address owner = vault.owner();
@@ -26,13 +26,85 @@ contract TestBase is Constants, Events, Assertions {
         vm.stopPrank();
     }
 
-    function close(SynthVaultPermit vault) public {
+    function close(SynthVault vault) public {
         address owner = vault.owner();
         vm.prank(owner);
         vault.close();
     }
 
+    function pause(SynthVault vault) public {
+        address owner = vault.owner();
+        vm.prank(owner);
+        vault.pause();
+    }
+
+    function unpause(SynthVault vault) public {
+        address owner = vault.owner();
+        vm.prank(owner);
+        vault.unpause();
+    }
+
     // USERS ACTIONS //
+
+    function mint(SynthVault vault, VmSafe.Wallet memory user) public {
+        mint(vault, user, USDC.balanceOf(user.addr));
+    }
+
+    function deposit(SynthVault vault, VmSafe.Wallet memory user) public {
+        deposit(vault, user, USDC.balanceOf(user.addr));
+    }
+
+    function withdraw(SynthVault vault, VmSafe.Wallet memory user) public {
+        withdraw(vault, user, USDC.balanceOf(user.addr));
+    }
+
+    function redeem(SynthVault vault, VmSafe.Wallet memory user) public {
+        redeem(vault, user, vault.balanceOf(user.addr));
+    }
+
+    function mint(
+        SynthVault vault,
+        VmSafe.Wallet memory user,
+        uint256 amount
+    )
+        public
+    {
+        vm.startPrank(user.addr);
+        vault.mint(amount, user.addr);
+    }
+
+    function deposit(
+        SynthVault vault,
+        VmSafe.Wallet memory user,
+        uint256 amount
+    )
+        public
+    {
+        vm.startPrank(user.addr);
+        vault.deposit(amount, user.addr);
+    }
+
+    function withdraw(
+        SynthVault vault,
+        VmSafe.Wallet memory user,
+        uint256 amount
+    )
+        public
+    {
+        vm.startPrank(user.addr);
+        vault.withdraw(amount, user.addr, user.addr);
+    }
+
+    function redeem(
+        SynthVault vault,
+        VmSafe.Wallet memory user,
+        uint256 shares
+    )
+        public
+    {
+        vm.startPrank(user.addr);
+        vault.redeem(shares, user.addr, user.addr);
+    }
 
     // USERS CONFIGURATION //
 

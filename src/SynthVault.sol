@@ -480,7 +480,10 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         epochs[lastRequestId].depositRequestBalance[owner] = 0;
 
         transfer(receiver, shares);
-
+        emit Withdraw(_msgSender(), receiver, address(this), assets, shares); //todo
+            // see if we keep this
+        emit Deposit(_msgSender(), owner, assets, shares); //todo see if we keep
+            // this
         emit ClaimDeposit(lastRequestId, _msgSender(), receiver, assets, shares);
     }
 

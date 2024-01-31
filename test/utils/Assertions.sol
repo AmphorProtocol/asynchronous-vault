@@ -3,9 +3,10 @@ pragma solidity 0.8.21;
 
 import { IERC4626 } from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import { Test } from "forge-std/Test.sol";
+import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 abstract contract Assertions is Test {
-    function assertIsInProfit(
+    function assertIsInGrossProfit(
         IERC4626 vault,
         address owner,
         uint256 deposited
@@ -82,6 +83,37 @@ abstract contract Assertions is Test {
             vault.totalAssets(),
             expected,
             string.concat("Total assets in ", vaultLabel, explanation)
+        );
+    }
+
+    function assertVaultAssetBalance(IERC4626 vault, uint256 expected) public {
+        string memory vaultLabel = vm.getLabel(address(vault));
+        string memory explanation = " | Current (left) != Expected (right)";
+        assertEq(
+            vault.convertToAssets(
+                ERC20(vault.asset()).balanceOf(address(vault))
+            ),
+            expected,
+            string.concat(
+                "Vault balance in assets in ", vaultLabel, explanation
+            )
+        );
+    }
+
+    function assertVaultSharesBalance(
+        IERC4626 vault,
+        uint256 expected
+    )
+        public
+    {
+        string memory vaultLabel = vm.getLabel(address(vault));
+        string memory explanation = " | Current (left) != Expected (right)";
+        assertEq(
+            vault.balanceOf(address(vault)),
+            expected,
+            string.concat(
+                "Vault balance in assets in ", vaultLabel, explanation
+            )
         );
     }
 }
