@@ -1,0 +1,61 @@
+TestMint
+
+#when vault is closed
+##it should revert with ERC4626ExceededMaxMint
+
+#when vault is open
+##it should not revert
+##it should decrease the underlying balance of the owner
+##it should emit a Deposit event
+##it should increase the underlying balance of the vault
+##it should increase the balance of shares of the receiver
+##it should return the same value as the one returned by previewMint
+##it should return the same value as the given (to the receiver) shares amount
+##it should increase the total supply of shares
+##it should return the same value as the one returned by previewMint
+##it should take the underlying amount returned by previewMint to the owner
+
+#when the receiver is not the owner
+##it should not revert
+##it should decrease the underlying balance of the owner
+##it should emit a Deposit event
+##it should increase the underlying balance of the vault
+##it should increase the balance of shares of the receiver
+##it should return the same value as the one returned by previewMint
+##it should return the same value as the given (to the receiver) shares amount
+##it should increase the total supply of shares
+##it should return the same value as the one returned by previewMint
+##it should take the underlying amount returned by previewMint to the owner
+
+#when vault is empty
+##it should not revert
+##it should decrease the underlying balance of the owner
+##it should emit a Deposit event
+##it should increase the underlying balance of the vault
+##it should increase the balance of shares of the receiver
+##it should return the same value as the one returned by previewMint
+##it should return the same value as the given (to the receiver) shares amount
+##it should increase the total supply of shares
+##it should return the same value as the one returned by previewMint
+##it should take the underlying amount returned by previewMint to the owner
+
+#when the deposit amount is 0
+##it should not revert
+##it should decrease the underlying balance of the owner
+##it should emit a Deposit event
+##it should increase the underlying balance of the vault
+##it should increase the balance of shares of the receiver
+##it should return the same value as the one returned by previewMint
+##it should return the same value as the given (to the receiver) shares amount
+##it should increase the total supply of shares
+##it should return the same value as the one returned by previewMint
+##it should take the underlying amount returned by previewMint to the owner
+
+#when vault is open and paused
+##it should revert with ERC4626ExceededMaxDeposit
+
+#when vault is closed and paused
+##it should revert with ERC4626ExceededMaxDeposit
+
+#when receiver is address 0
+##it should revert with ERC20InvalidReceiver
