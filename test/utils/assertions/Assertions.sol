@@ -41,12 +41,10 @@ abstract contract Assertions is EventsAssertions {
         public
     {
         // assets data before deposit
-        AssetsData memory assetsBeforeDep =
-            getAssetsData(vault, owner, receiver);
+        AssetsData memory assetsBefore = getAssetsData(vault, owner, receiver);
 
         // shares data before deposit
-        SharesData memory sharesBeforeDep =
-            getSharesData(vault, owner, receiver);
+        SharesData memory sharesBefore = getSharesData(vault, owner, receiver);
 
         // shares value in assets before deposit
         SharesValueData memory sharesValueBeforeDep =
@@ -54,11 +52,6 @@ abstract contract Assertions is EventsAssertions {
 
         // expected shares after deposit
         uint256 previewedShares = vault.previewDeposit(assets);
-        uint256 expectedSharesAfterDeposit =
-            sharesBeforeDep.receiver + previewedShares;
-
-        // expected assets after deposit
-        uint256 expectedAssetsAfterDeposit = assetsBeforeDep.receiver - assets;
 
         // assertions on events
         assertTransferEvent(
@@ -81,24 +74,25 @@ abstract contract Assertions is EventsAssertions {
         );
 
         // assertion on total supply
-        assertTotalSupply(vault, sharesBeforeDep.totalSupply + depositReturn);
+        assertTotalSupply(vault, sharesBefore.totalSupply + depositReturn);
 
         // assertion on total assets
-        assertTotalAssets(vault, assetsBeforeDep.totalAssets + assets);
-        assertVaultAssetBalance(vault, assetsBeforeDep.vault + assets);
+        assertTotalAssets(vault, assetsBefore.totalAssets + assets);
+        assertVaultAssetBalance(vault, assetsBefore.vault + assets);
 
         // assertion on shares
         if (owner != receiver) {
-            assertSharesBalance(vault, owner, sharesBeforeDep.owner);
+            assertSharesBalance(vault, owner, sharesBefore.owner);
         }
-        assertSharesBalance(vault, receiver, expectedSharesAfterDeposit);
-
-        assertVaultSharesBalance(vault, sharesBeforeDep.vault);
+        assertSharesBalance(
+            vault, receiver, sharesBefore.receiver + previewedShares
+        );
+        assertSharesBalance(vault, address(vault), sharesBefore.vault);
 
         // assertion on assets
-        assertAssetBalance(vault, owner, assetsBeforeDep.owner - assets);
+        assertAssetBalance(vault, owner, assetsBefore.owner - assets);
         if (owner != receiver) {
-            assertAssetBalance(vault, receiver, assetsBeforeDep.receiver);
+            assertAssetBalance(vault, receiver, assetsBefore.receiver);
         }
 
         // assertion on shares value in assets
@@ -116,12 +110,10 @@ abstract contract Assertions is EventsAssertions {
         public
     {
         // assets data before deposit
-        AssetsData memory assetsBeforeDep =
-            getAssetsData(vault, owner, receiver);
+        AssetsData memory assetsBefore = getAssetsData(vault, owner, receiver);
 
         // shares data before deposit
-        SharesData memory sharesBeforeDep =
-            getSharesData(vault, owner, receiver);
+        SharesData memory sharesBefore = getSharesData(vault, owner, receiver);
 
         // shares value in assets before deposit
         SharesValueData memory sharesValueBeforeDep =
@@ -129,11 +121,6 @@ abstract contract Assertions is EventsAssertions {
 
         // expected assets after deposit
         uint256 previewedAssets = vault.previewMint(shares);
-        uint256 expectedAssetsAfterDeposit =
-            assetsBeforeDep.receiver - previewedAssets;
-
-        // expected shares after deposit
-        uint256 expectedSharesAfterDeposit = sharesBeforeDep.receiver + shares;
 
         // assertions on events
         assertTransferEvent(
@@ -156,24 +143,25 @@ abstract contract Assertions is EventsAssertions {
         );
 
         // assertion on total supply
-        assertTotalSupply(vault, sharesBeforeDep.totalSupply + shares);
+        assertTotalSupply(vault, sharesBefore.totalSupply + shares);
 
         // assertion on total assets
-        assertTotalAssets(vault, assetsBeforeDep.totalAssets + previewedAssets);
-        assertVaultAssetBalance(vault, assetsBeforeDep.vault + previewedAssets);
+        assertTotalAssets(vault, assetsBefore.totalAssets + previewedAssets);
+        assertVaultAssetBalance(vault, assetsBefore.vault + previewedAssets);
 
         // assertion on shares
         if (owner != receiver) {
-            assertSharesBalance(vault, owner, sharesBeforeDep.owner);
+            assertSharesBalance(vault, owner, sharesBefore.owner);
         }
-        assertSharesBalance(vault, receiver, expectedSharesAfterDeposit);
-        assertSharesBalance(vault, address(vault), expectedSharesAfterDeposit);
-        assertVaultSharesBalance(vault, sharesBeforeDep.vault);
+        assertSharesBalance(vault, receiver, sharesBefore.receiver + shares);
+        assertSharesBalance(vault, address(vault), sharesBefore.vault);
 
         // assertion on assets
-        assertAssetBalance(vault, receiver, expectedAssetsAfterDeposit);
+        assertAssetBalance(
+            vault, receiver, assetsBefore.receiver - previewedAssets
+        );
         if (owner != receiver) {
-            assertAssetBalance(vault, receiver, assetsBeforeDep.receiver);
+            assertAssetBalance(vault, receiver, assetsBefore.receiver);
         }
 
         // assertion on shares value in assets
