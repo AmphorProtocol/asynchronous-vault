@@ -1,0 +1,56 @@
+TestRedeem
+
+#when vault is closed
+##it should revert with ERC4626ExceededMaxRedeem
+
+#when vault is open
+##it should revert if the redeem amount provided by the owner is higher than his shares balance
+##it should increase the underlying balance of the owner
+##it should emit a Withdraw event
+##it should decrease the underlying balance of the vault
+##it should decrease the balance of shares of the receiver
+##it should return the same value as the one returned by previewWithdraw
+##it should return the same value as the burned (to the owner) shares amount
+##it should decrease the total supply of shares
+##it should take the shares amount returned by previewWithdraw to the owner
+
+#when the receiver is not the owner
+##it should revert if the withdraw amount provided by the owner is higher than his balance
+##it should increase the underlying balance of the owner
+##it should emit a Withdraw event
+##it should decrease the underlying balance of the vault
+##it should decrease the balance of shares of the receiver
+##it should return the same value as the one returned by previewWithdraw
+##it should return the same value as the burned (to the owner) shares amount
+##it should decrease the total supply of shares
+##it should take the shares amount returned by previewWithdraw to the owner
+
+#when vault is empty
+##it should revert if the withdraw amount provided by the owner is higher than his balance
+##it should increase the underlying balance of the owner
+##it should emit a Withdraw event
+##it should decrease the underlying balance of the vault
+##it should decrease the balance of shares of the receiver
+##it should return the same value as the one returned by previewWithdraw
+##it should return the same value as the burned (to the owner) shares amount
+##it should not decrease the total supply of shares since it is already 0
+
+#when the deposit amount is 0
+##it should revert if the withdraw amount provided by the owner is higher than his balance
+##it should increase the underlying balance of the owner
+##it should emit a Withdraw event
+##it should decrease the underlying balance of the vault
+##it should decrease the balance of shares of the receiver
+##it should return the same value as the one returned by previewWithdraw
+##it should return the same value as the burned (to the owner) shares amount
+##it should decrease the total supply of shares
+##it should take the shares amount returned by previewWithdraw to the owner
+
+#when vault is open and paused
+##it should revert with ERC4626ExceededMaxDeposit
+
+#when vault is closed and paused
+##it should revert with ERC4626ExceededMaxDeposit
+
+#when receiver is address 0
+##it should revert with ERC20InvalidReceiver
