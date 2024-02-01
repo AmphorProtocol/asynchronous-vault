@@ -1,49 +1,49 @@
 TestWithdraw
 
-#when vault is closed given a positive assets amount
+#when withdraw given vault closed
 ##it should revert with ERC4626ExceededMaxWithdraw
 
-#when vault is open given a positive assets amount
-##it should revert if the withdraw amount provided by the owner is higher than his shares converted balance
+#when withdraw given vault open
+##it should revert if the withdraw amount provided by the owner is higher than his shares (converted to assets) balance
 ##it should increase the underlying balance of the owner
 ##it should emit a Withdraw event
-##it should decrease the underlying balance of the vault
-##it should decrease the balance of shares of the receiver
+##it should decrease the underlying balance of the vault by the withdraw amount
+##it should decrease the balance of shares of the receiver by the withdraw amount converted in shares
 ##it should return the same value as the one returned by previewWithdraw
 ##it should return the same value as the burned (to the owner) shares amount
-##it should decrease the total supply of shares
-##it should takes the shares amount returned by previewWithdraw to the owner
+##it should decrease the total supply of shares by the value returned by previewWithdraw
+##it should take the shares amount returned by previewWithdraw to the owner
 
-#when the vault is open and the receiver is not the owner given a positive assets amount
-##it should revert if the withdraw amount provided by the owner is higher than his shares converted balance
+#when withdraw given vault open given receiver not equal owner
+##it should revert if the withdraw amount provided by the owner is higher than his shares (converted to assets) balance
 ##it should increase the underlying balance of the owner
 ##it should emit a Withdraw event
-##it should decrease the underlying balance of the vault
-##it should decrease the balance of shares of the receiver
+##it should decrease the underlying balance of the vault by the withdraw amount
+##it should decrease the balance of shares of the receiver by the withdraw amount converted in shares
 ##it should return the same value as the one returned by previewWithdraw
 ##it should return the same value as the burned (to the owner) shares amount
-##it should decrease the total supply of shares
-##it should takes the shares amount returned by previewWithdraw to the owner
+##it should decrease the total supply of shares by the value returned by previewWithdraw
+##it should take the shares amount returned by previewWithdraw to the owner
 
-#when vault is open and empty given a positive assets amount
+#when withdraw given vault open given vault empty
 ##it should revert if the withdraw amount provided by the owner is higher than 0
 
-#when the vault is open withdraw amount is 0 given a positive assets amount
-##it should revert if the withdraw amount provided by the owner is higher than his shares converted balance
+#when withdraw given vault open given withdraw amount is 0
+##it should revert if the withdraw amount provided by the owner is higher than his shares (converted to assets) balance
 ##it should increase the underlying balance of the owner
 ##it should emit a Withdraw event
-##it should decrease the underlying balance of the vault
-##it should decrease the balance of shares of the receiver
+##it should decrease the underlying balance of the vault by the withdraw amount
+##it should decrease the balance of shares of the receiver by the withdraw amount converted in shares
 ##it should return the same value as the one returned by previewWithdraw
 ##it should return the same value as the burned (to the owner) shares amount
-##it should decrease the total supply of shares
-##it should takes the shares amount returned by previewWithdraw to the owner
+##it should decrease the total supply of shares by the value returned by previewWithdraw
+##it should take the shares amount returned by previewWithdraw to the owner
 
-#when vault is open and paused
+#when withdraw given vault open given vault paused
 ##it should revert with ERC4626ExceededMaxDeposit
 
-#when vault is closed and paused
+#when withdraw given vault closed given vault paused
 ##it should revert with ERC4626ExceededMaxDeposit
 
-#when receiver is address 0
+#when withdraw given receiver is address 0
 ##it should revert with ERC20InvalidReceiver

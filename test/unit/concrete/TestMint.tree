@@ -1,53 +1,53 @@
 TestMint
-├── when is closed
+├── when mint given vault closed
 │   └── it should revert with ERC4626ExceededMaxMint
-├── when vault is open
-│   ├── it should not revert
+├── when mint given vault open
+│   ├── it should revert if the requested amount of shares converted in asset is higher than the allowance of the owner to the vault
+│   ├── it should revert if the requested amount of shares converted in asset is higher than the shares balance of the owner
 │   ├── it should decrease the underlying balance of the owner
 │   ├── it should emit a Deposit event
 │   ├── it should increase the underlying balance of the vault
 │   ├── it should increase the balance of shares of the receiver
 │   ├── it should return the same value as the one returned by previewMint
-│   ├── it should return the same value as the given (to the receiver) shares amount
+│   ├── it should return the same value as the taken (to the owner) underlying amount
 │   ├── it should increase the total supply of shares
-│   ├── it should return the same value as the one returned by previewMint
 │   └── it should take the underlying amount returned by previewMint to the owner
-├── when the receiver is not the owner
-│   ├── it should not revert
+├── when mint given receiver not equal owner
+│   ├── it should revert if the requested amount of shares converted in asset is higher than the allowance of the owner to the vault
+│   ├── it should revert if the requested amount of shares converted in asset is higher than the shares balance of the owner
 │   ├── it should decrease the underlying balance of the owner
 │   ├── it should emit a Deposit event
 │   ├── it should increase the underlying balance of the vault
 │   ├── it should increase the balance of shares of the receiver
 │   ├── it should return the same value as the one returned by previewMint
-│   ├── it should return the same value as the given (to the receiver) shares amount
+│   ├── it should return the same value as the taken (to the owner) underlying amount
 │   ├── it should increase the total supply of shares
-│   ├── it should return the same value as the one returned by previewMint
 │   └── it should take the underlying amount returned by previewMint to the owner
-├── when vault is empty
-│   ├── it should not revert
+├── when mint given vault empty
+│   ├── it should revert if the requested amount of shares converted in asset is higher than the allowance of the owner to the vault
+│   ├── it should revert if the requested amount of shares converted in asset is higher than the shares balance of the owner
 │   ├── it should decrease the underlying balance of the owner
 │   ├── it should emit a Deposit event
 │   ├── it should increase the underlying balance of the vault
 │   ├── it should increase the balance of shares of the receiver
 │   ├── it should return the same value as the one returned by previewMint
-│   ├── it should return the same value as the given (to the receiver) shares amount
+│   ├── it should return the same value as the taken (to the owner) underlying amount
 │   ├── it should increase the total supply of shares
-│   ├── it should return the same value as the one returned by previewMint
 │   └── it should take the underlying amount returned by previewMint to the owner
-├── when the deposit amount is 0
-│   ├── it should not revert
-│   ├── it should decrease the underlying balance of the owner
+├── when mint given deposit amount is 0
+│   ├── it should revert if the requested amount of shares converted in asset is higher than the allowance of the owner to the vault
+│   ├── it should revert if the requested amount of shares converted in asset is higher than the shares balance of the owner
+│   ├── it should nor increase and decrease the underlying balance of the owner
 │   ├── it should emit a Deposit event
-│   ├── it should increase the underlying balance of the vault
-│   ├── it should increase the balance of shares of the receiver
+│   ├── it should nor increase and decrease the underlying balance of the vault
+│   ├── it should nor increase and decrease the balance of shares of the receiver
 │   ├── it should return the same value as the one returned by previewMint
-│   ├── it should return the same value as the given (to the receiver) shares amount
-│   ├── it should increase the total supply of shares
-│   ├── it should return the same value as the one returned by previewMint
+│   ├── it should return the same value as the taken (to the owner) underlying amount
+│   ├── it should nor increase and decrease the total supply of shares
 │   └── it should take the underlying amount returned by previewMint to the owner
-├── when vault is open and paused
+├── when mint given vault open given vault paused
 │   └── it should revert with ERC4626ExceededMaxDeposit
-├── when vault is closed and paused
+├── when mint given vault closed given vault paused
 │   └── it should revert with ERC4626ExceededMaxDeposit
-└── when receiver is address 0
+└── when mint given receiver is address 0
     └── it should revert with ERC20InvalidReceiver
