@@ -59,8 +59,15 @@ abstract contract Constants is Test {
     VmSafe.Wallet user8 = vm.createWallet("user8");
     VmSafe.Wallet user9 = vm.createWallet("user9");
     VmSafe.Wallet user10 = vm.createWallet("user10");
-
     VmSafe.Wallet[] users;
+
+    // Wallet
+    VmSafe.Wallet address0 = VmSafe.Wallet({
+        addr: address(0),
+        publicKeyX: 0,
+        publicKeyY: 0,
+        privateKey: 0
+    });
 
     // Else
     int256 immutable bipsDivider = 10_000;

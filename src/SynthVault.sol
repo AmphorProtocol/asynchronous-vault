@@ -480,11 +480,10 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         epochs[lastRequestId].depositRequestBalance[owner] = 0;
 
         transfer(receiver, shares);
-        emit Withdraw(_msgSender(), receiver, address(this), assets, shares); //todo
-            // see if we keep this
-        emit Deposit(_msgSender(), owner, assets, shares); //todo see if we keep
-            // this
-        emit ClaimDeposit(lastRequestId, _msgSender(), receiver, assets, shares);
+        emit Withdraw(_msgSender(), receiver, address(this), assets, shares);
+        emit Deposit(_msgSender(), owner, assets, shares);
+        // emit ClaimDeposit(lastRequestId, _msgSender(), receiver, assets,
+        // shares);
     }
 
     function claimRedeem(address receiver)
@@ -501,8 +500,8 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         epochs[lastRequestId].redeemRequestBalance[owner] = 0;
 
         _ASSET.safeTransfer(receiver, assets);
-
-        emit ClaimRedeem(lastRequestId, owner, receiver, assets, shares);
+        emit Deposit(_msgSender(), owner, assets, shares);
+        emit Withdraw(_msgSender(), receiver, address(this), assets, shares);
     }
 
     /**
@@ -996,11 +995,8 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         ////////////////////////////////
         // Pending deposits treatment //
         ////////////////////////////////
-        uint256 pendingDeposit = totalPendingDepositRequest; // get the
-            // underlying of the pending deposits
+        uint256 pendingDeposit = totalPendingDepositRequest;
         deposit(pendingDeposit, address(this));
-        emit AsyncDeposit(epochNonce, pendingDeposit, pendingDeposit);
-
         //////////////////////////////
         // Pending redeem treatment //
         //////////////////////////////
@@ -1008,7 +1004,6 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
             // the pending withdraws
         uint256 redeemedAssets =
             redeem(pendingRedeem, address(this), address(this));
-        emit AsyncRedeem(epochNonce, pendingRedeem, pendingRedeem);
 
         totalPendingDepositRequest = 0;
         totalPendingRedeemRequest = 0;
@@ -1061,6 +1056,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
      * @param token The IERC20 token to be claimed.
     */
     function claimToken(IERC20 token) external onlyOwner {
+        // todo iwould remove this
         if (token == _ASSET) {
             token.safeTransfer(_msgSender(), excessAssets);
         }

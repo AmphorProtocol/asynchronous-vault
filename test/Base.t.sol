@@ -1,16 +1,14 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { Constants } from "./utils/Constants.sol";
-import { Events } from "./utils/Events.sol";
-import { Assertions } from "./utils/Assertions.sol";
-import { Test } from "forge-std/Test.sol";
+import { Assertions } from "./utils/Assertions/Assertions.sol";
 import { console } from "forge-std/console.sol";
 import { SynthVaultPermit, SynthVault } from "../../src/SynthVaultPermit.sol";
 import { VmSafe } from "forge-std/Vm.sol";
 
-contract TestBase is Constants, Events, Assertions {
+contract TestBase is Assertions {
     // OWNER ACTIONS //
+
     function open(SynthVault vault, int256 performanceInBips) public {
         vm.assume(performanceInBips > -10_000 && performanceInBips < 10_000);
         int256 lastAssetAmount = int256(vault.totalAssets());
