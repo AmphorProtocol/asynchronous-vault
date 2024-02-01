@@ -7,7 +7,7 @@ solc = "0.8.21"
 remappings = [
     "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
     "forge-std/=lib/forge-std/src/",
-    ]
+]
 
 [profile.production]
 src = 'src'
