@@ -88,10 +88,6 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     IERC20 internal immutable _ASSET; // underlying
     uint256 public epochNonce = 1;
     uint256 public totalAssets; // total underlying assets
-    uint256 internal totalPendingDepositRequest; // total underlying assets
-        // pre-deposited // todo remove this
-    uint256 internal totalPendingRedeemRequest; // total shares pre-redeemed //
-        // todo remove this
     uint256 public excessAssets; // donated underlying // todo remove this
     bool public _isOpen; // vault is open or closed // todo remove this
     mapping(uint256 epochNonce => EpochData epoch) public epochs;
@@ -255,7 +251,6 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         internal
     {
         _ASSET.safeTransferFrom(owner, address(this), assets);
-        totalPendingDepositRequest += assets;
         epochs[epochNonce].depositRequestBalance[receiver] += assets;
 
         if (lastDepositRequestId[receiver] != epochNonce) {
@@ -275,11 +270,11 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     }
 
     function totalPendingDeposits() public view returns (uint256) {
-        return totalPendingDepositRequest;
+        return isOpen() ? 0 : _ASSET.balanceOf(address(this));
     }
 
     function totalPendingRedeems() public view returns (uint256) {
-        return totalPendingRedeemRequest;
+        return isOpen() ? 0 : balanceOf(address(this));
     }
 
     function maxDepositRequest(address) public view returns (uint256) {
@@ -325,7 +320,6 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     {
         uint256 oldBalance = epochs[epochNonce].depositRequestBalance[owner];
         epochs[epochNonce].depositRequestBalance[owner] -= assets;
-        totalPendingDepositRequest -= assets;
         _ASSET.safeTransfer(receiver, assets);
 
         emit DecreaseDepositRequest(
@@ -392,7 +386,6 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         internal
     {
         transferFrom(owner, address(this), shares);
-        totalPendingRedeemRequest += shares;
         epochs[epochNonce].redeemRequestBalance[receiver] += shares;
         lastRedeemRequestId[owner] = epochNonce;
 
@@ -419,7 +412,6 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     {
         uint256 oldBalance = epochs[epochNonce].redeemRequestBalance[owner];
         epochs[epochNonce].redeemRequestBalance[owner] -= shares;
-        totalPendingRedeemRequest -= shares;
         transfer(receiver, shares);
 
         emit DecreaseRedeemRequest(
@@ -968,6 +960,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     function open(uint256 assetReturned) external onlyOwner whenClosed {
         if (isOpen()) revert VaultIsOpen();
 
+        uint256 pendingDeposit = _ASSET.balanceOf(address(this));
         uint256 fees;
 
         uint256 _totalAssets = totalAssets;
@@ -988,27 +981,23 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
             block.timestamp, _totalAssets, assetReturned, fees, totalSupply()
         );
         _isOpen = true;
-        _execRequests();
+        _execRequests(pendingDeposit);
 
         epochNonce++;
     }
 
-    function _execRequests() internal {
+    function _execRequests(uint256 pendingDeposit) internal {
         ////////////////////////////////
         // Pending deposits treatment //
         ////////////////////////////////
-        uint256 pendingDeposit = totalPendingDepositRequest;
         deposit(pendingDeposit, address(this));
         //////////////////////////////
         // Pending redeem treatment //
         //////////////////////////////
-        uint256 pendingRedeem = totalPendingRedeemRequest; // get the shares of
+        uint256 pendingRedeem = balanceOf(address(this)); // get the shares of
             // the pending withdraws
         uint256 redeemedAssets =
             redeem(pendingRedeem, address(this), address(this));
-
-        totalPendingDepositRequest = 0;
-        totalPendingRedeemRequest = 0;
 
         epochs[epochNonce].totalSupplySnapshot = totalSupply();
         epochs[epochNonce].totalAssetsSnapshot = totalAssets;
