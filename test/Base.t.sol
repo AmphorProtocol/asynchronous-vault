@@ -5,6 +5,8 @@ import { Assertions } from "./utils/Assertions/Assertions.sol";
 import { console } from "forge-std/console.sol";
 import { SynthVaultPermit, SynthVault } from "../../src/SynthVaultPermit.sol";
 import { VmSafe } from "forge-std/Vm.sol";
+import { IERC4626 } from "@openzeppelin/contracts/interfaces/IERC4626.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract TestBase is Assertions {
     // OWNER ACTIONS //
@@ -39,6 +41,18 @@ contract TestBase is Assertions {
         address owner = vault.owner();
         vm.prank(owner);
         vault.unpause();
+    }
+
+    // USER INFO //
+    function vaultAssetBalanceOf(
+        IERC4626 vault,
+        address user
+    )
+        public
+        view
+        returns (uint256)
+    {
+        return IERC20(vault.asset()).balanceOf(user);
     }
 
     // USERS ACTIONS //
