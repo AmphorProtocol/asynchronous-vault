@@ -88,8 +88,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     IERC20 internal immutable _ASSET; // underlying
     uint256 public epochNonce = 1;
     uint256 public totalAssets; // total underlying assets
-    uint256 public excessAssets; // donated underlying // todo remove this
-    bool public _isOpen; // vault is open or closed // todo remove this
+    bool public isOpen; // vault is open or closed
     mapping(uint256 epochNonce => EpochData epoch) public epochs;
     mapping(address user => uint256 epochNonce) public lastDepositRequestId;
     mapping(address user => uint256 epochNonce) public lastRedeemRequestId;
@@ -192,7 +191,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
      * ##############################
      */
     modifier whenClosed() {
-        if (isOpen()) revert VaultIsOpen();
+        if (isOpen) revert VaultIsOpen();
         _;
     }
 
@@ -206,7 +205,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         ERC20Permit(name)
     {
         _ASSET = IERC20(underlying);
-        _isOpen = true;
+        isOpen = true;
     }
 
     function isCurrentEpoch(uint256 requestId) internal view returns (bool) {
@@ -270,19 +269,19 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     }
 
     function totalPendingDeposits() public view returns (uint256) {
-        return isOpen() ? 0 : _ASSET.balanceOf(address(this));
+        return isOpen ? 0 : _ASSET.balanceOf(address(this));
     }
 
     function totalPendingRedeems() public view returns (uint256) {
-        return isOpen() ? 0 : balanceOf(address(this));
+        return isOpen ? 0 : balanceOf(address(this));
     }
 
     function maxDepositRequest(address) public view returns (uint256) {
-        return isOpen() || paused() ? 0 : type(uint256).max;
+        return isOpen || paused() ? 0 : type(uint256).max;
     }
 
     function maxRedeemRequest(address owner) public view returns (uint256) {
-        return isOpen() || paused() ? 0 : balanceOf(owner);
+        return isOpen || paused() ? 0 : balanceOf(owner);
     }
 
     function claimAndRequestDeposit(
@@ -549,32 +548,32 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
 
     /*
      * @dev The `maxDeposit` function is used to calculate the maximum deposit.
-     * @notice If the vault is locked or paused, users are not allowed to mint,
-     * the maxMint is 0. //todo add some details
+     * @notice If the vault is locked or paused, users are not allowed to deposit,
+     * the maxDeposit is 0.
      * @return Amount of the maximum underlying assets deposit amount.
     */
     function maxDeposit(address) public view returns (uint256) {
-        return isOpen() && !paused() ? type(uint256).max : 0;
+        return isOpen && !paused() ? type(uint256).max : 0;
     }
 
     /*
      * @dev The `maxMint` function is used to calculate the maximum amount of
      * shares you can mint.
-     * @notice If the vault is locked or paused, the maxMint is 0. // todo add details
+     * @notice If the vault is locked or paused, the maxMint is 0.
      * @return Amount of the maximum shares mintable for the specified address.
     */
     function maxMint(address) public view returns (uint256) {
-        return isOpen() && !paused() ? type(uint256).max : 0;
+        return isOpen && !paused() ? type(uint256).max : 0;
     }
 
     /*
      * @dev See {IERC4626-maxWithdraw}.
      * @notice If the function is called during the lock period the maxWithdraw
-     * is `0`. // todo add details
+     * is `0`.
      * @return Amount of the maximum number of withdrawable underlying assets.
     */
     function maxWithdraw(address owner) public view returns (uint256) {
-        return isOpen() && !paused()
+        return isOpen && !paused()
             ? _convertToAssets(balanceOf(owner), Math.Rounding.Floor)
             : 0;
     }
@@ -582,11 +581,11 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     /*
      * @dev See {IERC4626-maxRedeem}.
      * @notice If the function is called during the lock period the maxRedeem is
-     * `0`. // todo add details
+     * `0`;
      * @param owner The address of the owner.
      * @return Amount of the maximum number of redeemable shares. */
     function maxRedeem(address owner) public view returns (uint256) {
-        return isOpen() && !paused() ? balanceOf(owner) : 0;
+        return isOpen && !paused() ? balanceOf(owner) : 0;
     }
 
     /*
@@ -619,7 +618,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     /*
      * @dev See {IERC4626-deposit}
      * @notice The `deposit` function is used to deposit underlying assets into
-     * the vault. // todo add details
+     * the vault.
      * @param assets The underlying assets amount to be converted into shares.
      * @param receiver The address of the shares receiver.
      * @return Amount of shares received in exchange of the
@@ -937,13 +936,13 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
      * of the contract (`onlyOwner` modifier).
     */
     function close() external onlyOwner {
-        if (!isOpen()) revert VaultIsLocked();
+        if (!isOpen) revert VaultIsLocked();
 
         uint256 _totalAssets = totalAssets;
         if (_totalAssets == 0) revert VaultIsEmpty();
 
         _ASSET.safeTransfer(owner(), _totalAssets);
-        _isOpen = false;
+        isOpen = false;
         emit EpochStart(block.timestamp, _totalAssets, totalSupply());
     }
 
@@ -958,7 +957,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
      * the vault.
     */
     function open(uint256 assetReturned) external onlyOwner whenClosed {
-        if (isOpen()) revert VaultIsOpen();
+        if (isOpen) revert VaultIsOpen();
 
         uint256 pendingDeposit = _ASSET.balanceOf(address(this));
         uint256 fees;
@@ -980,7 +979,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         emit EpochEnd(
             block.timestamp, _totalAssets, assetReturned, fees, totalSupply()
         );
-        _isOpen = true;
+        isOpen = true;
         _execRequests(pendingDeposit);
 
         epochNonce++;
@@ -995,15 +994,12 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         // Pending redeem treatment //
         //////////////////////////////
         uint256 pendingRedeem = balanceOf(address(this)); // get the shares of
-            // the pending withdraws
-        uint256 redeemedAssets =
-            redeem(pendingRedeem, address(this), address(this));
+        
+        // the pending withdraws
+        redeem(pendingRedeem, address(this), address(this));
 
         epochs[epochNonce].totalSupplySnapshot = totalSupply();
         epochs[epochNonce].totalAssetsSnapshot = totalAssets;
-
-        excessAssets =
-            _ASSET.balanceOf(address(this)) - (totalAssets + redeemedAssets);
     }
 
     function restruct(uint256 virtualReturnedAsset) external onlyOwner {
@@ -1032,7 +1028,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
      * @param newFees The new perf fees to be applied.
     */
     function setFee(uint16 newFee) external onlyOwner {
-        if (!isOpen()) revert VaultIsLocked();
+        if (!isOpen) revert VaultIsLocked();
         if (newFee > MAX_FEES) revert FeesTooHigh();
         feeInBps = newFee;
         emit FeesChanged(feeInBps, newFee);
@@ -1047,11 +1043,8 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
      * @param token The IERC20 token to be claimed.
     */
     function claimToken(IERC20 token) external onlyOwner {
-        // todo iwould remove this
-        if (token == _ASSET) {
-            token.safeTransfer(_msgSender(), excessAssets);
-        }
-        token.safeTransfer(_msgSender(), token.balanceOf(address(this)));
+        if (token != _ASSET)
+            token.safeTransfer(_msgSender(), token.balanceOf(address(this)));
     }
 
     /*
@@ -1078,9 +1071,5 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         whenNotPaused
     {
         super._update(from, to, value);
-    }
-
-    function isOpen() public view returns (bool) {
-        return _isOpen;
     }
 }
