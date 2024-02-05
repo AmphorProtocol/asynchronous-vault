@@ -94,17 +94,12 @@ contract SynthVault is
     // @return Amount of the perf fees applied on the positive yield.
     uint16 public feeInBps;
     IERC20 internal _ASSET; // underlying
-    uint256 public epochNonce = 1;
+    uint256 public epochId;
     uint256 public totalAssets; // total underlying assets
-    uint256 internal totalPendingDepositRequest; // total underlying assets
-        // pre-deposited // todo remove this
-    uint256 internal totalPendingRedeemRequest; // total shares pre-redeemed //
-        // todo remove this
-    uint256 public excessAssets; // donated underlying // todo remove this
-    bool public _isOpen = true; // vault is open or closed // todo remove this
-    mapping(uint256 epochNonce => EpochData epoch) public epochs;
-    mapping(address user => uint256 epochNonce) public lastDepositRequestId;
-    mapping(address user => uint256 epochNonce) public lastRedeemRequestId;
+    bool public isOpen; // vault is open or closed
+    mapping(uint256 epochId => EpochData epoch) public epochs;
+    mapping(address user => uint256 epochId) public lastDepositRequestId;
+    mapping(address user => uint256 epochId) public lastRedeemRequestId;
 
     /*
      * ##########
@@ -204,7 +199,7 @@ contract SynthVault is
      * ##############################
      */
     modifier whenClosed() {
-        if (isOpen()) revert VaultIsOpen();
+        if (isOpen) revert VaultIsOpen();
         _;
     }
 
@@ -222,15 +217,18 @@ contract SynthVault is
         public
         initializer
     {
+        if (fees > MAX_FEES) revert FeesTooHigh();
+        feeInBps = fees;
+        isOpen = true;
+        epochId = 1;
         __ERC20_init(name, symbol);
         __Ownable_init(owner);
         __ERC20Permit_init(name);
         _ASSET = IERC20(underlying);
-        setFee(fees);
     }
 
     function isCurrentEpoch(uint256 requestId) internal view returns (bool) {
-        return requestId == epochNonce;
+        return requestId == epochId;
     }
 
     function requestDeposit(
@@ -248,7 +246,7 @@ contract SynthVault is
         uint256 lastRequestBalance =
             epochs[lastRequestId].depositRequestBalance[receiver];
         bool hasClaimableRequest =
-            lastRequestBalance > 0 && lastRequestId != epochNonce;
+            lastRequestBalance > 0 && lastRequestId != epochId;
 
         if (hasClaimableRequest) revert MustClaimFirst();
 
@@ -271,39 +269,38 @@ contract SynthVault is
         internal
     {
         _ASSET.safeTransferFrom(owner, address(this), assets);
-        totalPendingDepositRequest += assets;
-        epochs[epochNonce].depositRequestBalance[receiver] += assets;
+        epochs[epochId].depositRequestBalance[receiver] += assets;
 
-        if (lastDepositRequestId[receiver] != epochNonce) {
-            lastDepositRequestId[receiver] = epochNonce;
+        if (lastDepositRequestId[receiver] != epochId) {
+            lastDepositRequestId[receiver] = epochId;
         }
 
         if (
             data.length > 0
                 && ERC7540Receiver(receiver).onERC7540DepositReceived(
-                    _msgSender(), owner, epochNonce, data
+                    _msgSender(), owner, epochId, data
                 ) != ERC7540Receiver.onERC7540DepositReceived.selector
         ) {
             revert ReceiverFailed();
         }
 
-        emit DepositRequest(receiver, owner, epochNonce, _msgSender(), assets);
+        emit DepositRequest(receiver, owner, epochId, _msgSender(), assets);
     }
 
     function totalPendingDeposits() public view returns (uint256) {
-        return totalPendingDepositRequest;
+        return isOpen ? 0 : _ASSET.balanceOf(address(this));
     }
 
     function totalPendingRedeems() public view returns (uint256) {
-        return totalPendingRedeemRequest;
+        return isOpen ? 0 : balanceOf(address(this));
     }
 
     function maxDepositRequest(address) public view returns (uint256) {
-        return isOpen() || paused() ? 0 : type(uint256).max;
+        return isOpen || paused() ? 0 : type(uint256).max;
     }
 
     function maxRedeemRequest(address owner) public view returns (uint256) {
-        return isOpen() || paused() ? 0 : balanceOf(owner);
+        return isOpen || paused() ? 0 : balanceOf(owner);
     }
 
     function claimAndRequestDeposit(
@@ -339,16 +336,15 @@ contract SynthVault is
         whenClosed
         whenNotPaused
     {
-        uint256 oldBalance = epochs[epochNonce].depositRequestBalance[owner];
-        epochs[epochNonce].depositRequestBalance[owner] -= assets;
-        totalPendingDepositRequest -= assets;
+        uint256 oldBalance = epochs[epochId].depositRequestBalance[owner];
+        epochs[epochId].depositRequestBalance[owner] -= assets;
         _ASSET.safeTransfer(receiver, assets);
 
         emit DecreaseDepositRequest(
-            epochNonce,
+            epochId,
             owner,
             oldBalance,
-            epochs[epochNonce].depositRequestBalance[owner]
+            epochs[epochId].depositRequestBalance[owner]
         );
     }
 
@@ -386,7 +382,7 @@ contract SynthVault is
         uint256 lastRequestBalance =
             epochs[lastRequestId].redeemRequestBalance[receiver];
         bool hasClaimableRequest =
-            lastRequestBalance > 0 && lastRequestId != epochNonce;
+            lastRequestBalance > 0 && lastRequestId != epochId;
 
         if (hasClaimableRequest) revert MustClaimFirst();
         if (shares > maxRedeemRequest(receiver)) {
@@ -408,20 +404,19 @@ contract SynthVault is
         internal
     {
         transferFrom(owner, address(this), shares);
-        totalPendingRedeemRequest += shares;
-        epochs[epochNonce].redeemRequestBalance[receiver] += shares;
-        lastRedeemRequestId[owner] = epochNonce;
+        epochs[epochId].redeemRequestBalance[receiver] += shares;
+        lastRedeemRequestId[owner] = epochId;
 
         if (
             data.length > 0
                 && ERC7540Receiver(receiver).onERC7540RedeemReceived(
-                    _msgSender(), owner, epochNonce, data
+                    _msgSender(), owner, epochId, data
                 ) != ERC7540Receiver.onERC7540RedeemReceived.selector
         ) {
             revert ReceiverFailed();
         }
 
-        emit DepositRequest(receiver, owner, epochNonce, _msgSender(), shares);
+        emit DepositRequest(receiver, owner, epochId, _msgSender(), shares);
     }
 
     function decreaseRedeemRequest(
@@ -433,16 +428,15 @@ contract SynthVault is
         whenClosed
         whenNotPaused
     {
-        uint256 oldBalance = epochs[epochNonce].redeemRequestBalance[owner];
-        epochs[epochNonce].redeemRequestBalance[owner] -= shares;
-        totalPendingRedeemRequest -= shares;
+        uint256 oldBalance = epochs[epochId].redeemRequestBalance[owner];
+        epochs[epochId].redeemRequestBalance[owner] -= shares;
         transfer(receiver, shares);
 
         emit DecreaseRedeemRequest(
-            epochNonce,
+            epochId,
             owner,
             oldBalance,
-            epochs[epochNonce].redeemRequestBalance[owner]
+            epochs[epochId].redeemRequestBalance[owner]
         );
     }
 
@@ -451,7 +445,7 @@ contract SynthVault is
         view
         returns (uint256)
     {
-        return epochs[epochNonce].redeemRequestBalance[owner];
+        return epochs[epochId].redeemRequestBalance[owner];
     }
 
     function claimableRedeemRequest(address owner)
@@ -533,29 +527,29 @@ contract SynthVault is
 
     // @dev See {IERC4626-convertToShares}.
     function convertToShares(uint256 assets) public view returns (uint256) {
-        return _convertToShares(assets, epochNonce, Math.Rounding.Floor);
+        return _convertToShares(assets, epochId, Math.Rounding.Floor);
     }
 
     function convertToShares(
         uint256 assets,
-        uint256 epochId
+        uint256 _epochId
     )
         public
         view
         returns (uint256)
     {
-        return _convertToShares(assets, epochId, Math.Rounding.Floor);
+        return _convertToShares(assets, _epochId, Math.Rounding.Floor);
     }
 
     function convertToAssets(
         uint256 shares,
-        uint256 epochId
+        uint256 _epochId
     )
         public
         view
         returns (uint256)
     {
-        return _convertToAssets(shares, epochId, Math.Rounding.Floor);
+        return _convertToAssets(shares, _epochId, Math.Rounding.Floor);
     }
 
     function sharesBalanceInAsset(address owner)
@@ -568,50 +562,73 @@ contract SynthVault is
 
     // @dev See {IERC4626-convertToAssets}.
     function convertToAssets(uint256 shares) public view returns (uint256) {
-        return _convertToAssets(shares, epochNonce, Math.Rounding.Floor);
+        return _convertToAssets(shares, epochId, Math.Rounding.Floor);
     }
 
     /*
+    <<<<<<< HEAD
     * @dev The `maxDeposit` function is used to calculate the maximum deposit.
     * @notice If the vault is locked or paused, users are not allowed to mint,
      * the maxMint is 0. //todo add some details
+    =======
+    * @dev The `maxDeposit` function is used to calculate the maximum deposit.
+    * @notice If the vault is locked or paused, users are not allowed to
+    deposit,
+     * the maxDeposit is 0.
+    >>>>>>> de0f2461bf4ab90510abd4a21374ce739f96b05c
      * @return Amount of the maximum underlying assets deposit amount.
     */
     function maxDeposit(address) public view returns (uint256) {
-        return isOpen() && !paused() ? type(uint256).max : 0;
+        return isOpen && !paused() ? type(uint256).max : 0;
     }
 
     /*
     * @dev The `maxMint` function is used to calculate the maximum amount of
      * shares you can mint.
+    <<<<<<< HEAD
     * @notice If the vault is locked or paused, the maxMint is 0. // todo add
     details
     * @return Amount of the maximum shares mintable for the specified address.
+    =======
+     * @notice If the vault is locked or paused, the maxMint is 0.
+    * @return Amount of the maximum shares mintable for the specified address.
+    >>>>>>> de0f2461bf4ab90510abd4a21374ce739f96b05c
     */
     function maxMint(address) public view returns (uint256) {
-        return isOpen() && !paused() ? type(uint256).max : 0;
+        return isOpen && !paused() ? type(uint256).max : 0;
     }
 
     /*
      * @dev See {IERC4626-maxWithdraw}.
+    <<<<<<< HEAD
     * @notice If the function is called during the lock period the maxWithdraw
      * is `0`. // todo add details
     * @return Amount of the maximum number of withdrawable underlying assets.
+    =======
+    * @notice If the function is called during the lock period the maxWithdraw
+     * is `0`.
+    * @return Amount of the maximum number of withdrawable underlying assets.
+    >>>>>>> de0f2461bf4ab90510abd4a21374ce739f96b05c
     */
     function maxWithdraw(address owner) public view returns (uint256) {
-        return isOpen() && !paused()
+        return isOpen && !paused()
             ? _convertToAssets(balanceOf(owner), Math.Rounding.Floor)
             : 0;
     }
 
     /*
      * @dev See {IERC4626-maxRedeem}.
+    <<<<<<< HEAD
     * @notice If the function is called during the lock period the maxRedeem is
      * `0`. // todo add details
+    =======
+    * @notice If the function is called during the lock period the maxRedeem is
+     * `0`;
+    >>>>>>> de0f2461bf4ab90510abd4a21374ce739f96b05c
      * @param owner The address of the owner.
      * @return Amount of the maximum number of redeemable shares. */
     function maxRedeem(address owner) public view returns (uint256) {
-        return isOpen() && !paused() ? balanceOf(owner) : 0;
+        return isOpen && !paused() ? balanceOf(owner) : 0;
     }
 
     /*
@@ -643,9 +660,15 @@ contract SynthVault is
 
     /*
      * @dev See {IERC4626-deposit}
+    <<<<<<< HEAD
     * @notice The `deposit` function is used to deposit underlying assets into
      * the vault. // todo add details
     * @param assets The underlying assets amount to be converted into shares.
+    =======
+    * @notice The `deposit` function is used to deposit underlying assets into
+     * the vault.
+    * @param assets The underlying assets amount to be converted into shares.
+    >>>>>>> de0f2461bf4ab90510abd4a21374ce739f96b05c
      * @param receiver The address of the shares receiver.
      * @return Amount of shares received in exchange of the
      * specified underlying assets amount.
@@ -842,7 +865,7 @@ contract SynthVault is
         returns (uint256)
     {
         uint256 _totalAssets = epochs[requestId].totalAssetsSnapshot;
-        return _totalAssets == 0 || requestId == epochNonce
+        return _totalAssets == 0 || requestId == epochId
             ? assets
             : assets.mulDiv(
                 epochs[requestId].totalSupplySnapshot, _totalAssets, rounding
@@ -881,7 +904,7 @@ contract SynthVault is
         returns (uint256)
     {
         uint256 totalSupply = epochs[requestId].totalSupplySnapshot;
-        return totalSupply == 0 || requestId == epochNonce
+        return totalSupply == 0 || requestId == epochId
             ? shares
             : shares.mulDiv(
                 epochs[requestId].totalAssetsSnapshot, totalSupply, rounding
@@ -962,13 +985,13 @@ contract SynthVault is
      * of the contract (`onlyOwner` modifier).
     */
     function close() external onlyOwner {
-        if (!isOpen()) revert VaultIsLocked();
+        if (!isOpen) revert VaultIsLocked();
 
         uint256 _totalAssets = totalAssets;
         if (_totalAssets == 0) revert VaultIsEmpty();
 
         _ASSET.safeTransfer(owner(), _totalAssets);
-        _isOpen = false;
+        isOpen = false;
         emit EpochStart(block.timestamp, _totalAssets, totalSupply());
     }
 
@@ -983,8 +1006,9 @@ contract SynthVault is
      * the vault.
     */
     function open(uint256 assetReturned) external onlyOwner whenClosed {
-        if (isOpen()) revert VaultIsOpen();
+        if (isOpen) revert VaultIsOpen();
 
+        uint256 pendingDeposit = _ASSET.balanceOf(address(this));
         uint256 fees;
 
         uint256 _totalAssets = totalAssets;
@@ -1004,34 +1028,27 @@ contract SynthVault is
         emit EpochEnd(
             block.timestamp, _totalAssets, assetReturned, fees, totalSupply()
         );
-        _isOpen = true;
-        _execRequests();
+        isOpen = true;
+        _execRequests(pendingDeposit);
 
-        epochNonce++;
+        epochId++;
     }
 
-    function _execRequests() internal {
+    function _execRequests(uint256 pendingDeposit) internal {
         ////////////////////////////////
         // Pending deposits treatment //
         ////////////////////////////////
-        uint256 pendingDeposit = totalPendingDepositRequest;
         deposit(pendingDeposit, address(this));
         //////////////////////////////
         // Pending redeem treatment //
         //////////////////////////////
-        uint256 pendingRedeem = totalPendingRedeemRequest; // get the shares of
-            // the pending withdraws
-        uint256 redeemedAssets =
-            redeem(pendingRedeem, address(this), address(this));
+        uint256 pendingRedeem = balanceOf(address(this)); // get the shares of
 
-        totalPendingDepositRequest = 0;
-        totalPendingRedeemRequest = 0;
+        // the pending withdraws
+        redeem(pendingRedeem, address(this), address(this));
 
-        epochs[epochNonce].totalSupplySnapshot = totalSupply();
-        epochs[epochNonce].totalAssetsSnapshot = totalAssets;
-
-        excessAssets =
-            _ASSET.balanceOf(address(this)) - (totalAssets + redeemedAssets);
+        epochs[epochId].totalSupplySnapshot = totalSupply();
+        epochs[epochId].totalAssetsSnapshot = totalAssets;
     }
 
     function restruct(uint256 virtualReturnedAsset) external onlyOwner {
@@ -1059,8 +1076,8 @@ contract SynthVault is
      * It can't exceed 30% (3000 in BPS).
      * @param newFees The new perf fees to be applied.
     */
-    function setFee(uint16 newFee) public onlyOwner {
-        if (!isOpen()) revert VaultIsLocked();
+    function setFee(uint16 newFee) external onlyOwner {
+        if (!isOpen) revert VaultIsLocked();
         if (newFee > MAX_FEES) revert FeesTooHigh();
         feeInBps = newFee;
         emit FeesChanged(feeInBps, newFee);
@@ -1075,11 +1092,9 @@ contract SynthVault is
      * @param token The IERC20 token to be claimed.
     */
     function claimToken(IERC20 token) external onlyOwner {
-        // todo iwould remove this
-        if (token == _ASSET) {
-            token.safeTransfer(_msgSender(), excessAssets);
+        if (token != _ASSET) {
+            token.safeTransfer(_msgSender(), token.balanceOf(address(this)));
         }
-        token.safeTransfer(_msgSender(), token.balanceOf(address(this)));
     }
 
     /*
@@ -1106,9 +1121,5 @@ contract SynthVault is
         whenNotPaused
     {
         super._update(from, to, value);
-    }
-
-    function isOpen() public view returns (bool) {
-        return _isOpen;
     }
 }

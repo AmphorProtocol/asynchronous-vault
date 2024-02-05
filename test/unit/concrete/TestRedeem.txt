@@ -37,10 +37,10 @@ TestRedeem
 ##it should return the same value as the taken (to the owner) assets amount
 
 #when redeem given vault open given vault paused
-##it should revert with ERC4626ExceededMaxDeposit
+##it should revert with EnforcedPause
 
 #when redeem given vault closed given vault paused
-##it should revert with ERC4626ExceededMaxDeposit
+##it should revert with EnforcedPause
 
 #when redeem given vault closed given vault not paused
 ##it should revert with ERC4626ExceededMaxDeposit

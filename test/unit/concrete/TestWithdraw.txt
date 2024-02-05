@@ -40,10 +40,10 @@ TestWithdraw
 ##it should take the shares amount returned by previewWithdraw to the owner
 
 #when withdraw given vault open given vault paused
-##it should revert with ERC4626ExceededMaxDeposit
+##it should revert with EnforcedPause
 
 #when withdraw given vault closed given vault paused
-##it should revert with ERC4626ExceededMaxDeposit
+##it should revert with EnforcedPause
 
 #when withdraw given receiver is address 0
 ##it should revert with ERC20InvalidReceiver

@@ -1,0 +1,22 @@
+TestIsCurrentEpoch
+
+#when isCurrentEpoch given vault paused
+##it should not revert
+
+#when isCurrentEpoch given vault closed
+##it should not revert
+
+#when isCurrentEpoch given vault open
+##it should not revert
+
+#when isCurrentEpoch given epochNonce equals 10 given requestId equals 10
+##it should not revert
+**it should returns true
+
+#when isCurrentEpoch given epochNonce equals 10 given requestId equals 9
+##it should not revert
+##it should returns false
+
+#when isCurrentEpoch given epochNonce equals 9 given requestId equals 10
+##it should not revert
+##it should returns false
