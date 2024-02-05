@@ -2,15 +2,14 @@
 pragma solidity 0.8.21;
 
 import {
-    Ownable2Step,
-    Ownable
+    Ownable2Step, Ownable
 } from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
 import { SafeERC20 } from
     "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import { IERC7540 } from "./interfaces/IERC7540.sol";
-import { PermitParams } from "./SynthVaultPermit.sol";
+import { IERC7540, IERC4626 } from "./interfaces/IERC7540.sol";
+import { PermitParams } from "./SynthVault.sol";
 import { ERC20Permit } from
     "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
@@ -38,14 +37,37 @@ contract AsyncVaultZapper is Ownable2Step, Pausable {
      */
     using Address for address payable;
 
-    mapping(IERC7540 => bool) public authorizedVaults;
-    mapping(address => bool) public authorizedRouters;
+    mapping(IERC4626 vault => bool isAuthorized) public authorizedVaults;
+    mapping(address routerAddress => bool isAuthorized) public authorizedRouters;
 
     // The canonical permit2 contract.
-    IPermit2 public immutable permit2;
+    IPermit2 public immutable PERMIT2;
+
+    event ZapAndRequestDeposit(
+        IERC7540 indexed vault,
+        address indexed router,
+        IERC20 tokenIn,
+        uint256 amount
+    );
+    event ZapAndDeposit(
+        IERC4626 indexed vault,
+        address indexed router,
+        IERC20 tokenIn,
+        uint256 amount,
+        uint256 shares
+    );
+    event ClaimRedeemAndZap(
+        IERC7540 indexed vault,
+        address indexed router,
+        uint256 shares,
+        uint256 assets
+    );
+    event RouterApproved(address indexed router, IERC20 indexed token);
+    event RouterAuthorized(address indexed router, bool allowed);
+    event VaultAuthorized(IERC4626 indexed vault, bool allowed);
 
     error NotRouter(address router);
-    error NotVault(IERC7540 vault);
+    error NotVault(IERC4626 vault);
     error SwapFailed(string reason);
     error InconsistantSwapData(
         uint256 expectedTokenInBalance, uint256 actualTokenInBalance
@@ -56,45 +78,21 @@ contract AsyncVaultZapper is Ownable2Step, Pausable {
     );
     error NullMinShares();
 
-    event ZapAndRequestDeposit(
-        IERC7540 indexed vault,
-        address indexed router,
-        IERC20 tokenIn,
-        uint256 amount
-    );
-
-    event ClaimRedeemAndZap(
-        IERC7540 indexed vault,
-        address indexed router,
-        uint256 shares,
-        uint256 assets
-    );
-
-    event routerApproved(address indexed router, IERC20 indexed token);
-    event routerAuthorized(address indexed router, bool allowed);
-    event vaultAuthorized(IERC7540 indexed vault, bool allowed);
-
     modifier onlyAllowedRouter(address router) {
         if (!authorizedRouters[router]) revert NotRouter(router);
         _;
     }
 
-    modifier onlyAllowedVault(IERC7540 vault) {
+    modifier onlyAllowedVault(IERC4626 vault) {
         if (!authorizedVaults[vault]) revert NotVault(vault);
         _;
     }
 
-    constructor(IPermit2 _permit2) Ownable(_msgSender()) {
-        permit2 = _permit2;
+    constructor(IPermit2 permit2) Ownable(_msgSender()) {
+        PERMIT2 = permit2;
     }
 
     /**
-     * @dev The `claimToken` function is used to claim other tokens that have
-     * been sent to the vault.
-     * @notice The `claimToken` function is used to claim other tokens that have
-     * been sent to the vault.
-     * It can only be called by the owner of the contract (`onlyOwner`
-     * modifier).
      * @param token The IERC20 token to be claimed.
      */
     function withdrawToken(IERC20 token) external onlyOwner {
@@ -122,13 +120,13 @@ contract AsyncVaultZapper is Ownable2Step, Pausable {
         onlyAllowedRouter(router)
     {
         token.forceApprove(router, type(uint256).max);
-        emit routerApproved(router, token);
+        emit RouterApproved(router, token);
     }
 
     function toggleRouterAuthorization(address router) public onlyOwner {
         bool authorized = !authorizedRouters[router];
         authorizedRouters[router] = authorized;
-        emit routerAuthorized(router, authorized);
+        emit RouterAuthorized(router, authorized);
     }
 
     function toggleVaultAuthorization(IERC7540 vault) public onlyOwner {
@@ -137,7 +135,7 @@ contract AsyncVaultZapper is Ownable2Step, Pausable {
             address(vault), authorized ? type(uint256).max : 0
         );
         authorizedVaults[vault] = authorized;
-        emit vaultAuthorized(vault, authorized);
+        emit VaultAuthorized(vault, authorized);
     }
 
     // internal function used only to execute the zap before request a deposit
@@ -158,7 +156,7 @@ contract AsyncVaultZapper is Ownable2Step, Pausable {
             expectedBalance = address(this).balance - msg.value;
         }
 
-        _execute(router, data); // zap
+        _executeZap(router, data); // zap
 
         uint256 balanceAfterZap = msg.value == 0
             ? tokenIn.balanceOf(address(this))
@@ -174,11 +172,77 @@ contract AsyncVaultZapper is Ownable2Step, Pausable {
         }
     }
 
+    function _transferTokenInAndApprove(
+        address router,
+        IERC20 tokenIn,
+        uint256 amount
+    )
+        internal
+    {
+        tokenIn.safeTransferFrom(_msgSender(), address(this), amount);
+        if (tokenIn.allowance(_msgSender(), router) < amount) {
+            tokenIn.forceApprove(router, amount);
+        }
+    }
+
+    /*
+     ########################
+      USER RELATED FUNCTIONS
+     ########################
+    */
+
+    function zapAndDeposit(
+        IERC20 tokenIn,
+        IERC4626 vault,
+        address router,
+        uint256 amount,
+        uint256 minShares,
+        bytes calldata data
+    )
+        public
+        payable
+        onlyAllowedRouter(router)
+        onlyAllowedVault(vault)
+        whenNotPaused
+        returns (uint256)
+    {
+        if (minShares == 0) revert NullMinShares();
+
+        uint256 initialTokenOutBalance =
+            IERC20(vault.asset()).balanceOf(address(this)); // tokenOut balance to deposit, not final value
+
+        // Zap
+        _zapIn(tokenIn, router, amount, data);
+
+        // Deposit
+        uint256 shares = vault.deposit(
+            IERC20(vault.asset()).balanceOf(address(this))
+                - initialTokenOutBalance,
+            _msgSender()
+        );
+
+        if (shares < minShares)
+            revert NotEnoughSharesMinted({
+                sharesMinted: shares,
+                minSharesMinted: minShares
+            });
+
+        emit ZapAndDeposit({
+            vault: vault,
+            router: router,
+            tokenIn: tokenIn,
+            amount: amount,
+            shares: shares
+        });
+
+        return shares;
+    }
+
     function zapAndRequestDeposit(
         IERC20 tokenIn,
         IERC7540 vault,
         address router,
-        uint256 amount,
+        uint256 amountIn,
         bytes calldata data,
         bytes calldata swapData
     )
@@ -187,14 +251,13 @@ contract AsyncVaultZapper is Ownable2Step, Pausable {
         onlyAllowedRouter(router)
         onlyAllowedVault(vault)
         whenNotPaused
-    // returns (uint256) // request receipt tokens amount minted
     {
         uint256 initialTokenOutBalance =
             IERC20(vault.asset()).balanceOf(address(this)); // tokenOut balance to
             // deposit, not final value
 
         // Zap
-        _zapIn(tokenIn, router, amount, swapData);
+        _zapIn(tokenIn, router, amountIn, swapData);
 
         // Request deposit
         vault.requestDeposit(
@@ -209,61 +272,15 @@ contract AsyncVaultZapper is Ownable2Step, Pausable {
             vault: vault,
             router: router,
             tokenIn: tokenIn,
-            amount: amount
+            amount: amountIn
         });
     }
 
-    function _transferTokenInAndApprove(
-        address router,
-        IERC20 tokenIn,
-        uint256 amount
-    )
-        private
-    {
-        tokenIn.safeTransferFrom(_msgSender(), address(this), amount);
-        if (tokenIn.allowance(_msgSender(), router) < amount) {
-            tokenIn.forceApprove(router, amount);
-        }
-    }
-
-    function claimRedeemAndZap(
-        IERC7540 vault,
-        address router,
-        uint256 shares, // redeemable shares to claim
-        bytes calldata data
-    )
-        public
-        onlyAllowedRouter(router)
-        onlyAllowedVault(vault)
-        whenNotPaused
-        returns (uint256)
-    {
-        // zapper balance in term of vault underlying
-        uint256 balanceBeforeRedeem =
-            IERC20(vault.asset()).balanceOf(address(this));
-
-        // Claim redeem
-        uint256 assets =
-            IERC7540(vault).redeem(shares, address(this), _msgSender());
-
-        // Once the assets are out of the vault, we can zap them into the
-        // desired asset
-        _execute(router, data);
-
-        uint256 balanceAfterSwap =
-            IERC20(vault.asset()).balanceOf(address(this));
-
-        if (balanceAfterSwap > balanceBeforeRedeem) {
-            revert InconsistantSwapData({
-                expectedTokenInBalance: balanceBeforeRedeem,
-                actualTokenInBalance: balanceAfterSwap
-            });
-        }
-
-        emit ClaimRedeemAndZap(vault, router, shares, assets);
-
-        return assets;
-    }
+    /*
+     ##########################
+      PERMIT RELATED FUNCTIONS
+     ##########################
+    */
 
     function zapAndRequestDepositWithPermit(
         IERC20 tokenIn,
@@ -273,39 +290,31 @@ contract AsyncVaultZapper is Ownable2Step, Pausable {
         bytes calldata data,
         bytes calldata swapData,
         PermitParams calldata permitParams
-    )
-        public
-        payable /*returns (uint256)*/
-    {
-        if (tokenIn.allowance(_msgSender(), address(this)) < amount) {
+    ) public {
+        if (tokenIn.allowance(_msgSender(), address(this)) < amount)
             _executePermit(tokenIn, _msgSender(), address(this), permitParams);
-        }
-        /*return*/
         zapAndRequestDeposit(tokenIn, vault, router, amount, data, swapData);
     }
 
-    function redeemAndZapWithPermit(
-        IERC7540 vault,
+    function zapAndDepositWithPermit(
+        IERC20 tokenIn,
+        IERC4626 vault,
         address router,
-        uint256 shares, // shares to redeem
-        bytes calldata data,
+        uint256 amount,
+        uint256 minShares,
+        bytes calldata swapData,
         PermitParams calldata permitParams
-    )
-        public
-    {
-        if (IERC20(vault).allowance(_msgSender(), address(this)) < shares) {
-            _executePermit(
-                IERC20(vault), _msgSender(), address(this), permitParams
-            );
-        }
-        claimRedeemAndZap(vault, router, shares, data);
+    ) public returns (uint256) {
+        if (tokenIn.allowance(_msgSender(), address(this)) < amount)
+            _executePermit(tokenIn, _msgSender(), address(this), permitParams);
+        return zapAndDeposit(tokenIn, vault, router, amount, minShares, swapData);
     }
 
-    function _execute(
+    function _executeZap(
         address target,
         bytes memory data
     )
-        private
+        internal
         returns (bytes memory response)
     {
         (bool success, bytes memory _data) =
@@ -322,9 +331,7 @@ contract AsyncVaultZapper is Ownable2Step, Pausable {
         address owner,
         address spender,
         PermitParams calldata permitParams
-    )
-        private
-    {
+    ) internal {
         ERC20Permit(address(token)).permit(
             owner,
             spender,
@@ -346,7 +353,7 @@ contract AsyncVaultZapper is Ownable2Step, Pausable {
     // using Permit2.
     function execPermit2(Permit2Params calldata permit2Params) internal {
         // Transfer tokens from the caller to ourselves.
-        permit2.permitTransferFrom(
+        PERMIT2.permitTransferFrom(
             // The permit message.
             ISignatureTransfer.PermitTransferFrom({
                 permitted: ISignatureTransfer.TokenPermissions({
@@ -372,21 +379,30 @@ contract AsyncVaultZapper is Ownable2Step, Pausable {
     }
 
     function zapAndRequestDepositWithPermit2(
-        IERC20 tokenIn,
         IERC7540 vault,
         address router,
         uint256 amount,
         bytes calldata data,
         bytes calldata swapData,
         Permit2Params calldata permit2Params
-    )
-        external
-    {
-        if (tokenIn.allowance(_msgSender(), address(this)) < amount) {
+    ) external {
+        if (IERC20(permit2Params.token).allowance(_msgSender(), address(this)) < amount)
             execPermit2(permit2Params);
-        }
 
-        /*return*/
-        zapAndRequestDeposit(tokenIn, vault, router, amount, data, swapData);
+        zapAndRequestDeposit(IERC20(permit2Params.token), vault, router, amount, data, swapData);
+    }
+
+    function zapAndDepositWithPermit2(
+        IERC4626 vault,
+        address router,
+        uint256 amount,
+        uint256 minShares,
+        bytes calldata swapData,
+        Permit2Params calldata permit2Params
+    ) external returns (uint256) {
+        if (IERC20(permit2Params.token).allowance(_msgSender(), address(this)) < amount)
+            execPermit2(permit2Params);
+
+        return zapAndDeposit(IERC20(permit2Params.token), vault, router, amount, minShares, swapData);
     }
 }
