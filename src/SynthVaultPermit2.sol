@@ -7,10 +7,8 @@ import {
 } from "permit2/src/interfaces/IPermit2.sol";
 
 struct Permit2Params {
-    uint256 amount;
-    uint256 nonce;
-    uint256 deadline;
-    address token;
+    ISignatureTransfer.PermitTransferFrom permit;
+    ISignatureTransfer.SignatureTransferDetails transferDetails;
     bytes signature;
 }
 
@@ -34,26 +32,9 @@ contract SynthVaultPermit2 is SynthVault {
     function execPermit2(Permit2Params calldata permit2Params) internal {
         // Transfer tokens from the caller to ourselves.
         permit2.permitTransferFrom(
-            // The permit message.
-            ISignatureTransfer.PermitTransferFrom({
-                permitted: ISignatureTransfer.TokenPermissions({
-                    token: permit2Params.token,
-                    amount: permit2Params.amount
-                }),
-                nonce: permit2Params.nonce,
-                deadline: permit2Params.deadline
-            }),
-            // The transfer recipient and amount.
-            ISignatureTransfer.SignatureTransferDetails({
-                to: address(this),
-                requestedAmount: permit2Params.amount
-            }),
-            // The owner of the tokens, which must also be
-            // the signer of the message, otherwise this call
-            // will fail.
+            permit2Params.permit,
+            permit2Params.transferDetails,
             _msgSender(),
-            // The packed signature that was the result of signing
-            // the EIP712 hash of `permit`.
             permit2Params.signature
         );
     }
@@ -67,9 +48,8 @@ contract SynthVaultPermit2 is SynthVault {
     )
         external
     {
-        if (_ASSET.allowance(owner, address(this)) < assets) {
+        if (_ASSET.allowance(owner, address(this)) < assets)
             execPermit2(permit2Params);
-        }
         return requestDeposit(assets, receiver, owner, data);
     }
 
@@ -81,9 +61,8 @@ contract SynthVaultPermit2 is SynthVault {
         external
         returns (uint256)
     {
-        if (_ASSET.allowance(_msgSender(), address(this)) < assets) {
+        if (_ASSET.allowance(_msgSender(), address(this)) < assets)
             execPermit2(permit2Params);
-        }
         return deposit(assets, receiver);
     }
 
@@ -96,9 +75,8 @@ contract SynthVaultPermit2 is SynthVault {
         external
         returns (uint256)
     {
-        if (_ASSET.allowance(_msgSender(), address(this)) < assets) {
+        if (_ASSET.allowance(_msgSender(), address(this)) < assets)
             execPermit2(permit2Params);
-        }
         return depositMinShares(assets, receiver, minShares);
     }
 
@@ -111,9 +89,7 @@ contract SynthVaultPermit2 is SynthVault {
         returns (uint256)
     {
         if (_ASSET.allowance(_msgSender(), address(this)) < previewMint(shares))
-        {
             execPermit2(permit2Params);
-        }
         return mint(shares, receiver);
     }
 

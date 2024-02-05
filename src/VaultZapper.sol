@@ -9,7 +9,7 @@ import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
 import { SafeERC20 } from
     "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import { IERC7540 } from "./interfaces/IERC7540.sol";
+import { IERC7540, IERC4626 } from "./interfaces/IERC7540.sol";
 import { PermitParams } from "./SynthVaultPermit.sol";
 import { ERC20Permit } from
     "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
@@ -18,10 +18,9 @@ import {
     IPermit2, ISignatureTransfer
 } from "permit2/src/interfaces/IPermit2.sol";
 
-struct Permit2Info {
-    IPermit2 canonicalContract; // The canonical permit2 contract.
-    uint256 nonce;
-    uint256 deadline;
+struct Permit2Params {
+    ISignatureTransfer.PermitBatchTransferFrom permit;
+    ISignatureTransfer.SignatureTransferDetails[] transferDetails;
     bytes signature;
 }
 
@@ -72,7 +71,13 @@ contract AsyncVaultZapper is Ownable2Step, Pausable {
         uint256 shares,
         uint256 assets
     );
-
+    event ZapAndDeposit(
+        IERC4626 indexed vault,
+        address indexed router,
+        IERC20 tokenIn,
+        uint256 amount,
+        uint256 shares
+    );
     event routerApproved(address indexed router, IERC20 indexed token);
     event routerAuthorized(address indexed router, bool allowed);
     event vaultAuthorized(IERC7540 indexed vault, bool allowed);
@@ -87,7 +92,11 @@ contract AsyncVaultZapper is Ownable2Step, Pausable {
         _;
     }
 
-    constructor() Ownable(_msgSender()) {
+    // Storage
+    IPermit2 canonicalPermit2;
+
+    constructor(IPermit2 _canonicalPermit2) Ownable(_msgSender()) {
+        canonicalPermit2 = _canonicalPermit2;
     }
 
     /**
@@ -176,32 +185,29 @@ contract AsyncVaultZapper is Ownable2Step, Pausable {
         }
     }
 
-    function zapAndRequestDeposit(
-        IERC20 tokenIn,
+    // zap native
+    function _zapNativeAndRequestDeposit(
         IERC7540 vault,
+        uint256 amountIn,
         address router,
-        uint256 amount,
         bytes calldata data,
         bytes calldata swapData
     )
-        public
+        internal
         payable
         onlyAllowedRouter(router)
         onlyAllowedVault(vault)
         whenNotPaused
-    // returns (uint256) // request receipt tokens amount minted
     {
-        uint256 initialTokenOutBalance =
-            IERC20(vault.asset()).balanceOf(address(this)); // tokenOut balance to
-            // deposit, not final value
+        // Native eth balance
+        uint256 nativeBalanceBefore = address(this).balance;
 
         // Zap
-        _zapIn(tokenIn, router, amount, swapData);
+        _zapIn(IERC20(0x0), router, msg.value, swapData);
 
         // Request deposit
         vault.requestDeposit(
-            IERC20(vault.asset()).balanceOf(address(this))
-                - initialTokenOutBalance,
+            IERC20(vault.asset()).balanceOf(address(this)),
             _msgSender(),
             _msgSender(),
             data
@@ -210,9 +216,115 @@ contract AsyncVaultZapper is Ownable2Step, Pausable {
         emit ZapAndRequestDeposit({
             vault: vault,
             router: router,
-            tokenIn: tokenIn,
-            amount: amount
+            tokenIn: IERC20(0x0),
+            amount: msg.value
         });
+
+        // Check if the zap was successful
+        uint256 nativeBalanceAfter = address(this).balance;
+
+        if (nativeBalanceAfter > nativeBalanceBefore) {
+            revert InconsistantSwapData({
+                expectedTokenInBalance: nativeBalanceBefore,
+                actualTokenInBalance: nativeBalanceAfter
+            });
+        }
+    }
+
+    function _zapNativeAndDeposit(
+        IERC4626 vault,
+        uint256 amountIn,
+        address router,
+        bytes calldata data,
+        bytes calldata swapData
+    )
+        internal
+        payable
+        onlyAllowedRouter(router)
+        onlyAllowedVault(vault)
+        whenNotPaused
+    {
+        // Native eth balance
+        uint256 nativeBalanceBefore = address(this).balance;
+
+        // Zap
+        _zapIn(IERC20(0x0), router, msg.value, swapData);
+
+        // Request deposit
+        vault.deposit(
+            vault.asset()).balanceOf(address(this),
+            _msgSender()
+        );
+
+        emit ZapAndDeposit({
+            vault: vault,
+            router: router,
+            tokenIn: IERC20(0x0),
+            amount: msg.value
+        });
+
+        // Check if the zap was successful
+        uint256 nativeBalanceAfter = address(this).balance;
+
+        if (nativeBalanceAfter > nativeBalanceBefore) {
+            revert InconsistantSwapData({
+                expectedTokenInBalance: nativeBalanceBefore,
+                actualTokenInBalance: nativeBalanceAfter
+            });
+        }
+    }
+
+    ///////////////
+
+    // non native zap and deposit
+
+    function zapAndRequestDeposit(
+        IERC7540 vault,
+        address router,
+        IERC20[] tokensIn,
+        uint256[] amountsIn,
+        uint256[] minShares,
+        bytes[] calldata swapData
+    )
+        public
+        payable
+        onlyAllowedRouter(router)
+        onlyAllowedVault(vault)
+        whenNotPaused
+    // returns (uint256) // request receipt tokens amount minted
+    {
+        if (msg.value > 0) {
+            _zapNativeAndRequestDeposit(
+                vault,
+                0,
+                router,
+                new bytes(0),
+                new bytes(0)
+            );
+        }
+
+        uint256 initialTokenOutBalance =
+            IERC20(vault.asset()).balanceOf(address(this)); // tokenOut balance to
+            // deposit, not final value
+
+        // Zap (loop here)
+        // _zapIn(tokenIn, router, amount, swapData);
+
+        // Request deposit
+        // vault.requestDeposit(
+        //     IERC20(vault.asset()).balanceOf(address(this))
+        //         - initialTokenOutBalance,
+        //     _msgSender(),
+        //     _msgSender(),
+        //     data
+        // );
+
+        // emit ZapAndRequestDeposit({
+        //     vault: vault,
+        //     router: router,
+        //     tokenIn: tokenIn,
+        //     amount: amount
+        // });
     }
 
     function _transferTokenInAndApprove(
@@ -344,165 +456,48 @@ contract AsyncVaultZapper is Ownable2Step, Pausable {
      ###########################
     */
 
-    // // Deposit some amount of an ERC20 token into this contract
-    // // using Permit2.
-    // function execPermit2(Permit2Params calldata permit2Params) internal {
-    //     // Transfer tokens from the caller to ourselves.
-    //     permit2.permitTransferFrom(
-    //         // The permit message.
-    //         ISignatureTransfer.PermitTransferFrom({
-    //             permitted: ISignatureTransfer.TokenPermissions({
-    //                 token: permit2Params.token,
-    //                 amount: permit2Params.amount
-    //             }),
-    //             nonce: permit2Params.nonce,
-    //             deadline: permit2Params.deadline
-    //         }),
-    //         // The transfer recipient and amount.
-    //         ISignatureTransfer.SignatureTransferDetails({
-    //             to: address(this),
-    //             requestedAmount: permit2Params.amount
-    //         }),
-    //         // The owner of the tokens, which must also be
-    //         // the signer of the message, otherwise this call
-    //         // will fail.
-    //         _msgSender(),
-    //         // The packed signature that was the result of signing
-    //         // the EIP712 hash of `permit`.
-    //         permit2Params.signature
-    //     );
-
-    //     ISignatureTransfer(permit2.contractAddress).permitTransferFrom(
-    //   ISignatureTransfer.PermitTransferFrom(
-    //     ISignatureTransfer.TokenPermissions(
-    //       tokenInfo.inputToken,
-    //       tokenInfo.inputAmount
-    //     ),
-    //     permit2.nonce,
-    //     permit2.deadline
-    //   ),
-    //   ISignatureTransfer.SignatureTransferDetails(
-    //     tokenInfo.inputReceiver,
-    //     tokenInfo.inputAmount
-    //   ),
-    //   msg.sender,
-    //   permit2.signature
-    // );
-    // }
+    // Works for single and batch permit2
+    function execPermit2(Permit2Params calldata permit2Params) internal {
+        // Transfer tokens from the caller to ourselves.
+        canonicalPermit2.permitTransferFrom(
+            permit2Params.permit,
+            permit2Params.transferDetails,
+            _msgSender(),
+            permit2Params.signature
+        );
+    }
 
     function zapAndRequestDepositWithPermit2(
-        uint256 amountIn,
-        IERC20 tokenIn,
         IERC7540 vault,
-        Permit2Info memory permit2,
         address router,
+        Permit2Params calldata permit2Params,
         bytes calldata data,
         bytes calldata swapData
     )
         external
+        payable
     {
-        ISignatureTransfer(permit2.canonicalContract).permitTransferFrom(
-            ISignatureTransfer.PermitTransferFrom(
-                ISignatureTransfer.TokenPermissions(
-                    tokenIn,
-                    amountIn
-                ),
-                permit2.nonce,
-                permit2.deadline
-            ),
-            ISignatureTransfer.SignatureTransferDetails(
-                address(this),
-                tokenInfo.inputAmount
-            ),
-            _msgSender(),
-            permit2.signature
-        );
-        zapAndRequestDeposit(tokenIn, vault, router, amountIn, data, swapData);
-    }
-
-
-    // TODO : add support of payable token (eth) in addition of ERC20
-    function zapBatchAndRequestDepositWithPermit2(
-        uint256[] amountIn,
-        IERC20[] tokenIn,
-        IERC7540 vault,
-        Permit2Info memory permit2,
-        address router,
-        bytes calldata data,
-        bytes calldata swapData // odos or 1inch
-    )
-        external
-    {
-    }
-
-    // /// @notice Externally facing interface for swapping between two sets of tokens with Permit2
-    // /// @param permit2 All additional info for Permit2 transfers
-    // /// @param inputs list of input token structs for the path being executed
-    // /// @param outputs list of output token structs for the path being executed
-    // /// @param valueOutMin minimum amount of value out the user will accept
-    // /// @param pathDefinition Encoded path definition for executor
-    // /// @param executor Address of contract that will execute the path
-    // /// @param referralCode referral code to specify the source of the swap
-    // function swapMultiPermit2(
-    //     Permit2Info memory permit2,
-    //     inputTokenInfo[] memory inputs,
-    //     outputTokenInfo[] memory outputs,
-    //     uint256 valueOutMin,
-    //     bytes calldata pathDefinition,
-    //     address executor,
-    //     uint32 referralCode
-    // )
-    //     external
-    //     payable
-    //     returns (uint256[] memory amountsOut)
-    // {
-    //     ISignatureTransfer.PermitBatchTransferFrom memory permit;
-    //     ISignatureTransfer.SignatureTransferDetails[] memory transferDetails;
-    //     {
-    //     uint256 permit_length = msg.value > 0 ? inputs.length - 1 : inputs.length;
-
-    //     permit = ISignatureTransfer.PermitBatchTransferFrom(
-    //         new ISignatureTransfer.TokenPermissions[](permit_length),
-    //         permit2.nonce,
-    //         permit2.deadline
-    //     );
-    //     transferDetails = 
-    //         new ISignatureTransfer.SignatureTransferDetails[](permit_length);
-    //     }
-    //     {
-    //     uint256 expected_msg_value = 0;
-    //     for (uint256 i = 0; i < inputs.length; i++) {
-
-    //         if (inputs[i].tokenAddress == _ETH) {
-    //         if (inputs[i].amountIn == 0) {
-    //             inputs[i].amountIn = msg.value;
-    //         }
-    //         expected_msg_value = inputs[i].amountIn;
-    //         }
-    //         else {
-    //         if (inputs[i].amountIn == 0) {
-    //             inputs[i].amountIn = IERC20(inputs[i].tokenAddress).balanceOf(msg.sender);
-    //         }
-    //         uint256 permit_index = expected_msg_value == 0 ? i : i - 1;
-
-    //         permit.permitted[permit_index].token = inputs[i].tokenAddress;
-    //         permit.permitted[permit_index].amount = inputs[i].amountIn;
-
-    //         transferDetails[permit_index].to = inputs[i].receiver;
-    //         transferDetails[permit_index].requestedAmount = inputs[i].amountIn;
-    //         }
-    //     }
-    //     require(msg.value == expected_msg_value, "Wrong msg.value");
-    //     }
-    //     ISignatureTransfer(permit2.contractAddress).permitTransferFrom(
-    //     permit,
-    //     transferDetails,
-    //     msg.sender,
-    //     permit2.signature
-    //     );
+        if (msg.value > 0) {
+            zapAndRequestDeposit {value: msg.value} (
+                vault,
+                router,
+                IERC20(0x0),
+                0,
+                data,
+                swapData
+            );
+        }
+        execPermit2(permit2Params);
+        for (uint256 i = 0; i < permit2Params.transferDetails.length; i++) {
+            zapAndRequestDeposit(
+                permit2Params.permit.permitted.token,
+                vault,
+                router,
+                permit2Params.permit.permitted.amount,
+                data,
+                swapData
+            );
+        }
         
-        
-    //     // swap and dep
-    // }
-
+    }
 }
