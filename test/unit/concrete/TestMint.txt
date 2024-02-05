@@ -1,0 +1,61 @@
+TestMint
+
+#when mint given vault closed
+##it should revert with ERC4626ExceededMaxMint
+
+#when mint given vault open
+##it should revert if the requested amount of shares converted in asset is higher than the allowance of the owner to the vault
+##it should revert if the requested amount of shares converted in asset is higher than the shares balance of the owner
+##it should decrease the underlying balance of the owner by the specified shares amount converted in assets (using _convertToAssets)    
+##it should emit a Deposit event
+##it should increase the underlying balance of the vault by the specified shares amount converted in assets (using _convertToAssets)
+##it should increase the balance of shares of the receiver by the specified shares amount converted in assets (using _convertToAssets)
+##it should return the same value as the one returned by previewMint
+##it should return the same value as the taken (to the owner) underlying amount
+##it should increase the total supply of shares by the specified shares amount converted in assets (using _convertToAssets)
+##it should decrease the underlying balance of the owner by the amount returned by previewMint to the owner
+
+#when mint given receiver not equal owner
+##it should revert if the requested amount of shares converted in asset is higher than the allowance of the owner to the vault
+##it should revert if the requested amount of shares converted in asset is higher than the shares balance of the owner
+##it should decrease the underlying balance of the owner by the specified shares amount converted in assets (using _convertToAssets)    
+##it should emit a Deposit event
+##it should increase the underlying balance of the vault by the specified shares amount converted in assets (using _convertToAssets)
+##it should increase the balance of shares of the receiver by the specified shares amount converted in assets (using _convertToAssets)
+##it should return the same value as the one returned by previewMint
+##it should return the same value as the taken (to the owner) underlying amount
+##it should increase the total supply of shares by the specified shares amount converted in assets (using _convertToAssets)
+##it should decrease the underlying balance of the owner by the amount returned by previewMint to the owner
+
+#when mint given vault empty
+##it should revert if the requested amount of shares converted in asset is higher than the allowance of the owner to the vault
+##it should revert if the requested amount of shares converted in asset is higher than the shares balance of the owner
+##it should decrease the underlying balance of the owner by the specified shares amount converted in assets (using _convertToAssets)    
+##it should emit a Deposit event
+##it should increase the underlying balance of the vault by the specified shares amount converted in assets (using _convertToAssets)
+##it should increase the balance of shares of the receiver by the specified shares amount converted in assets (using _convertToAssets)
+##it should return the same value as the one returned by previewMint
+##it should return the same value as the taken (to the owner) underlying amount
+##it should increase the total supply of shares by the specified shares amount converted in assets (using _convertToAssets)
+##it should decrease the underlying balance of the owner by the amount returned by previewMint to the owner
+
+#when mint given deposit amount is 0
+##it should revert if the requested amount of shares converted in asset is higher than the allowance of the owner to the vault
+##it should revert if the requested amount of shares converted in asset is higher than the shares balance of the owner
+##it should decrease the underlying balance of the owner by the specified shares amount converted in assets (using _convertToAssets)    
+##it should emit a Deposit event
+##it should increase the underlying balance of the vault by the specified shares amount converted in assets (using _convertToAssets)
+##it should increase the balance of shares of the receiver by the specified shares amount converted in assets (using _convertToAssets)
+##it should return the same value as the one returned by previewMint
+##it should return the same value as the taken (to the owner) underlying amount
+##it should increase the total supply of shares by the specified shares amount converted in assets (using _convertToAssets)
+##it should decrease the underlying balance of the owner by the amount returned by previewMint to the owner
+
+#when mint given vault open given vault paused
+##it should revert with ERC4626ExceededMaxDeposit
+
+#when mint given vault closed given vault paused
+##it should revert with ERC4626ExceededMaxDeposit
+
+#when mint given receiver is address 0
+##it should revert with ERC20InvalidReceiver
