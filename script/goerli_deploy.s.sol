@@ -2,7 +2,8 @@
 pragma solidity 0.8.21;
 
 import { Script, console } from "forge-std/Script.sol";
-import { SynthVaultPermit, ERC20 } from "../src/SynthVaultPermit.sol";
+import { SynthVault, ERC20 } from "../src/SynthVault.sol";
+import { IPermit2 } from "permit2/src/interfaces/IPermit2.sol";
 
 contract GOERLI_DeployAmphorSynthetic is Script {
     function run() external {
@@ -15,11 +16,12 @@ contract GOERLI_DeployAmphorSynthetic is Script {
         uint16 fees = uint16(vm.envUint("INITIAL_FEES_AMOUNT"));
         string memory vaultName = vm.envString("SYNTHETIC_USDC_V1_NAME");
         string memory vaultSymbol = vm.envString("SYNTHETIC_USDC_V1_SYMBOL");
+        IPermit2 permit2 = IPermit2(vm.envAddress("PERMIT2_ADDRESS"));
 
         vm.startBroadcast(privateKey);
 
-        SynthVaultPermit vault =
-            new SynthVaultPermit(underlying, vaultName, vaultSymbol);
+        SynthVault vault =
+            new SynthVault(underlying, vaultName, vaultSymbol, permit2);
 
         vault.setFee(fees);
 
