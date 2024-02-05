@@ -2,7 +2,12 @@
 pragma solidity 0.8.21;
 
 import { Script, console } from "forge-std/Script.sol";
-import { SynthVaultPermit, ERC20 } from "../src/SynthVaultPermit.sol";
+import { SynthVault } from "../src/SynthVault.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { Upgrades, Options } from "openzeppelin-foundry-upgrades/Upgrades.sol";
+import { IPermit2 } from "permit2/src/interfaces/IPermit2.sol";
+import { UpgradeableBeacon } from
+    "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 
 contract GOERLI_DeployAmphorSynthetic is Script {
     function run() external {
@@ -11,21 +16,37 @@ contract GOERLI_DeployAmphorSynthetic is Script {
         // string memory seedPhrase = vm.readFile(".secret");
         // uint256 privateKey = vm.deriveKey(seedPhrase, 0);
         uint256 privateKey = vm.envUint("PRIVATE_KEY");
-        ERC20 underlying = ERC20(vm.envAddress("USDC_MAINNET"));
         uint16 fees = uint16(vm.envUint("INITIAL_FEES_AMOUNT"));
         string memory vaultName = vm.envString("SYNTHETIC_USDC_V1_NAME");
         string memory vaultSymbol = vm.envString("SYNTHETIC_USDC_V1_SYMBOL");
-
+        address owner = vm.envAddress("AMPHORLABS_ADDRESS");
+        address underlying = vm.envAddress("USDC_MAINNET");
+        address permit2 = vm.envAddress("PERMIT2");
         vm.startBroadcast(privateKey);
 
-        SynthVaultPermit vault =
-            new SynthVaultPermit(underlying, vaultName, vaultSymbol);
+        address beacon = Upgrades.deployBeacon("SynthVault.sol", owner);
 
-        vault.setFee(fees);
+        address proxy = Upgrades.deployBeaconProxy(
+            beacon,
+            abi.encodeCall(
+                SynthVault.initialize,
+                (
+                    fees,
+                    owner,
+                    IERC20(underlying),
+                    vaultName,
+                    vaultSymbol,
+                    IPermit2(permit2)
+                )
+            )
+        );
 
-        // vault.transferOwnership(amphorlabsAddress);
-
-        console.log("Synthetic vault USDC contract address: ", address(vault));
+        address implementation = UpgradeableBeacon(beacon).implementation();
+        console.log("Synthetic vault USDC contract address: ", proxy);
+        console.log("Synthetic vault USDC beacon address: ", beacon);
+        console.log(
+            "Synthetic vault USDC implementation address: ", implementation
+        );
 
         vm.stopBroadcast();
 

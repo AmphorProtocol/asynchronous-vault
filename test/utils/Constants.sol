@@ -3,9 +3,8 @@ pragma solidity 0.8.21;
 
 import { Test } from "forge-std/Test.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import { SynthVaultPermit, SynthVault } from "../../src/SynthVaultPermit.sol";
-import { SynthVaultPermit2, IPermit2 } from "../../src/SynthVaultPermit2.sol";
-import { AsyncVaultZapper } from "../../src/AsyncVaultZapper.sol";
+import { SynthVault } from "../../src/SynthVault.sol";
+import { IPermit2 } from "permit2/src/interfaces/IPermit2.sol";
 import { VmSafe } from "forge-std/Vm.sol";
 
 abstract contract Constants is Test {
@@ -27,26 +26,26 @@ abstract contract Constants is Test {
     // Permit2
     IPermit2 immutable permit2 = IPermit2(vm.envAddress("PERMIT2"));
 
+    // Fees
+    uint16 fees = uint16(vm.envUint("INITIAL_FEES_AMOUNT"));
+
     // USDC vault
     string vaultNameUSDC = vm.envString("SYNTHETIC_USDC_V1_NAME");
     string vaultSymbolUSDC = vm.envString("SYNTHETIC_USDC_V1_SYMBOL");
-    SynthVaultPermit immutable vaultUSDC =
-        new SynthVaultPermit(USDC, vaultNameUSDC, vaultSymbolUSDC);
+    SynthVault vaultUSDC = new SynthVault();
 
     // WSTETH vault
     string vaultNameWSTETH = vm.envString("SYNTHETIC_WSTETH_V1_NAME");
     string vaultSymbolWSTETH = vm.envString("SYNTHETIC_WSTETH_V1_SYMBOL");
-    SynthVaultPermit immutable vaultWSTETH =
-        new SynthVaultPermit(WSTETH, vaultNameWSTETH, vaultSymbolWSTETH);
+    SynthVault immutable vaultWSTETH = new SynthVault();
 
     // WBTC vault
     string vaultNameWBTC = vm.envString("SYNTHETIC_WBTC_V1_NAME");
     string vaultSymbolWBTC = vm.envString("SYNTHETIC_WBTC_V1_SYMBOL");
-    SynthVaultPermit2 immutable vaultWBTC =
-        new SynthVaultPermit2(WBTC, vaultNameWBTC, vaultSymbolWBTC, permit2);
+    SynthVault immutable vaultWBTC = new SynthVault();
 
     // Zapper
-    AsyncVaultZapper immutable zapper = new AsyncVaultZapper(permit2);
+    //AsyncVaultZapper immutable zapper = new AsyncVaultZapper(permit2);
 
     // Users
     VmSafe.Wallet user1 = vm.createWallet("user1");
@@ -89,7 +88,7 @@ abstract contract Constants is Test {
         vm.label(address(vaultWSTETH), "vaultWSTETH");
         vm.label(address(vaultWBTC), "vaultWBTC");
 
-        vm.label(address(zapper), "zapper");
+        //vm.label(address(zapper), "zapper");
 
         users.push(user1);
         users.push(user2);
@@ -101,5 +100,20 @@ abstract contract Constants is Test {
         users.push(user8);
         users.push(user9);
         users.push(user10);
+
+        vaultUSDC.initialize(
+            fees, amphorLabs, USDC, vaultNameUSDC, vaultSymbolUSDC, permit2
+        );
+        vaultWSTETH.initialize(
+            fees,
+            amphorLabs,
+            WSTETH,
+            vaultNameWSTETH,
+            vaultSymbolWSTETH,
+            permit2
+        );
+        vaultWBTC.initialize(
+            fees, amphorLabs, WBTC, vaultNameWBTC, vaultSymbolWBTC, permit2
+        );
     }
 }
