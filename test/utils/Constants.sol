@@ -32,17 +32,17 @@ abstract contract Constants is Test {
     // USDC vault
     string vaultNameUSDC = vm.envString("SYNTHETIC_USDC_V1_NAME");
     string vaultSymbolUSDC = vm.envString("SYNTHETIC_USDC_V1_SYMBOL");
-    SynthVault vaultUSDC = new SynthVault();
+    SynthVault vaultUSDC = new SynthVault(permit2);
 
     // WSTETH vault
     string vaultNameWSTETH = vm.envString("SYNTHETIC_WSTETH_V1_NAME");
     string vaultSymbolWSTETH = vm.envString("SYNTHETIC_WSTETH_V1_SYMBOL");
-    SynthVault immutable vaultWSTETH = new SynthVault();
+    SynthVault immutable vaultWSTETH = new SynthVault(permit2);
 
     // WBTC vault
     string vaultNameWBTC = vm.envString("SYNTHETIC_WBTC_V1_NAME");
     string vaultSymbolWBTC = vm.envString("SYNTHETIC_WBTC_V1_SYMBOL");
-    SynthVault immutable vaultWBTC = new SynthVault();
+    SynthVault immutable vaultWBTC = new SynthVault(permit2);
 
     // Zapper
     //AsyncVaultZapper immutable zapper = new AsyncVaultZapper(permit2);
@@ -102,18 +102,13 @@ abstract contract Constants is Test {
         users.push(user10);
 
         vaultUSDC.initialize(
-            fees, amphorLabs, USDC, vaultNameUSDC, vaultSymbolUSDC, permit2
+            fees, amphorLabs, USDC, vaultNameUSDC, vaultSymbolUSDC
         );
         vaultWSTETH.initialize(
-            fees,
-            amphorLabs,
-            WSTETH,
-            vaultNameWSTETH,
-            vaultSymbolWSTETH,
-            permit2
+            fees, amphorLabs, WSTETH, vaultNameWSTETH, vaultSymbolWSTETH
         );
         vaultWBTC.initialize(
-            fees, amphorLabs, WBTC, vaultNameWBTC, vaultSymbolWBTC, permit2
+            fees, amphorLabs, WBTC, vaultNameWBTC, vaultSymbolWBTC
         );
     }
 }

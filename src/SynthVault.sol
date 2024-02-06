@@ -121,7 +121,8 @@ contract SynthVault is
     mapping(uint256 epochId => EpochData epoch) public epochs;
     mapping(address user => uint256 epochId) public lastDepositRequestId;
     mapping(address user => uint256 epochId) public lastRedeemRequestId;
-    IPermit2 public permit2; // The canonical permit2 contract.
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
+    IPermit2 public immutable permit2; // The canonical permit2 contract.
 
     /*
      * ##########
@@ -225,17 +226,18 @@ contract SynthVault is
         _;
     }
 
-    // constructor() {
-    //     _disableInitializers();
-    // }
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor(IPermit2 _permit2) {
+        _disableInitializers();
+        permit2 = _permit2;
+    }
 
     function initialize(
         uint16 fees,
         address owner,
         IERC20 underlying,
         string memory name,
-        string memory symbol,
-        IPermit2 _permit2
+        string memory symbol
     )
         public
         initializer
@@ -248,7 +250,6 @@ contract SynthVault is
         __Ownable_init(owner);
         __ERC20Permit_init(name);
         _ASSET = IERC20(underlying);
-        permit2 = _permit2;
     }
 
     function isCurrentEpoch(uint256 requestId) internal view returns (bool) {

@@ -2,7 +2,7 @@
 pragma solidity 0.8.21;
 
 import { Script, console } from "forge-std/Script.sol";
-import { SynthVault } from "../src/SynthVault.sol";
+import { SynthVault2, SynthVault } from "../../src/else/SynthVault2.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Upgrades, Options } from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import { IPermit2 } from "permit2/src/interfaces/IPermit2.sol";
@@ -15,11 +15,12 @@ contract GOERLI_DeployAmphorSynthetic is Script {
     function run() external {
         // if you want to deploy a vault with a seed phrase instead of a pk,
         // uncomment the following line
+        // string memory seedPhrase = vm.readFile(".secret");
         uint256 privateKey = vm.envUint("PRIVATE_KEY");
+        address owner = vm.addr(privateKey);
         uint16 fees = uint16(vm.envUint("INITIAL_FEES_AMOUNT"));
         string memory vaultName = vm.envString("SYNTHETIC_USDC_V1_NAME");
         string memory vaultSymbol = vm.envString("SYNTHETIC_USDC_V1_SYMBOL");
-        address owner = vm.envAddress("AMPHORLABS_ADDRESS");
         address underlying = vm.envAddress("USDC_MAINNET");
         address permit2 = vm.envAddress("PERMIT2");
         vm.startBroadcast(privateKey);
@@ -55,6 +56,32 @@ contract GOERLI_DeployAmphorSynthetic is Script {
             "Synthetic vault USDC implementation address: ", implementation
         );
 
+        Options memory upgrade;
+        upgrade.referenceContract = "SynthVault2.sol";
+        upgrade.constructorData = abi.encode(permit2);
+        SynthVault2 newImpl = SynthVault2(
+            Upgrades.deployImplementation("SynthVault2.sol", upgrade)
+        );
+        UpgradeableBeacon(beacon).upgradeTo(address(newImpl));
+
+        console.log(
+            "Synthetic vault USDC new implementation address: ",
+            address(newImpl)
+        );
+        address newImplInBeacon = UpgradeableBeacon(beacon).implementation();
+        console.log(
+            "Synthetic vault USDC new implementation address in beacon: ",
+            newImplInBeacon
+        );
+        SynthVault2(address(proxy)).initialize(42);
+        uint256 variable = SynthVault2(address(proxy)).newVariable();
+        uint256 newVariable = newImpl.getNewVariable();
+
+        console.log("Synthetic vault USDC new variable: ", variable);
+        console.log(
+            "Synthetic vault USDC new variable in new implementation: ",
+            newVariable
+        );
         vm.stopBroadcast();
 
         //forge script script/goerli_deploy.s.sol:GOERLI_DeployAmphorSynthetic
