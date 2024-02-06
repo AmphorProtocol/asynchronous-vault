@@ -98,7 +98,8 @@ struct Permit2Params {
 }
 
 uint256 constant BPS_DIVIDER = 10_000;
-uint256 constant MAX_FEES = 3000; // 30%
+uint16 constant MAX_FEES = 3000; // 30%
+uint16 constant MAX_DRAWDOWN = 3000; // 30%
 
 contract SynthVault is
     IERC7540,
@@ -115,6 +116,7 @@ contract SynthVault is
     // @return Amount of the perf fees applied on the positive yield.
     uint16 public feeInBps;
     IERC20 internal _ASSET; // underlying
+    uint16 internal _MAX_DRAWDOWN; // guardrail
     uint256 public epochId;
     uint256 public totalAssets; // total underlying assets
     bool public isOpen; // vault is open or closed
@@ -215,6 +217,7 @@ contract SynthVault is
     error ClaimableRequestPending();
     error MustClaimFirst();
     error ReceiverFailed();
+    error MaxDrawDownReached();
 
     /**
      * ##############################
@@ -250,6 +253,7 @@ contract SynthVault is
         __Ownable_init(owner);
         __ERC20Permit_init(name);
         _ASSET = IERC20(underlying);
+        _MAX_DRAWDOWN = MAX_DRAWDOWN;
     }
 
     function isCurrentEpoch(uint256 requestId) internal view returns (bool) {
@@ -1032,6 +1036,9 @@ contract SynthVault is
     */
     function open(uint256 assetReturned) external onlyOwner whenClosed {
         if (isOpen) revert VaultIsOpen();
+        if (assetReturned < BPS_DIVIDER - _MAX_DRAWDOWN * totalAssets / BPS_DIVIDER) {
+            revert MaxDrawDownReached();
+        }
 
         uint256 pendingDeposit = _ASSET.balanceOf(address(this));
         uint256 fees;
@@ -1106,6 +1113,10 @@ contract SynthVault is
         if (newFee > MAX_FEES) revert FeesTooHigh();
         feeInBps = newFee;
         emit FeesChanged(feeInBps, newFee);
+    }
+
+    function setMaxDrawDown(uint16 newMaxDrawDown) external onlyOwner {
+        _MAX_DRAWDOWN = newMaxDrawDown;
     }
 
     /*
