@@ -25,7 +25,7 @@ struct Permit2Params {
     bytes signature;
 }
 
-contract AsyncVaultZapper is Ownable2Step, Pausable {
+contract VaultZapper is Ownable2Step, Pausable {
     /**
      * @dev The `SafeERC20` lib is only used for `safeTransfer`,
      * `safeTransferFrom` and `forceApprove` operations.
