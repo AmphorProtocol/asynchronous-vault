@@ -93,7 +93,8 @@ struct Permit2Params {
 }
 
 uint256 constant BPS_DIVIDER = 10_000;
-uint256 constant MAX_FEES = 3000; // 30%
+uint16 constant MAX_FEES = 3000; // 30%
+uint16 constant MAX_DRAWDOWN = 3000; // 30%
 
 contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     /*
@@ -104,6 +105,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
 
     // @return Amount of the perf fees applied on the positive yield.
     uint16 public feeInBps;
+    uint16 internal _MAX_DRAWDOWN = _MAX_DRAWDOWN; // guardrail
     IERC20 internal immutable _ASSET; // underlying
     uint256 public epochNonce = 1;
     uint256 public totalAssets; // total underlying assets
@@ -204,6 +206,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     error ClaimableRequestPending();
     error MustClaimFirst();
     error ReceiverFailed();
+    error MaxDrawDownReached();
 
     /**
      * ##############################
@@ -226,6 +229,7 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         ERC20Permit(name)
     {
         _ASSET = IERC20(underlying);
+        _MAX_DRAWDOWN = MAX_DRAWDOWN;
         isOpen = true;
         permit2 = _permit2;
     }
@@ -980,6 +984,9 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
     */
     function open(uint256 assetReturned) external onlyOwner whenClosed {
         if (isOpen) revert VaultIsOpen();
+        if (assetReturned < BPS_DIVIDER - _MAX_DRAWDOWN * totalAssets / BPS_DIVIDER) {
+            revert MaxDrawDownReached();
+        }
 
         uint256 pendingDeposit = _ASSET.balanceOf(address(this));
         uint256 fees;
@@ -1054,6 +1061,10 @@ contract SynthVault is IERC7540, ERC20Pausable, Ownable2Step, ERC20Permit {
         if (newFee > MAX_FEES) revert FeesTooHigh();
         feeInBps = newFee;
         emit FeesChanged(feeInBps, newFee);
+    }
+
+    function setMaxDrawDown(uint16 newMaxDrawDown) external onlyOwner {
+        _MAX_DRAWDOWN = newMaxDrawDown;
     }
 
     /*
