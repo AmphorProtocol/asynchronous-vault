@@ -59,28 +59,21 @@ contract GOERLI_DeployAmphorSynthetic is Script {
         Options memory upgrade;
         upgrade.referenceContract = "SynthVault2.sol";
         upgrade.constructorData = abi.encode(permit2);
-        SynthVault2 newImpl = SynthVault2(
-            Upgrades.deployImplementation("SynthVault2.sol", upgrade)
-        );
-        UpgradeableBeacon(beacon).upgradeTo(address(newImpl));
-
-        console.log(
-            "Synthetic vault USDC new implementation address: ",
-            address(newImpl)
-        );
-        address newImplInBeacon = UpgradeableBeacon(beacon).implementation();
-        console.log(
-            "Synthetic vault USDC new implementation address in beacon: ",
-            newImplInBeacon
-        );
+        Upgrades.upgradeBeacon(address(beacon), "SynthVault2.sol", upgrade);
         SynthVault2(address(proxy)).initialize(42);
-        uint256 variable = SynthVault2(address(proxy)).newVariable();
-        uint256 newVariable = newImpl.getNewVariable();
 
-        console.log("Synthetic vault USDC new variable: ", variable);
+        address newImplInBeacon = UpgradeableBeacon(beacon).implementation();
+        uint256 variable = SynthVault2(address(proxy)).newVariable();
+        uint256 variableInImpl =
+            SynthVault2(address(newImplInBeacon)).newVariable();
+
+        console.log("Synthetic vault USDC new variable in proxy: ", variable);
         console.log(
             "Synthetic vault USDC new variable in new implementation: ",
-            newVariable
+            variableInImpl
+        );
+        console.log(
+            "Synthetic vault USDC new implementation address: ", newImplInBeacon
         );
         vm.stopBroadcast();
 
