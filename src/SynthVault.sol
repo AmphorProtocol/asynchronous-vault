@@ -13,11 +13,10 @@ import { ERC20PermitUpgradeable } from
     "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
 import { ERC20PausableUpgradeable } from
     "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
-
 import { SafeERC20 } from
     "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-
+import { Initializable } from
+    "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import { ERC20Permit } from
     "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 import {
