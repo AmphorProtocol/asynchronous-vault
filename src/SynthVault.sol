@@ -312,22 +312,27 @@ contract SynthVault is
         emit DepositRequest(receiver, owner, epochId, _msgSender(), assets);
     }
 
+    // tree done
     function totalPendingDeposits() public view returns (uint256) {
         return isOpen ? 0 : _ASSET.balanceOf(address(this));
     }
 
+    // tree done
     function totalPendingRedeems() public view returns (uint256) {
         return isOpen ? 0 : balanceOf(address(this));
     }
 
+    // tree done
     function maxDepositRequest(address) public view returns (uint256) {
         return isOpen || paused() ? 0 : type(uint256).max;
     }
 
+    // tree done
     function maxRedeemRequest(address owner) public view returns (uint256) {
         return isOpen || paused() ? 0 : balanceOf(owner);
     }
 
+    // tree later
     function claimAndRequestDeposit(
         uint256 assets,
         address receiver,
@@ -340,6 +345,7 @@ contract SynthVault is
         requestDeposit(assets, receiver, owner, data);
     }
 
+    // tree later
     function claimAndRequestRedeem(
         uint256 shares,
         address receiver,
@@ -352,6 +358,7 @@ contract SynthVault is
         requestRedeem(shares, receiver, owner, data);
     }
 
+    // tree done
     function decreaseDepositRequest(
         uint256 assets,
         address receiver,
@@ -373,6 +380,7 @@ contract SynthVault is
         );
     }
 
+    
     function pendingDepositRequest(address owner)
         external
         view
@@ -1010,7 +1018,7 @@ contract SynthVault is
     */
     function open(uint256 assetReturned) external onlyOwner whenClosed {
         if (isOpen) revert VaultIsOpen();
-        if (assetReturned < BPS_DIVIDER - _MAX_DRAWDOWN * totalAssets / BPS_DIVIDER) {
+        if (assetReturned < BPS_DIVIDER - _MAX_DRAWDOWN * totalAssets / BPS_DIVIDER) { // todo solve this shit
             revert MaxDrawDownReached();
         }
 
