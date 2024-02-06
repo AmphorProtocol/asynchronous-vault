@@ -114,8 +114,8 @@ contract SynthVault is
 
     // @return Amount of the perf fees applied on the positive yield.
     uint16 public feeInBps;
-    IERC20 internal _ASSET; // underlying
     uint16 internal _MAX_DRAWDOWN; // guardrail
+    IERC20 internal _ASSET; // underlying
     uint256 public epochId;
     uint256 public totalAssets; // total underlying assets
     bool public isOpen; // vault is open or closed
@@ -299,18 +299,15 @@ contract SynthVault is
         _ASSET.safeTransferFrom(owner, address(this), assets);
         epochs[epochId].depositRequestBalance[receiver] += assets;
 
-        if (lastDepositRequestId[receiver] != epochId) {
+        if (lastDepositRequestId[receiver] != epochId)
             lastDepositRequestId[receiver] = epochId;
-        }
 
         if (
             data.length > 0
                 && ERC7540Receiver(receiver).onERC7540DepositReceived(
                     _msgSender(), owner, epochId, data
                 ) != ERC7540Receiver.onERC7540DepositReceived.selector
-        ) {
-            revert ReceiverFailed();
-        }
+        ) revert ReceiverFailed();
 
         emit DepositRequest(receiver, owner, epochId, _msgSender(), assets);
     }
@@ -413,11 +410,10 @@ contract SynthVault is
             lastRequestBalance > 0 && lastRequestId != epochId;
 
         if (hasClaimableRequest) revert MustClaimFirst();
-        if (shares > maxRedeemRequest(receiver)) {
+        if (shares > maxRedeemRequest(receiver))
             revert ExceededMaxRedeemRequest(
                 receiver, shares, maxRedeemRequest(receiver)
             );
-        }
 
         // Create a new request
         _createRedeemRequest(shares, receiver, owner, data);
@@ -580,6 +576,14 @@ contract SynthVault is
         return _convertToAssets(shares, _epochId, Math.Rounding.Floor);
     }
 
+    function claimableSharesBalanceInAsset(address owner, uint256 _epochId)
+        public
+        view
+        returns (uint256)
+    {
+        return convertToAssets(epochs[_epochId].depositRequestBalance[owner]);
+    }
+
     function sharesBalanceInAsset(address owner)
         public
         view
@@ -593,50 +597,32 @@ contract SynthVault is
         return _convertToAssets(shares, epochId, Math.Rounding.Floor);
     }
 
-    /*
-    <<<<<<< HEAD
-    * @dev The `maxDeposit` function is used to calculate the maximum deposit.
-    * @notice If the vault is locked or paused, users are not allowed to mint,
-     * the maxMint is 0. //todo add some details
-    =======
+    /**
     * @dev The `maxDeposit` function is used to calculate the maximum deposit.
     * @notice If the vault is locked or paused, users are not allowed to
     deposit,
      * the maxDeposit is 0.
-    >>>>>>> de0f2461bf4ab90510abd4a21374ce739f96b05c
      * @return Amount of the maximum underlying assets deposit amount.
     */
     function maxDeposit(address) public view returns (uint256) {
         return isOpen && !paused() ? type(uint256).max : 0;
     }
 
-    /*
+    /**
     * @dev The `maxMint` function is used to calculate the maximum amount of
-     * shares you can mint.
-    <<<<<<< HEAD
-    * @notice If the vault is locked or paused, the maxMint is 0. // todo add
-    details
+    * shares you can mint.
+    * @notice If the vault is locked or paused, the maxMint is 0.
     * @return Amount of the maximum shares mintable for the specified address.
-    =======
-     * @notice If the vault is locked or paused, the maxMint is 0.
-    * @return Amount of the maximum shares mintable for the specified address.
-    >>>>>>> de0f2461bf4ab90510abd4a21374ce739f96b05c
     */
     function maxMint(address) public view returns (uint256) {
         return isOpen && !paused() ? type(uint256).max : 0;
     }
 
-    /*
+    /**
      * @dev See {IERC4626-maxWithdraw}.
-    <<<<<<< HEAD
-    * @notice If the function is called during the lock period the maxWithdraw
-     * is `0`. // todo add details
-    * @return Amount of the maximum number of withdrawable underlying assets.
-    =======
-    * @notice If the function is called during the lock period the maxWithdraw
+     * @notice If the function is called during the lock period the maxWithdraw
      * is `0`.
-    * @return Amount of the maximum number of withdrawable underlying assets.
-    >>>>>>> de0f2461bf4ab90510abd4a21374ce739f96b05c
+     * @return Amount of the maximum number of withdrawable underlying assets.
     */
     function maxWithdraw(address owner) public view returns (uint256) {
         return isOpen && !paused()
@@ -644,59 +630,50 @@ contract SynthVault is
             : 0;
     }
 
-    /*
+    /**
      * @dev See {IERC4626-maxRedeem}.
-    <<<<<<< HEAD
-    * @notice If the function is called during the lock period the maxRedeem is
-     * `0`. // todo add details
-    =======
-    * @notice If the function is called during the lock period the maxRedeem is
+     * @notice If the function is called during the lock period the maxRedeem is
      * `0`;
-    >>>>>>> de0f2461bf4ab90510abd4a21374ce739f96b05c
      * @param owner The address of the owner.
-     * @return Amount of the maximum number of redeemable shares. */
+     * @return Amount of the maximum number of redeemable shares.
+    */
     function maxRedeem(address owner) public view returns (uint256) {
         return isOpen && !paused() ? balanceOf(owner) : 0;
     }
 
-    /*
-     * @dev See {IERC4626-previewDeposit}. */
+    /**
+     * @dev See {IERC4626-previewDeposit}.
+    */
     function previewDeposit(uint256 assets) public view returns (uint256) {
         return _convertToShares(assets, Math.Rounding.Floor);
     }
 
-    /*
+    /**
      * @dev See {IERC4626-previewMint}.
     */
     function previewMint(uint256 shares) public view returns (uint256) {
         return _convertToAssets(shares, Math.Rounding.Ceil);
     }
 
-    /*
+    /**
      * @dev See {IERC4626-previewWithdraw}
     */
     function previewWithdraw(uint256 assets) public view returns (uint256) {
         return _convertToShares(assets, Math.Rounding.Ceil);
     }
 
-    /*
+    /**
      * @dev See {IERC4626-previewRedeem}
     */
     function previewRedeem(uint256 shares) public view returns (uint256) {
         return _convertToAssets(shares, Math.Rounding.Floor);
     }
 
-    /*
+    /**
      * @dev See {IERC4626-deposit}
-    <<<<<<< HEAD
-    * @notice The `deposit` function is used to deposit underlying assets into
-     * the vault. // todo add details
-    * @param assets The underlying assets amount to be converted into shares.
-    =======
-    * @notice The `deposit` function is used to deposit underlying assets into
+     * @notice The `deposit` function is used to deposit underlying assets into
      * the vault.
-    * @param assets The underlying assets amount to be converted into shares.
-    >>>>>>> de0f2461bf4ab90510abd4a21374ce739f96b05c
+     * @param assets The underlying assets amount to be converted into shares.
      * @param receiver The address of the shares receiver.
      * @return Amount of shares received in exchange of the
      * specified underlying assets amount.
@@ -719,14 +696,14 @@ contract SynthVault is
         return sharesAmount;
     }
 
-    /*
-    * @dev The `depositMinShares` function is used to deposit underlying assets
-    * into the vault. It also checks that the amount of shares minted is greater
+    /**
+     * @dev The `depositMinShares` function is used to deposit underlying assets
+     * into the vault. It also checks that the amount of shares minted is greater
      * or equal to the specified minimum amount.
-    * @param assets The underlying assets amount to be converted into shares.
+     * @param assets The underlying assets amount to be converted into shares.
      * @param receiver The address of the shares receiver.
      * @param minShares The minimum amount of shares to be minted.
-    * @return Amount of shares received in exchange of the specified underlying
+     * @return Amount of shares received in exchange of the specified underlying
      * assets amount.
     */
     function depositMinShares(
@@ -746,12 +723,12 @@ contract SynthVault is
         return sharesAmount;
     }
 
-    /*
-    * @dev The `mint` function is used to mint the specified amount of shares in
+    /**
+     * @dev The `mint` function is used to mint the specified amount of shares in
      * exchange of the corresponding assets amount from owner.
-    * @param shares The shares amount to be converted into underlying assets.
+     * @param shares The shares amount to be converted into underlying assets.
      * @param receiver The address of the shares receiver.
-    * @return Amount of underlying assets deposited in exchange of the specified
+     * @return Amount of underlying assets deposited in exchange of the specified
      * amount of shares.
     */
     function mint(
@@ -773,15 +750,15 @@ contract SynthVault is
         return assetsAmount;
     }
 
-    /*
-    * @dev The `mintMaxAssets` function is used to mint the specified amount of
+    /**
+     * @dev The `mintMaxAssets` function is used to mint the specified amount of
      * shares in exchange of the corresponding underlying assets amount from
-    * owner. It also checks that the amount of assets deposited is less or equal
+     * owner. It also checks that the amount of assets deposited is less or equal
      * to the specified maximum amount.
-    * @param shares The shares amount to be converted into underlying assets.
+     * @param shares The shares amount to be converted into underlying assets.
      * @param receiver The address of the shares receiver.
      * @param maxAssets The maximum amount of assets to be deposited.
-    * @return Amount of underlying assets deposited in exchange of the specified
+     * @return Amount of underlying assets deposited in exchange of the specified
      * amount of shares.
     */
     function mintMaxAssets(
@@ -802,13 +779,13 @@ contract SynthVault is
         return assetsAmount;
     }
 
-    /*
-    * @dev The `withdraw` function is used to withdraw the specified underlying
+    /**
+     * @dev The `withdraw` function is used to withdraw the specified underlying
      * assets amount in exchange of a proportional amount of shares.
-    * @param assets The underlying assets amount to be converted into shares.
+     * @param assets The underlying assets amount to be converted into shares.
      * @param receiver The address of the shares receiver.
      * @param owner The address of the owner.
-    * @return Amount of shares received in exchange of the specified underlying
+     * @return Amount of shares received in exchange of the specified underlying
      * assets amount.
     */
     function withdraw(
@@ -821,9 +798,8 @@ contract SynthVault is
         returns (uint256)
     {
         uint256 maxAssets = maxWithdraw(owner);
-        if (assets > maxAssets) {
+        if (assets > maxAssets)
             revert ERC4626ExceededMaxWithdraw(owner, assets, maxAssets);
-        }
 
         uint256 sharesAmount = previewWithdraw(assets);
         _withdraw(receiver, owner, assets, sharesAmount);
@@ -831,14 +807,14 @@ contract SynthVault is
         return sharesAmount;
     }
 
-    /*
+    /**
      * @dev The `redeem` function is used to redeem the specified amount of
      * shares in exchange of the corresponding underlying assets amount from
      * owner.
-    * @param shares The shares amount to be converted into underlying assets.
+     * @param shares The shares amount to be converted into underlying assets.
      * @param receiver The address of the shares receiver.
      * @param owner The address of the owner.
-    * @return Amount of underlying assets received in exchange of the specified
+     * @return Amount of underlying assets received in exchange of the specified
      * amount of shares.
     */
     function redeem(
@@ -851,9 +827,8 @@ contract SynthVault is
         returns (uint256)
     {
         uint256 maxShares = maxRedeem(owner);
-        if (shares > maxShares) {
+        if (shares > maxShares)
             revert ERC4626ExceededMaxRedeem(owner, shares, maxShares);
-        }
 
         uint256 assetsAmount = previewRedeem(shares);
         _withdraw(receiver, owner, assetsAmount, shares);
@@ -861,12 +836,12 @@ contract SynthVault is
         return assetsAmount;
     }
 
-    /*
-    * @dev Internal conversion function (from assets to shares) with support
+    /**
+     * @dev Internal conversion function (from assets to shares) with support
      * for rounding direction.
-    * @param assets Theunderlying assets amount to be converted into shares.
+     * @param assets Theunderlying assets amount to be converted into shares.
      * @param rounding The rounding direction.
-    * @return Amount of shares received in exchange of the specified underlying
+     * @return Amount of shares received in exchange of the specified underlying
      * assets amount.
     */
     function _convertToShares(
@@ -900,10 +875,10 @@ contract SynthVault is
             );
     }
 
-    /*
-    * @dev Internal conversion function (from shares to assets) with support
+    /**
+     * @dev Internal conversion function (from shares to assets) with support
      * for rounding direction.
-    * @param shares The shares amount to be converted into underlying assets.
+     * @param shares The shares amount to be converted into underlying assets.
      * @param rounding The rounding direction.
      * @return Amount of underlying assets received in exchange of the
      * specified amount of shares.
@@ -939,13 +914,13 @@ contract SynthVault is
             );
     }
 
-    /*
-    * @dev The `_deposit` function is used to deposit the specified underlying
+    /**
+     * @dev The `_deposit` function is used to deposit the specified underlying
      * assets amount in exchange of a proportionnal amount of shares.
      * @param caller The address of the caller.
      * @param receiver The address of the shares receiver.
-    * @param assets The underlying assets amount to be converted into shares.
-    * @param shares The shares amount to be converted into underlying assets.
+     * @param assets The underlying assets amount to be converted into shares.
+     * @param shares The shares amount to be converted into underlying assets.
     */
     function _deposit(
         address caller,
@@ -970,17 +945,17 @@ contract SynthVault is
         emit Deposit(caller, receiver, assets, shares);
     }
 
-    /*
+    /**
      * @dev The function `_withdraw` is used to withdraw the specified
-    * underlying assets amount in exchange of a proportionnal amount of shares
+     * underlying assets amount in exchange of a proportionnal amount of shares
      * by
      * specifying all the params.
      * @notice The `withdraw` function is used to withdraw the specified
-    * underlying assets amount in exchange of a proportionnal amount of shares.
+     * underlying assets amount in exchange of a proportionnal amount of shares.
      * @param receiver The address of the shares receiver.
      * @param owner The address of the owner.
-    * @param assets The underlying assets amount to be converted into shares.
-    * @param shares The shares amount to be converted into underlying assets.
+     * @param assets The underlying assets amount to be converted into shares.
+     * @param shares The shares amount to be converted into underlying assets.
     */
     function _withdraw(
         address receiver,
@@ -1001,15 +976,15 @@ contract SynthVault is
         emit Withdraw(_msgSender(), receiver, owner, assets, shares);
     }
 
-    /**
+    /*
      * ######################################
      * # AMPHOR SYNTHETIC RELATED FUNCTIONS #
      * ######################################
-     */
+    */
 
-    /*
+    /**
      * @dev The `close` function is used to close the vault.
-    * It is the only way to lock the vault. It can only be called by the owner
+     * It is the only way to lock the vault. It can only be called by the owner
      * of the contract (`onlyOwner` modifier).
     */
     function close() external onlyOwner {
@@ -1023,14 +998,14 @@ contract SynthVault is
         emit EpochStart(block.timestamp, _totalAssets, totalSupply());
     }
 
-    /*
+    /**
      * @dev The `open` function is used to open the vault.
-    * @notice The `end` function is used to end the lock period of the vault.
-    * It can only be called by the owner of the contract (`onlyOwner` modifier)
+     * @notice The `end` function is used to end the lock period of the vault.
+     * It can only be called by the owner of the contract (`onlyOwner` modifier)
      * and only when the vault is locked.
      * If there are profits, the performance fees are taken and sent to the
      * owner of the contract.
-    * @param assetReturned The underlying assets amount to be deposited into
+     * @param assetReturned The underlying assets amount to be deposited into
      * the vault.
     */
     function open(uint256 assetReturned) external onlyOwner whenClosed {
@@ -1094,18 +1069,18 @@ contract SynthVault is
         emit EpochStart(block.timestamp, _totalAssets, totalSupply());
     }
 
-    /**
+    /*
      * ######################################
      * # AMPHOR SYNTHETIC RELATED FUNCTIONS #
      * ######################################
-     */
+    */
 
-    /*
+    /**
      * @dev The `setFee` function is used to modify the protocol fees.
      * @notice The `setFee` function is used to modify the perf fees.
-    * It can only be called by the owner of the contract (`onlyOwner` modifier).
+     * It can only be called by the owner of the contract (`onlyOwner` modifier).
      * It can't exceed 30% (3000 in BPS).
-     * @param newFees The new perf fees to be applied.
+     * @param newFee The new perf fees to be applied.
     */
     function setFee(uint16 newFee) external onlyOwner {
         if (!isOpen) revert VaultIsLocked();
@@ -1118,7 +1093,7 @@ contract SynthVault is
         _MAX_DRAWDOWN = newMaxDrawDown;
     }
 
-    /*
+    /**
     * @dev The `claimToken` function is used to claim other tokens that have
      * been sent to the vault.
     * @notice The `claimToken` function is used to claim other tokens that have
@@ -1127,9 +1102,8 @@ contract SynthVault is
      * @param token The IERC20 token to be claimed.
     */
     function claimToken(IERC20 token) external onlyOwner {
-        if (token != _ASSET) {
+        if (token != _ASSET)
             token.safeTransfer(_msgSender(), token.balanceOf(address(this)));
-        }
     }
 
     /*
@@ -1175,7 +1149,7 @@ contract SynthVault is
      * data.
      * @return Amount of shares received in exchange of the specified underlying
      * assets amount.
-     */
+    */
     function depositWithPermit(
         uint256 assets,
         address receiver,
@@ -1184,26 +1158,24 @@ contract SynthVault is
         external
         returns (uint256)
     {
-        if (_ASSET.allowance(msg.sender, address(this)) < assets) {
+        if (_ASSET.allowance(msg.sender, address(this)) < assets)
             execPermit(_msgSender(), address(this), permitParams);
-        }
         return deposit(assets, receiver);
     }
 
-    /*
+    /**
      * @dev The `depositWithPermitMinShares` function is used to deposit
      * underlying assets into the vault using a permit for approval.
      * @param assets The underlying assets amount to be converted into
      * shares.
      * @param receiver The address of the shares receiver.
-    * @param minShares The minimum amount of shares to be received in exchange
-    of
-     * the specified underlying assets amount.
-    * @param permitParams The permit struct containing the permit signature and
-    data.
-    * @return Amount of shares received in exchange of the specified underlying
+     * @param minShares The minimum amount of shares to be received in exchange
+     * of the specified underlying assets amount.
+     * @param permitParams The permit struct containing the permit signature and
+     * data.
+     * @return Amount of shares received in exchange of the specified underlying
      * assets amount.
-     */
+    */
     function depositWithPermitMinShares(
         uint256 assets,
         address receiver,
@@ -1231,7 +1203,7 @@ contract SynthVault is
      * @return Amount of underlying assets deposited in exchange of the
      * specified
      * shares amount.
-     */
+    */
     function mintWithPermit(
         uint256 shares,
         address receiver,
@@ -1260,7 +1232,7 @@ contract SynthVault is
      * @return Amount of underlying assets deposited in exchange of the
      * specified
      * shares amount.
-     */
+    */
     function mintWithPermitMaxAssets(
         uint256 shares,
         address receiver,
@@ -1367,9 +1339,8 @@ contract SynthVault is
         external
         returns (uint256)
     {
-        if (_ASSET.allowance(_msgSender(), address(this)) < assets) {
+        if (_ASSET.allowance(_msgSender(), address(this)) < assets)
             execPermit2(permit2Params);
-        }
         return deposit(assets, receiver);
     }
 
@@ -1382,9 +1353,8 @@ contract SynthVault is
         external
         returns (uint256)
     {
-        if (_ASSET.allowance(_msgSender(), address(this)) < assets) {
+        if (_ASSET.allowance(_msgSender(), address(this)) < assets)
             execPermit2(permit2Params);
-        }
         return depositMinShares(assets, receiver, minShares);
     }
 
@@ -1397,9 +1367,7 @@ contract SynthVault is
         returns (uint256)
     {
         if (_ASSET.allowance(_msgSender(), address(this)) < previewMint(shares))
-        {
             execPermit2(permit2Params);
-        }
         return mint(shares, receiver);
     }
 
@@ -1413,9 +1381,7 @@ contract SynthVault is
         returns (uint256)
     {
         if (_ASSET.allowance(_msgSender(), address(this)) < previewMint(shares))
-        {
             execPermit2(permit2Params);
-        }
         return mintMaxAssets(shares, receiver, maxAssets);
     }
 }
