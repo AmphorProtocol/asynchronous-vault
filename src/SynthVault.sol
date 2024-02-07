@@ -19,7 +19,6 @@ import { Initializable } from
     "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import { ERC20Permit } from
     "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
-// import { ISignatureTransfer } from "permit2/src/interfaces/IPermit2.sol";
 import { IAllowanceTransfer } from
     "permit2/src/interfaces/IAllowanceTransfer.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -212,7 +211,7 @@ contract SynthVault is
     error ReceiverFailed();
     error MaxDrawdownReached();
 
-    error InvalidSpender();
+    error InvalidSpender(); //todo check this
 
     /**
      * ##############################
@@ -229,6 +228,18 @@ contract SynthVault is
         uint256 lastRequestId = lastDepositRequestId[receiver];
         uint256 lastRequestBalance =
             epochs[lastRequestId].depositRequestBalance[receiver];
+        bool hasClaimableRequest =
+            lastRequestBalance > 0 && lastRequestId != epochId;
+
+        if (hasClaimableRequest) revert MustClaimFirst();
+        _;
+    }
+
+    modifier whenNoClaimableRedeemRequest(address receiver) {
+        // Check if the user has a claimable request
+        uint256 lastRequestId = lastRedeemRequestId[receiver];
+        uint256 lastRequestBalance =
+            epochs[lastRequestId].redeemRequestBalance[receiver];
         bool hasClaimableRequest =
             lastRequestBalance > 0 && lastRequestId != epochId;
 
@@ -392,6 +403,7 @@ contract SynthVault is
         );
     }
 
+    // tree done
     function pendingDepositRequest(address owner)
         external
         view
@@ -400,6 +412,7 @@ contract SynthVault is
         return epochs[lastDepositRequestId[owner]].depositRequestBalance[owner];
     }
 
+    // tree done
     function claimableDepositRequest(address owner)
         external
         view
@@ -411,6 +424,7 @@ contract SynthVault is
             : epochs[lastRequestId].depositRequestBalance[owner];
     }
 
+    // tree done
     function requestRedeem(
         uint256 shares,
         address receiver,
@@ -420,15 +434,8 @@ contract SynthVault is
         public
         whenClosed
         whenNotPaused
+        whenNoClaimableRedeemRequest(receiver)
     {
-        // Check if the user has a claimable request
-        uint256 lastRequestId = lastRedeemRequestId[receiver];
-        uint256 lastRequestBalance =
-            epochs[lastRequestId].redeemRequestBalance[receiver];
-        bool hasClaimableRequest =
-            lastRequestBalance > 0 && lastRequestId != epochId;
-
-        if (hasClaimableRequest) revert MustClaimFirst();
         if (shares > maxRedeemRequest(receiver)) {
             revert ExceededMaxRedeemRequest(
                 receiver, shares, maxRedeemRequest(receiver)
@@ -456,11 +463,9 @@ contract SynthVault is
                 && ERC7540Receiver(receiver).onERC7540RedeemReceived(
                     _msgSender(), owner, epochId, data
                 ) != ERC7540Receiver.onERC7540RedeemReceived.selector
-        ) {
-            revert ReceiverFailed();
-        }
+        ) revert ReceiverFailed();
 
-        emit DepositRequest(receiver, owner, epochId, _msgSender(), shares);
+        emit RedeemRequest(receiver, owner, epochId, _msgSender(), shares);
     }
 
     function decreaseRedeemRequest(
@@ -520,6 +525,7 @@ contract SynthVault is
         return _convertToAssets(shares, lastRequestId, Math.Rounding.Floor);
     }
 
+    // todo solve allowance and emit correct ClaimDeposit
     function claimDeposit(
         address owner,
         address receiver
@@ -1122,6 +1128,7 @@ contract SynthVault is
      * #################################
     */
 
+    // todo add an owner and do the righ thing with allowance
     /**
      * @dev The `depositWithPermit` function is used to deposit underlying
      * assets
@@ -1148,6 +1155,34 @@ contract SynthVault is
         return deposit(assets, receiver);
     }
 
+    /**
+     * @dev The `mintWithPermit` function is used to mint the specified shares
+     * amount in exchange of the corresponding underlying assets amount from
+     * `_msgSender()` using a permit for approval.
+     * @param shares The amount of shares to be converted into underlying
+     * assets.
+     * @param receiver The address of the shares receiver.
+     * @param permitParams The permit struct containing the permit signature and
+     * data.
+     * @return Amount of underlying assets deposited in exchange of the
+     * specified
+     * shares amount.
+     */
+    function mintWithPermit(
+        uint256 shares,
+        address receiver,
+        PermitParams calldata permitParams
+    )
+        external
+        returns (uint256)
+    {
+        if (_ASSET.allowance(msg.sender, address(this)) < previewMint(shares)) {
+            execPermit(_msgSender(), address(this), permitParams);
+        }
+        return mint(shares, receiver);
+    }
+
+    // todo add owner
     function requestDepositWithPermit(
         uint256 assets,
         address receiver,
@@ -1156,8 +1191,9 @@ contract SynthVault is
     )
         external
     {
-        if (_ASSET.allowance(_msgSender(), address(this)) < assets) {
-            execPermit(_msgSender(), address(this), permitParams);
+        address owner = _msgSender();
+        if (_ASSET.allowance(owner, address(this)) < assets) {
+            execPermit(owner, address(this), permitParams);
         }
         return requestDeposit(assets, receiver, _msgSender(), data);
     }
