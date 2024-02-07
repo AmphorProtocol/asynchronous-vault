@@ -1,9 +1,8 @@
 TestWithdraw
 
-#when withdraw given vault closed
-##it should revert with ERC4626ExceededMaxWithdraw
+#given vault closed ##it should revert with ERC4626ExceededMaxWithdraw when withdraw
 
-#when withdraw given vault open
+#given vault open when withdraw
 ##it should revert if the withdraw amount provided by the owner is higher than his shares (converted to assets) balance
 ##it should increase the underlying balance of the owner
 ##it should emit a Withdraw event
@@ -14,36 +13,20 @@ TestWithdraw
 ##it should decrease the total supply of shares by the value returned by previewWithdraw
 ##it should take the shares amount returned by previewWithdraw to the owner
 
-#when withdraw given vault open given receiver not equal owner
-##it should revert if the withdraw amount provided by the owner is higher than his shares (converted to assets) balance
-##it should increase the underlying balance of the owner
-##it should emit a Withdraw event
-##it should decrease the underlying balance of the vault by the withdraw amount
-##it should decrease the balance of shares of the receiver by the withdraw amount converted in shares
-##it should return the same value as the one returned by previewWithdraw
-##it should return the same value as the burned (to the owner) shares amount
-##it should decrease the total supply of shares by the value returned by previewWithdraw
-##it should take the shares amount returned by previewWithdraw to the owner
+#given vault open given receiver not equal owner when withdraw
+##Same as above
 
-#when withdraw given vault open given vault empty
+#given vault open given withdraw amount is 0 when withdraw
+##Same as above
+
+#given vault open given vault empty when withdraw
 ##it should revert if the withdraw amount provided by the owner is higher than 0
 
-#when withdraw given vault open given withdraw amount is 0
-##it should revert if the withdraw amount provided by the owner is higher than his shares (converted to assets) balance
-##it should increase the underlying balance of the owner
-##it should emit a Withdraw event
-##it should decrease the underlying balance of the vault by the withdraw amount
-##it should decrease the balance of shares of the receiver by the withdraw amount converted in shares
-##it should return the same value as the one returned by previewWithdraw
-##it should return the same value as the burned (to the owner) shares amount
-##it should decrease the total supply of shares by the value returned by previewWithdraw
-##it should take the shares amount returned by previewWithdraw to the owner
-
-#when withdraw given vault open given vault paused
+#given vault open given vault paused when withdraw
 ##it should revert with EnforcedPause
 
-#when withdraw given vault closed given vault paused
+#given vault closed given vault paused when withdraw
 ##it should revert with EnforcedPause
 
-#when withdraw given receiver is address 0
+#given receiver is address 0 when withdraw
 ##it should revert with ERC20InvalidReceiver

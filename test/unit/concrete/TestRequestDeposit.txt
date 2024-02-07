@@ -1,28 +1,28 @@
 TestRequestDeposit
 
-#when requestDeposit given vault open given vault open
+#given vault open given vault open when requestDeposit
 ##it should revert VaultIsOpen
 
-#when requestDeposit given vault open given vault paused
+#given vault open given vault paused when requestDeposit
 ##it should revert EnforcedPause
 
-#when requestDeposit given vault closed given vault not paused given receiver doesn't have any claimable balance
+#given vault closed given vault not paused given receiver doesn't have any claimable balance when requestDeposit
 ##it should decrease the owner underlying balance by the specified assets value
 ##it should increase the vault underlying balance by the specified assets value
 ##it should increase pendingDepositRequest balance of receiver
 ##it should increase totalPendingDepositRequest balance
 ##it should emit DepositRequest event
 
-#when requestDeposit given vault closed given vault not paused given receiver have not approval balance at all
+#given vault closed given vault not paused given receiver have not approval balance at all when requestDeposit
 ##it should revert with ERC20InsufficientAllowance
 
-#when requestDeposit given vault closed given vault not paused given receiver have not enough assets balance
+#given vault closed given vault not paused given receiver have not enough assets balance when requestDeposit
 ##it should revert with ERC20InsufficientBalance
 
-#when requestDeposit given vault closed given vault not paused given receiver have not enough approval balance
+#given vault closed given vault not paused given receiver have not enough approval balance when requestDeposit
 ##it should revert with ERC20InsufficientAllowance
 
-#when requestDeposit given vault closed given vault not paused given receiver have claimable balance
+#given vault closed given vault not paused given receiver have claimable balance when requestDeposit
 ##it should revert with MustClaimFirst
 
 
