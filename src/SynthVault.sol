@@ -228,6 +228,18 @@ contract SynthVault is
         _;
     }
 
+    modifier whenNoClaimableRedeemRequest(address receiver) {
+        // Check if the user has a claimable request
+        uint256 lastRequestId = lastRedeemRequestId[receiver];
+        uint256 lastRequestBalance =
+            epochs[lastRequestId].redeemRequestBalance[receiver];
+        bool hasClaimableRequest =
+            lastRequestBalance > 0 && lastRequestId != epochId;
+
+        if (hasClaimableRequest) revert MustClaimFirst();
+        _;
+    }
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(IPermit2 _permit2) {
         _disableInitializers();
@@ -381,6 +393,7 @@ contract SynthVault is
         );
     }
 
+    // tree done
     function pendingDepositRequest(address owner)
         external
         view
@@ -389,6 +402,7 @@ contract SynthVault is
         return epochs[lastDepositRequestId[owner]].depositRequestBalance[owner];
     }
 
+    // tree done
     function claimableDepositRequest(address owner)
         external
         view
@@ -400,6 +414,7 @@ contract SynthVault is
             : epochs[lastRequestId].depositRequestBalance[owner];
     }
 
+    // tree done
     function requestRedeem(
         uint256 shares,
         address receiver,
@@ -409,15 +424,8 @@ contract SynthVault is
         public
         whenClosed
         whenNotPaused
+        whenNoClaimableRedeemRequest(receiver)
     {
-        // Check if the user has a claimable request
-        uint256 lastRequestId = lastRedeemRequestId[receiver];
-        uint256 lastRequestBalance =
-            epochs[lastRequestId].redeemRequestBalance[receiver];
-        bool hasClaimableRequest =
-            lastRequestBalance > 0 && lastRequestId != epochId;
-
-        if (hasClaimableRequest) revert MustClaimFirst();
         if (shares > maxRedeemRequest(receiver)) {
             revert ExceededMaxRedeemRequest(
                 receiver, shares, maxRedeemRequest(receiver)
@@ -428,6 +436,7 @@ contract SynthVault is
         _createRedeemRequest(shares, receiver, owner, data);
     }
 
+    // 
     function _createRedeemRequest(
         uint256 shares,
         address receiver,
@@ -445,11 +454,9 @@ contract SynthVault is
                 && ERC7540Receiver(receiver).onERC7540RedeemReceived(
                     _msgSender(), owner, epochId, data
                 ) != ERC7540Receiver.onERC7540RedeemReceived.selector
-        ) {
-            revert ReceiverFailed();
-        }
+        ) revert ReceiverFailed();
 
-        emit DepositRequest(receiver, owner, epochId, _msgSender(), shares);
+        emit RedeemRequest(receiver, owner, epochId, _msgSender(), shares);
     }
 
     function decreaseRedeemRequest(
@@ -1220,72 +1227,15 @@ contract SynthVault is
         return depositMinShares(assets, receiver, minShares);
     }
 
-    /**
-     * @dev The `mintWithPermit` function is used to mint the specified shares
-     * amount in exchange of the corresponding underlying assets amount from
-     * `_msgSender()` using a permit for approval.
-     * @param shares The amount of shares to be converted into underlying
-     * assets.
-     * @param receiver The address of the shares receiver.
-     * @param permitParams The permit struct containing the permit signature and
-     * data.
-     * @return Amount of underlying assets deposited in exchange of the
-     * specified
-     * shares amount.
-     */
-    function mintWithPermit(
-        uint256 shares,
-        address receiver,
-        PermitParams calldata permitParams
-    )
-        external
-        returns (uint256)
-    {
-        if (_ASSET.allowance(msg.sender, address(this)) < previewMint(shares)) {
-            execPermit(_msgSender(), address(this), permitParams);
-        }
-        return mint(shares, receiver);
-    }
-
-    /**
-     * @dev The `mintWithPermit` function is used to mint the specified shares
-     * amount in exchange of the corresponding underlying assets amount from
-     * `_msgSender()` using a permit for approval.
-     * @param shares The amount of shares to be converted into underlying
-     * assets.
-     * @param receiver The address of the shares receiver.
-     * @param maxAssets The maximum amount of underlying assets to be deposited
-     * in exchange of the specified shares amount.
-     * @param permitParams The permit struct containing the permit signature and
-     * data.
-     * @return Amount of underlying assets deposited in exchange of the
-     * specified
-     * shares amount.
-     */
-    function mintWithPermitMaxAssets(
-        uint256 shares,
-        address receiver,
-        uint256 maxAssets,
-        PermitParams calldata permitParams
-    )
-        external
-        returns (uint256)
-    {
-        if (_ASSET.allowance(msg.sender, address(this)) < previewMint(shares)) {
-            execPermit(_msgSender(), address(this), permitParams);
-        }
-        return mintMaxAssets(shares, receiver, maxAssets);
-    }
-
     function requestDepositWithPermit(
         uint256 assets,
         address receiver,
-        address owner,
         bytes memory data,
         PermitParams calldata permitParams
     )
         external
     {
+        address owner = _msgSender();
         if (_ASSET.allowance(owner, address(this)) < assets) {
             execPermit(owner, address(this), permitParams);
         }
@@ -1387,36 +1337,5 @@ contract SynthVault is
             execPermit2(permit2Params);
         }
         return depositMinShares(assets, receiver, minShares);
-    }
-
-    function mintWithPermit2(
-        uint256 shares,
-        address receiver,
-        Permit2Params calldata permit2Params
-    )
-        external
-        returns (uint256)
-    {
-        if (_ASSET.allowance(_msgSender(), address(this)) < previewMint(shares))
-        {
-            execPermit2(permit2Params);
-        }
-        return mint(shares, receiver);
-    }
-
-    function mintWithPermit2MaxAssets(
-        uint256 shares,
-        address receiver,
-        uint256 maxAssets,
-        Permit2Params calldata permit2Params
-    )
-        external
-        returns (uint256)
-    {
-        if (_ASSET.allowance(_msgSender(), address(this)) < previewMint(shares))
-        {
-            execPermit2(permit2Params);
-        }
-        return mintMaxAssets(shares, receiver, maxAssets);
     }
 }
