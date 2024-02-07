@@ -216,7 +216,7 @@ contract SynthVault is
     error ClaimableRequestPending();
     error MustClaimFirst();
     error ReceiverFailed();
-    error MaxDrawDownReached();
+    error MaxDrawdownReached();
 
     /**
      * ##############################
@@ -1035,8 +1035,11 @@ contract SynthVault is
     */
     function open(uint256 assetReturned) external onlyOwner whenClosed {
         if (isOpen) revert VaultIsOpen();
-        if (assetReturned < BPS_DIVIDER - _MAX_DRAWDOWN * totalAssets / BPS_DIVIDER) {
-            revert MaxDrawDownReached();
+        if (
+            assetReturned
+                < BPS_DIVIDER - _MAX_DRAWDOWN * totalAssets / BPS_DIVIDER
+        ) {
+            revert MaxDrawdownReached();
         }
 
         uint256 pendingDeposit = _ASSET.balanceOf(address(this));
