@@ -19,9 +19,8 @@ import { Initializable } from
     "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import { ERC20Permit } from
     "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
-import {
-    IPermit2, ISignatureTransfer
-} from "permit2/src/interfaces/IPermit2.sol";
+import { IAllowanceTransfer } from
+    "permit2/src/interfaces/IAllowanceTransfer.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import "forge-std/console.sol"; //todo remove
@@ -98,7 +97,6 @@ struct Permit2Params {
 
 uint256 constant BPS_DIVIDER = 10_000;
 uint16 constant MAX_FEES = 3000; // 30%
-uint16 constant MAX_DRAWDOWN = 3000; // 30%
 
 contract SynthVault is
     IERC7540,
@@ -123,7 +121,8 @@ contract SynthVault is
     mapping(address user => uint256 epochId) public lastDepositRequestId;
     mapping(address user => uint256 epochId) public lastRedeemRequestId;
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    IPermit2 public immutable permit2; // The canonical permit2 contract.
+    IAllowanceTransfer public immutable permit2; // The canonical permit2
+        // contract.
 
     /*
      * ##########
@@ -206,17 +205,13 @@ contract SynthVault is
     error ExceededMaxDepositRequest(
         address receiver, uint256 assets, uint256 maxDeposit
     );
-    error ERC4626NotEnoughSharesMinted(
-        address owner, uint256 shares, uint256 minShares
-    );
-    error ERC4626TooMuchAssetsDeposited(
-        address owner, uint256 assets, uint256 maxAssets
-    );
     error VaultIsEmpty(); // We cannot start an epoch with an empty vault
     error ClaimableRequestPending();
     error MustClaimFirst();
     error ReceiverFailed();
     error MaxDrawdownReached();
+
+    error InvalidSpender(); //todo check this
 
     /**
      * ##############################
@@ -225,6 +220,18 @@ contract SynthVault is
      */
     modifier whenClosed() {
         if (isOpen) revert VaultIsOpen();
+        _;
+    }
+
+    modifier whenNoClaimableDepositRequest(address receiver) {
+        // Check if the user has a claimable request
+        uint256 lastRequestId = lastDepositRequestId[receiver];
+        uint256 lastRequestBalance =
+            epochs[lastRequestId].depositRequestBalance[receiver];
+        bool hasClaimableRequest =
+            lastRequestBalance > 0 && lastRequestId != epochId;
+
+        if (hasClaimableRequest) revert MustClaimFirst();
         _;
     }
 
@@ -241,7 +248,7 @@ contract SynthVault is
     }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(IPermit2 _permit2) {
+    constructor(IAllowanceTransfer _permit2) {
         _disableInitializers();
         permit2 = _permit2;
     }
@@ -264,7 +271,7 @@ contract SynthVault is
         __Ownable_init(owner);
         __ERC20Permit_init(name);
         _ASSET = IERC20(underlying);
-        _MAX_DRAWDOWN = MAX_DRAWDOWN;
+        _MAX_DRAWDOWN = 3000; // 30%
     }
 
     function isCurrentEpoch(uint256 requestId) internal view returns (bool) {
@@ -280,16 +287,8 @@ contract SynthVault is
         public
         whenClosed
         whenNotPaused
+        whenNoClaimableDepositRequest(receiver)
     {
-        // Check if the user has a claimable request
-        uint256 lastRequestId = lastDepositRequestId[receiver];
-        uint256 lastRequestBalance =
-            epochs[lastRequestId].depositRequestBalance[receiver];
-        bool hasClaimableRequest =
-            lastRequestBalance > 0 && lastRequestId != epochId;
-
-        if (hasClaimableRequest) revert MustClaimFirst();
-
         if (assets > maxDepositRequest(receiver)) {
             revert ExceededMaxDepositRequest(
                 receiver, assets, maxDepositRequest(receiver)
@@ -297,9 +296,14 @@ contract SynthVault is
         }
 
         // Create a new request
+
+        _ASSET.safeTransferFrom(_msgSender(), address(this), assets);
+
         _createDepositRequest(assets, receiver, owner, data);
     }
 
+    // transfer must happen before this function is called TOOD maybe change
+    // this
     function _createDepositRequest(
         uint256 assets,
         address receiver,
@@ -308,7 +312,13 @@ contract SynthVault is
     )
         internal
     {
-        _ASSET.safeTransferFrom(owner, address(this), assets);
+        if (
+            _msgSender() != owner
+                && _ASSET.allowance(owner, _msgSender()) >= assets
+        ) {
+            SafeERC20.safeTransferFrom(_ASSET, owner, address(this), assets);
+        }
+
         epochs[epochId].depositRequestBalance[receiver] += assets;
 
         if (lastDepositRequestId[receiver] != epochId) {
@@ -354,7 +364,7 @@ contract SynthVault is
     )
         external
     {
-        claimDeposit(receiver);
+        claimDeposit(receiver, receiver);
         requestDeposit(assets, receiver, owner, data);
     }
 
@@ -436,7 +446,6 @@ contract SynthVault is
         _createRedeemRequest(shares, receiver, owner, data);
     }
 
-    // 
     function _createRedeemRequest(
         uint256 shares,
         address receiver,
@@ -516,12 +525,16 @@ contract SynthVault is
         return _convertToAssets(shares, lastRequestId, Math.Rounding.Floor);
     }
 
-    function claimDeposit(address receiver)
+    // todo solve allowance and emit correct ClaimDeposit
+    function claimDeposit(
+        address owner,
+        address receiver
+    )
         public
         whenNotPaused
         returns (uint256 shares)
     {
-        address owner = _msgSender();
+        // address owner = _msgSender();
         uint256 lastRequestId = lastDepositRequestId[owner];
 
         shares = previewClaimDeposit(owner);
@@ -529,8 +542,8 @@ contract SynthVault is
         uint256 assets = epochs[lastRequestId].depositRequestBalance[owner];
         epochs[lastRequestId].depositRequestBalance[owner] = 0;
 
-        transfer(receiver, shares);
-        emit Withdraw(_msgSender(), receiver, address(this), assets, shares);
+        transfer(owner, shares);
+        emit Withdraw(_msgSender(), owner, address(this), assets, shares);
         emit Deposit(_msgSender(), owner, assets, shares);
         // emit ClaimDeposit(lastRequestId, _msgSender(), receiver, assets,
         // shares);
@@ -702,6 +715,7 @@ contract SynthVault is
         address receiver
     )
         public
+        whenNotPaused
         returns (uint256)
     {
         uint256 maxAssets = maxDeposit(receiver);
@@ -712,34 +726,6 @@ contract SynthVault is
         uint256 sharesAmount = previewDeposit(assets);
         _deposit(_msgSender(), receiver, assets, sharesAmount);
 
-        return sharesAmount;
-    }
-
-    /**
-     * @dev The `depositMinShares` function is used to deposit underlying assets
-     * into the vault. It also checks that the amount of shares minted is
-     * greater
-     * or equal to the specified minimum amount.
-     * @param assets The underlying assets amount to be converted into shares.
-     * @param receiver The address of the shares receiver.
-     * @param minShares The minimum amount of shares to be minted.
-     * @return Amount of shares received in exchange of the specified underlying
-     * assets amount.
-     */
-    function depositMinShares(
-        uint256 assets,
-        address receiver,
-        uint256 minShares
-    )
-        public
-        returns (uint256)
-    {
-        uint256 sharesAmount = deposit(assets, receiver);
-        if (sharesAmount < minShares) {
-            revert ERC4626NotEnoughSharesMinted(
-                receiver, sharesAmount, minShares
-            );
-        }
         return sharesAmount;
     }
 
@@ -768,37 +754,6 @@ contract SynthVault is
 
         uint256 assetsAmount = previewMint(shares);
         _deposit(_msgSender(), receiver, assetsAmount, shares);
-
-        return assetsAmount;
-    }
-
-    /**
-     * @dev The `mintMaxAssets` function is used to mint the specified amount of
-     * shares in exchange of the corresponding underlying assets amount from
-     * owner. It also checks that the amount of assets deposited is less or
-     * equal
-     * to the specified maximum amount.
-     * @param shares The shares amount to be converted into underlying assets.
-     * @param receiver The address of the shares receiver.
-     * @param maxAssets The maximum amount of assets to be deposited.
-     * @return Amount of underlying assets deposited in exchange of the
-     * specified
-     * amount of shares.
-     */
-    function mintMaxAssets(
-        uint256 shares,
-        address receiver,
-        uint256 maxAssets
-    )
-        public
-        returns (uint256)
-    {
-        uint256 assetsAmount = mint(shares, receiver);
-        if (assetsAmount > maxAssets) {
-            revert ERC4626TooMuchAssetsDeposited(
-                receiver, assetsAmount, maxAssets
-            );
-        }
 
         return assetsAmount;
     }
@@ -1122,8 +1077,8 @@ contract SynthVault is
         emit FeesChanged(feeInBps, newFee);
     }
 
-    function setMaxDrawDown(uint16 newMaxDrawDown) external onlyOwner {
-        _MAX_DRAWDOWN = newMaxDrawDown;
+    function setMaxDrawdown(uint16 newMaxDrawdown) external onlyOwner {
+        _MAX_DRAWDOWN = newMaxDrawdown;
     }
 
     /**
@@ -1173,6 +1128,7 @@ contract SynthVault is
      * #################################
     */
 
+    // todo add an owner and do the righ thing with allowance
     /**
      * @dev The `depositWithPermit` function is used to deposit underlying
      * assets
@@ -1200,33 +1156,33 @@ contract SynthVault is
     }
 
     /**
-     * @dev The `depositWithPermitMinShares` function is used to deposit
-     * underlying assets into the vault using a permit for approval.
-     * @param assets The underlying assets amount to be converted into
-     * shares.
+     * @dev The `mintWithPermit` function is used to mint the specified shares
+     * amount in exchange of the corresponding underlying assets amount from
+     * `_msgSender()` using a permit for approval.
+     * @param shares The amount of shares to be converted into underlying
+     * assets.
      * @param receiver The address of the shares receiver.
-     * @param minShares The minimum amount of shares to be received in exchange
-     * of the specified underlying assets amount.
      * @param permitParams The permit struct containing the permit signature and
      * data.
-     * @return Amount of shares received in exchange of the specified underlying
-     * assets amount.
+     * @return Amount of underlying assets deposited in exchange of the
+     * specified
+     * shares amount.
      */
-    function depositWithPermitMinShares(
-        uint256 assets,
+    function mintWithPermit(
+        uint256 shares,
         address receiver,
-        uint256 minShares,
         PermitParams calldata permitParams
     )
         external
         returns (uint256)
     {
-        if (_ASSET.allowance(msg.sender, address(this)) < assets) {
+        if (_ASSET.allowance(msg.sender, address(this)) < previewMint(shares)) {
             execPermit(_msgSender(), address(this), permitParams);
         }
-        return depositMinShares(assets, receiver, minShares);
+        return mint(shares, receiver);
     }
 
+    // todo add owner
     function requestDepositWithPermit(
         uint256 assets,
         address receiver,
@@ -1239,7 +1195,7 @@ contract SynthVault is
         if (_ASSET.allowance(owner, address(this)) < assets) {
             execPermit(owner, address(this), permitParams);
         }
-        return requestDeposit(assets, receiver, owner, data);
+        return requestDeposit(assets, receiver, _msgSender(), data);
     }
 
     function execPermit(
@@ -1266,76 +1222,53 @@ contract SynthVault is
      * #################################
     */
 
-    // Deposit some amount of an ERC20 token into this contract
-    // using Permit2.
-    function execPermit2(Permit2Params calldata permit2Params) internal {
-        // Transfer tokens from the caller to ourselves.
-        permit2.permitTransferFrom(
-            // The permit message.
-            ISignatureTransfer.PermitTransferFrom({
-                permitted: ISignatureTransfer.TokenPermissions({
-                    token: permit2Params.token,
-                    amount: permit2Params.amount
-                }),
-                nonce: permit2Params.nonce,
-                deadline: permit2Params.deadline
-            }),
-            // The transfer recipient and amount.
-            ISignatureTransfer.SignatureTransferDetails({
-                to: address(this),
-                requestedAmount: permit2Params.amount
-            }),
-            // The owner of the tokens, which must also be
-            // the signer of the message, otherwise this call
-            // will fail.
-            _msgSender(),
-            // The packed signature that was the result of signing
-            // the EIP712 hash of `permit`.
-            permit2Params.signature
-        );
-    }
-
     function requestDepositWithPermit2(
         uint256 assets,
         address receiver,
-        address owner,
         bytes memory data,
-        Permit2Params calldata permit2Params
+        IAllowanceTransfer.PermitSingle calldata permitSingle,
+        bytes calldata signature
     )
         external
     {
-        if (_ASSET.allowance(owner, address(this)) < assets) {
-            execPermit2(permit2Params);
-        }
-        return requestDeposit(assets, receiver, owner, data);
+        execPermit2(permitSingle, signature);
+        permit2.transferFrom(
+            _msgSender(), address(this), uint160(assets), address(_ASSET)
+        );
+
+        _createDepositRequest(assets, receiver, _msgSender(), data);
     }
 
     function depositWithPermit2(
         uint256 assets,
         address receiver,
-        Permit2Params calldata permit2Params
+        IAllowanceTransfer.PermitSingle calldata permitSingle,
+        bytes calldata signature
     )
         external
         returns (uint256)
     {
-        if (_ASSET.allowance(_msgSender(), address(this)) < assets) {
-            execPermit2(permit2Params);
-        }
-        return deposit(assets, receiver);
+        execPermit2(permitSingle, signature);
+        permit2.transferFrom(
+            _msgSender(), address(this), uint160(assets), address(_ASSET)
+        );
+
+        totalAssets += assets;
+        uint256 shares = _convertToShares(assets, Math.Rounding.Floor);
+        _mint(receiver, shares);
+        emit Deposit(_msgSender(), receiver, assets, shares);
+        return shares;
     }
 
-    function depositWithPermit2MinShares(
-        uint256 assets,
-        address receiver,
-        uint256 minShares,
-        Permit2Params calldata permit2Params
+    // Deposit some amount of an ERC20 token into this contract
+    // using Permit2.
+    function execPermit2(
+        IAllowanceTransfer.PermitSingle calldata permitSingle,
+        bytes calldata signature
     )
-        external
-        returns (uint256)
+        internal
     {
-        if (_ASSET.allowance(_msgSender(), address(this)) < assets) {
-            execPermit2(permit2Params);
-        }
-        return depositMinShares(assets, receiver, minShares);
+        if (permitSingle.spender != address(this)) revert InvalidSpender();
+        permit2.permit(_msgSender(), permitSingle, signature);
     }
 }
