@@ -1,8 +1,9 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { SynthVault, IPermit2 } from "../../src/SynthVault.sol";
+import { SynthVault } from "../../src/SynthVault.sol";
 import "forge-std/console.sol"; //todo remove
+import { IPermit2 } from "permit2/src/interfaces/IPermit2.sol";
 
 contract SynthVault2 is SynthVault {
     uint256 public newVariable;
