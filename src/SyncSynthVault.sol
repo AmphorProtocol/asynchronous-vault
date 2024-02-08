@@ -38,7 +38,7 @@ import "forge-std/console.sol"; //todo remove
  *         @@@@@@@@@@@@@@@@@@@+  Amphor  *@@@@@@@@@@@@@@@@@@@
  *         @@@@@@@@@@@@@@@@@@@*==========#@@@@@@@@@@@@@@@@@@@
  *         @@@@@@@@@@@@@@@@@@@+==========*@@@@@@@@@@@@@@@@@@@
- *         @@@@@@@@@@@@@@@@@@@=  Async   +@@@@@@@@@@@@@@@@@@@
+ *         @@@@@@@@@@@@@@@@@@@=   Sync   +@@@@@@@@@@@@@@@@@@@
  *         @@@@@@@@@@@@@@@@@@@%  Vault  .@@@@@@@@@@@@@@@@@@@@
  *         @@@@@@@@@@@@@@@@@@@@=        +@@@@@@@@@@@@@@@@@@@@
  *         @@@@@@@@@@@@@@@@@@@@%       .@@@@@@@@@@@@@@@@@@@@@
@@ -174,6 +174,7 @@ abstract contract SyncSynthVault is
         string memory symbol
     )
         public
+        virtual
         initializer
     {
         if (fees > MAX_FEES) revert FeesTooHigh();
@@ -541,7 +542,7 @@ abstract contract SyncSynthVault is
      * @param assetReturned The underlying assets amount to be deposited into
      * the vault.
      */
-    function open(uint256 assetReturned) external onlyOwner whenClosed {
+    function _open(uint256 assetReturned) internal onlyOwner whenClosed {
         if (isOpen) revert VaultIsOpen();
 
         if (
