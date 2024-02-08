@@ -2,7 +2,7 @@
 pragma solidity 0.8.21;
 
 import { Script, console } from "forge-std/Script.sol";
-import { SynthVault2, SynthVault } from "../../src/else/SynthVault2.sol";
+import { AsyncSynthVault } from "../../src/AsyncSynthVault.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Upgrades, Options } from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import { IPermit2 } from "permit2/src/interfaces/IPermit2.sol";
@@ -36,7 +36,7 @@ contract GOERLI_DeployAmphorSynthetic is Script {
                 Upgrades.deployBeaconProxy(
                     address(beacon),
                     abi.encodeCall(
-                        SynthVault.initialize,
+                        AsyncSynthVault.initialize,
                         (
                             fees,
                             owner,
@@ -60,18 +60,18 @@ contract GOERLI_DeployAmphorSynthetic is Script {
         upgrade.referenceContract = "SynthVault2.sol";
         upgrade.constructorData = abi.encode(permit2);
         Upgrades.upgradeBeacon(address(beacon), "SynthVault2.sol", upgrade);
-        SynthVault2(address(proxy)).initialize(42);
+        // AsyncSynthVault(address(proxy)).initialize(42); // TODO
 
         address newImplInBeacon = UpgradeableBeacon(beacon).implementation();
-        uint256 variable = SynthVault2(address(proxy)).newVariable();
-        uint256 variableInImpl =
-            SynthVault2(address(newImplInBeacon)).newVariable();
+        // uint256 variable = AsyncSynthVault(address(proxy)).newVariable(); // TODO
+        // uint256 variableInImpl =// TODO
+        //     AsyncSynthVault(address(newImplInBeacon)).newVariable();// TODO
 
-        console.log("Synthetic vault USDC new variable in proxy: ", variable);
-        console.log(
-            "Synthetic vault USDC new variable in new implementation: ",
-            variableInImpl
-        );
+        // console.log("Synthetic vault USDC new variable in proxy: ", variable); // TODO
+        // console.log(// TODO
+        //     "Synthetic vault USDC new variable in new implementation: ",// TODO
+        //     variableInImpl// TODO
+        // );// TODO
         console.log(
             "Synthetic vault USDC new implementation address: ", newImplInBeacon
         );

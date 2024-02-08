@@ -98,7 +98,7 @@ struct Permit2Params {
 uint256 constant BPS_DIVIDER = 10_000;
 uint16 constant MAX_FEES = 3000; // 30%
 
-contract SynthVault is
+contract AsyncSynthVault is
     IERC7540,
     ERC20PausableUpgradeable,
     Ownable2StepUpgradeable,
