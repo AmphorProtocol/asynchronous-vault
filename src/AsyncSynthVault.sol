@@ -459,18 +459,16 @@ contract AsyncSynthVault is
     }
 
     function claimDeposit(
-        address owner,
         address receiver
     )
         public
         whenNotPaused
         returns (uint256 shares)
     {
+        address owner = _msgSender();
         uint256 lastRequestId = lastDepositRequestId[owner];
 
         shares = previewClaimDeposit(owner);
-
-        if (_msgSender() != owner) _spendAllowance(owner, _msgSender(), shares);
 
         uint256 assets = epochs[lastRequestId].depositRequestBalance[owner];
         epochs[lastRequestId].depositRequestBalance[owner] = 0;
