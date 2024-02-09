@@ -295,7 +295,7 @@ contract AsyncSynthVault is
     )
         external
     {
-        claimDeposit(receiver, receiver);
+        claimDeposit(receiver);
         requestDeposit(assets, receiver, owner, data);
     }
 

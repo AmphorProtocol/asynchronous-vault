@@ -543,7 +543,7 @@ abstract contract SyncSynthVault is
 
         if (
             assetReturned < totalAssets.mulDiv(
-                (BPS_DIVIDER - _MAX_DRAWDOWN),
+                BPS_DIVIDER - _MAX_DRAWDOWN,
                 BPS_DIVIDER,
                 Math.Rounding.Ceil
             )
