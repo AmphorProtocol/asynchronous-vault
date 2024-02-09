@@ -147,6 +147,7 @@ abstract contract SyncSynthVault is
     error ERC4626ExceededMaxRedeem(address owner, uint256 shares, uint256 max);
     error VaultIsEmpty(); // We cannot start an epoch with an empty vault
     error MaxDrawdownReached();
+    error InvalidSpender(); // for permit2
 
     /**
      * ##############################
@@ -734,6 +735,7 @@ abstract contract SyncSynthVault is
     )
         internal
     {
+        if (permitSingle.spender != address(this)) revert InvalidSpender();
         permit2.permit(_msgSender(), permitSingle, signature);
     }
 }
