@@ -49,7 +49,7 @@ contract GOERLI_DeployAmphorSynthetic is Script {
         );
 
         address implementation = UpgradeableBeacon(beacon).implementation();
-        console.log("Synthetic vault USDC contract address: ", address(proxy));
+        console.log("Synthetic vault USDC proxy address: ", address(proxy));
         console.log("Synthetic vault USDC beacon address: ", address(beacon));
         console.log(
             "Synthetic vault USDC implementation address: ", implementation

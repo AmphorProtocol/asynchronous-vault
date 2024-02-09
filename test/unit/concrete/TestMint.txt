@@ -3,9 +3,31 @@ TestMint
 #given vault closed when mint
 ##it should revert with ERC4626ExceededMaxMint
 
+#given required assets higher than owner allowance to the vault when deposit
+##it should revert with ERC20InsufficientAllowance
+
+#given required assets higher than owner balance when deposit
+##it should revert with ERC20InsufficientBalance
+
+#given vault open given vault paused when mint
+##it should revert with EnforcedPause
+
+#given vault closed given vault paused when mint
+##it should revert with ERC4626ExceededMaxDeposit
+
+#given receiver is address 0 when mint
+##it should revert with ERC20InvalidReceiver
+
+#given amount is 0 when mint
+##it should revert with ERC20ZeroAmount (maybe)
+
+#given requested amount of shares converted in asset is higher than the allowance of the owner to the vault when mint
+##it should revert with ERC20InsufficientAllowance
+
+#given requested amount of shares converted in asset is higher than the balance of the owner when mint
+##it should revert with ERC20InsufficientBalance
+
 #given vault open when mint
-##it should revert if the requested amount of shares converted in asset is higher than the allowance of the owner to the vault
-##it should revert if the requested amount of shares converted in asset is higher than the shares balance of the owner
 ##it should decrease the underlying balance of the owner by the specified shares amount converted in assets (using _convertToAssets)    
 ##it should emit a Deposit event
 ##it should increase the underlying balance of the vault by the specified shares amount converted in assets (using _convertToAssets)
@@ -24,11 +46,3 @@ TestMint
 #given deposit amount is 0 when mint
 ##Same as above
 
-#given vault open given vault paused when mint
-##it should revert with EnforcedPause
-
-#given vault closed given vault paused when mint
-##it should revert with ERC4626ExceededMaxDeposit
-
-#given receiver is address 0 when mint
-##it should revert with ERC20InvalidReceiver

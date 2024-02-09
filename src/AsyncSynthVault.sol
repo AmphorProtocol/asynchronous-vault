@@ -213,7 +213,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         internal
     {
         epochs[epochId].depositRequestBalance[receiver] += assets;
-
+        // epochs[lastDepositRequestId[owner]].depositRequestBalance[owner];
         if (lastDepositRequestId[receiver] != epochId) {
             lastDepositRequestId[receiver] = epochId;
         }
@@ -320,7 +320,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         view
         returns (uint256 assets)
     {
-        return epochs[lastDepositRequestId[owner]].depositRequestBalance[owner];
+        return epochs[epochId].depositRequestBalance[owner];
     }
 
     // tree done
@@ -652,7 +652,11 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         ////////////////////////////////
         // Pending deposits treatment //
         ////////////////////////////////
-        deposit(pendingDeposit, address(this));
+        uint256 shares = previewDeposit(pendingDeposit);
+        totalAssets += shares;
+        _mint(address(this), shares);
+        emit Deposit(address(this), address(this), pendingDeposit, shares);
+
         //////////////////////////////
         // Pending redeem treatment //
         //////////////////////////////
