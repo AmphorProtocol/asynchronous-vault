@@ -104,12 +104,12 @@ abstract contract SyncSynthVault is
 
     // @return Amount of the perf fees applied on the positive yield.
     uint16 public feeInBps;
-    uint16 internal _MAX_DRAWDOWN; // guardrail
-    IERC20 internal _ASSET; // underlying todo make small cap
+    uint16 internal _maxDrawdown; // guardrail
+    IERC20 internal _asset; // underlying todo make small cap
     uint256 public totalAssets; // total underlying assets
     bool public isOpen; // vault is open or closed
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    IAllowanceTransfer public immutable permit2; // The canonical permit2
+    IAllowanceTransfer public immutable PERMIT2; // The canonical permit2
         // contract.
 
     /*
@@ -162,7 +162,7 @@ abstract contract SyncSynthVault is
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(IAllowanceTransfer _permit2) {
         _disableInitializers();
-        permit2 = _permit2;
+        PERMIT2 = _permit2;
     }
 
     function initialize(
@@ -174,7 +174,7 @@ abstract contract SyncSynthVault is
     )
         public
         virtual
-        initializer
+        onlyInitializing
     {
         if (fees > MAX_FEES) revert FeesTooHigh();
         feeInBps = fees;
@@ -182,8 +182,8 @@ abstract contract SyncSynthVault is
         __ERC20_init(name, symbol);
         __Ownable_init(owner);
         __ERC20Permit_init(name);
-        _ASSET = IERC20(underlying);
-        _MAX_DRAWDOWN = 3000; // 30%
+        _asset = IERC20(underlying);
+        _maxDrawdown = 3000; // 30%
     }
 
     /*
@@ -194,7 +194,7 @@ abstract contract SyncSynthVault is
 
     // @return address of the underlying asset.
     function asset() public view returns (address) {
-        return address(_ASSET);
+        return address(_asset);
     }
 
     // @dev See {IERC4626-convertToShares}.
@@ -463,7 +463,7 @@ abstract contract SyncSynthVault is
     )
         internal
     {
-        // If _ASSET is ERC777, transferFrom can trigger a reentrancy BEFORE the
+        // If _asset is ERC777, transferFrom can trigger a reentrancy BEFORE the
         // transfer happens through the tokensToSend hook. On the other hand,
         // the tokenReceived hook, that is triggered after the transfer,calls
         // the vault, which is assumed not malicious.
@@ -472,7 +472,7 @@ abstract contract SyncSynthVault is
         // reentrancy would happen before the assets are transferred and before
         // the shares are minted, which is a valid state.
         // slither-disable-next-line reentrancy-no-eth
-        _ASSET.safeTransferFrom(caller, address(this), assets);
+        _asset.safeTransferFrom(caller, address(this), assets);
         totalAssets += assets;
         _mint(receiver, shares);
         emit Deposit(caller, receiver, assets, shares);
@@ -502,7 +502,7 @@ abstract contract SyncSynthVault is
 
         _burn(owner, shares);
         totalAssets -= assets;
-        _ASSET.safeTransfer(receiver, assets);
+        _asset.safeTransfer(receiver, assets);
 
         emit Withdraw(_msgSender(), receiver, owner, assets, shares);
     }
@@ -512,65 +512,6 @@ abstract contract SyncSynthVault is
      * # AMPHOR SYNTHETIC RELATED FUNCTIONS #
      * ######################################
     */
-
-    /**
-     * @dev The `close` function is used to close the vault.
-     * It is the only way to lock the vault. It can only be called by the owner
-     * of the contract (`onlyOwner` modifier).
-     */
-    function close() external onlyOwner {
-        if (!isOpen) revert VaultIsLocked();
-
-        uint256 _totalAssets = totalAssets;
-        if (_totalAssets == 0) revert VaultIsEmpty();
-
-        _ASSET.safeTransfer(owner(), _totalAssets);
-        isOpen = false;
-        emit EpochStart(block.timestamp, _totalAssets, totalSupply());
-    }
-
-    /**
-     * @dev The `open` function is used to open the vault.
-     * @notice The `end` function is used to end the lock period of the vault.
-     * It can only be called by the owner of the contract (`onlyOwner` modifier)
-     * and only when the vault is locked.
-     * If there are profits, the performance fees are taken and sent to the
-     * owner of the contract.
-     * @param assetReturned The underlying assets amount to be deposited into
-     * the vault.
-     */
-    function _open(uint256 assetReturned) internal {
-        if (isOpen) revert VaultIsOpen();
-
-        if (
-            assetReturned < totalAssets.mulDiv(
-                BPS_DIVIDER - _MAX_DRAWDOWN,
-                BPS_DIVIDER,
-                Math.Rounding.Ceil
-            )
-        ) revert MaxDrawdownReached();
-
-        uint256 fees;
-
-        uint256 _totalAssets = totalAssets;
-        if (assetReturned > _totalAssets && feeInBps > 0) {
-            uint256 profits;
-            unchecked {
-                profits = assetReturned - _totalAssets;
-            }
-            fees = (profits).mulDiv(feeInBps, BPS_DIVIDER, Math.Rounding.Ceil);
-        }
-
-        _totalAssets = assetReturned - fees;
-        totalAssets = _totalAssets;
-
-        _ASSET.safeTransferFrom(_msgSender(), address(this), _totalAssets);
-
-        emit EpochEnd(
-            block.timestamp, _totalAssets, assetReturned, fees, totalSupply()
-        );
-        isOpen = true;
-    }
 
     function restruct(uint256 virtualReturnedAsset) external onlyOwner {
         uint256 _totalAssets = totalAssets;
@@ -606,7 +547,8 @@ abstract contract SyncSynthVault is
     }
 
     function setMaxDrawdown(uint16 newMaxDrawdown) external onlyOwner {
-        _MAX_DRAWDOWN = newMaxDrawdown;
+        if (newMaxDrawdown > 10_000) revert(); // add error
+        _maxDrawdown = newMaxDrawdown;
     }
 
     /**
@@ -619,7 +561,7 @@ abstract contract SyncSynthVault is
      * @param token The IERC20 token to be claimed.
      */
     function claimToken(IERC20 token) external onlyOwner {
-        if (token != _ASSET) {
+        if (token != _asset) {
             token.safeTransfer(_msgSender(), token.balanceOf(address(this)));
         }
     }
@@ -676,7 +618,7 @@ abstract contract SyncSynthVault is
         external
         returns (uint256)
     {
-        if (_ASSET.allowance(msg.sender, address(this)) < assets) {
+        if (_asset.allowance(msg.sender, address(this)) < assets) {
             execPermit(_msgSender(), address(this), permitParams);
         }
         return deposit(assets, receiver);
@@ -689,7 +631,7 @@ abstract contract SyncSynthVault is
     )
         internal
     {
-        ERC20Permit(address(_ASSET)).permit(
+        ERC20Permit(address(_asset)).permit(
             owner,
             spender,
             permitParams.value,
@@ -716,8 +658,8 @@ abstract contract SyncSynthVault is
         returns (uint256)
     {
         execPermit2(permitSingle, signature);
-        permit2.transferFrom(
-            _msgSender(), address(this), uint160(assets), address(_ASSET)
+        PERMIT2.transferFrom(
+            _msgSender(), address(this), uint160(assets), address(_asset)
         );
 
         totalAssets += assets;
@@ -736,6 +678,9 @@ abstract contract SyncSynthVault is
         internal
     {
         if (permitSingle.spender != address(this)) revert InvalidSpender();
-        permit2.permit(_msgSender(), permitSingle, signature);
+        PERMIT2.permit(_msgSender(), permitSingle, signature);
     }
+
+    function open(uint256 assetReturned) external virtual;
+    function close() external virtual;
 }
