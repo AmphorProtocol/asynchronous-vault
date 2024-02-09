@@ -147,8 +147,7 @@ abstract contract SyncSynthVault is
     error ERC4626ExceededMaxRedeem(address owner, uint256 shares, uint256 max);
     error VaultIsEmpty(); // We cannot start an epoch with an empty vault
     error MaxDrawdownReached();
-
-    error InvalidSpender(); //todo check this
+    error InvalidSpender(); // for permit2
 
     /**
      * ##############################
@@ -499,9 +498,7 @@ abstract contract SyncSynthVault is
     )
         internal
     {
-        if (_msgSender() != owner) {
-            _spendAllowance(owner, _msgSender(), shares);
-        }
+        if (_msgSender() != owner) _spendAllowance(owner, _msgSender(), shares);
 
         _burn(owner, shares);
         totalAssets -= assets;
@@ -546,13 +543,12 @@ abstract contract SyncSynthVault is
         if (isOpen) revert VaultIsOpen();
 
         if (
-            assetReturned
-                < BPS_DIVIDER - _MAX_DRAWDOWN * totalAssets / BPS_DIVIDER
-        ) {
-            // todo solve this shit
-
-            revert MaxDrawdownReached();
-        }
+            assetReturned < totalAssets.mulDiv(
+                BPS_DIVIDER - _MAX_DRAWDOWN,
+                BPS_DIVIDER,
+                Math.Rounding.Ceil
+            )
+        ) revert MaxDrawdownReached();
 
         uint256 fees;
 
@@ -660,7 +656,6 @@ abstract contract SyncSynthVault is
      * #################################
     */
 
-    // todo add an owner and do the righ thing with allowance
     /**
      * @dev The `depositWithPermit` function is used to deposit underlying
      * assets

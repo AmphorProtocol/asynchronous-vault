@@ -205,7 +205,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
     function requestDeposit(
         uint256 assets,
         address receiver,
-        address owner,
+        address owner, // this should not be here
         bytes memory data
     )
         public
@@ -213,29 +213,22 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         whenNotPaused
         whenNoClaimableDepositRequest(receiver)
     {
+        if (_msgSender() != owner) {
+            revert(); //todo add error
+        }
         if (assets > maxDepositRequest(receiver)) {
             revert ExceededMaxDepositRequest(
                 receiver, assets, maxDepositRequest(receiver)
             );
         }
 
-        if (
-            _msgSender() != owner
-                && _ASSET.allowance(owner, _msgSender()) >= assets
-        ) {
-            SafeERC20.safeTransferFrom(_ASSET, owner, address(this), assets);
-        } else if (_msgSender() == owner) {
-            _ASSET.safeTransferFrom(_msgSender(), address(this), assets);
-        } else {
-            revert("AsyncSynthVault: insufficient allowance");
-        }
-
         // Create a new request
+        _ASSET.safeTransferFrom(owner, address(this), assets);
 
         _createDepositRequest(assets, receiver, owner, data);
     }
 
-    // transfer must happen before this function is called TOOD maybe change
+    // transfer must happen before this function is called TODO maybe change
     // this
     function _createDepositRequest(
         uint256 assets,
@@ -390,6 +383,8 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
     )
         internal
     {
+        if (_msgSender() != owner) _spendAllowance(owner, _msgSender(), shares);
+
         transferFrom(owner, address(this), shares);
         epochs[epochId].redeemRequestBalance[receiver] += shares;
         lastRedeemRequestId[owner] = epochId;
@@ -469,7 +464,6 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         return _claimDeposit(_msgSender(), receiver);
     }
 
-    // todo decide events
     function _claimDeposit(
         address owner,
         address receiver
@@ -485,10 +479,8 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         epochs[lastRequestId].depositRequestBalance[owner] = 0;
 
         transfer(receiver, shares);
-        emit Withdraw(_msgSender(), owner, address(this), assets, shares);
-        emit Deposit(_msgSender(), owner, assets, shares);
-        emit ClaimDeposit(lastRequestId, _msgSender(), receiver, assets, shares);
-        return shares;
+
+        emit ClaimDeposit(lastRequestId, owner, receiver, assets, shares);
     }
 
     function claimRedeem(address receiver)
@@ -628,7 +620,6 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
      * #################################
     */
 
-    // todo add owner
     function requestDepositWithPermit(
         uint256 assets,
         address receiver,
@@ -641,7 +632,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         if (_ASSET.allowance(owner, address(this)) < assets) {
             execPermit(owner, address(this), permitParams);
         }
-        return requestDeposit(assets, receiver, _msgSender(), data);
+        return requestDeposit(assets, receiver, owner, data);
     }
 
     /*
@@ -659,11 +650,12 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
     )
         external
     {
+        address owner = _msgSender();
         execPermit2(permitSingle, signature);
         permit2.transferFrom(
-            _msgSender(), address(this), uint160(assets), address(_ASSET)
+            owner, address(this), uint160(assets), address(_ASSET)
         );
 
-        _createDepositRequest(assets, receiver, _msgSender(), data);
+        _createDepositRequest(assets, receiver, owner, data);
     }
 }
