@@ -22,8 +22,8 @@ TestRequestDeposit
 #given vault closed given vault not paused given receiver have not enough approval balance when requestDeposit
 ##it should revert with ERC20InsufficientAllowance
 
-#given vault closed given vault not paused given receiver have claimable balance when requestDeposit
-##it should revert with MustClaimFirst
+#given receiver have claimable and amount is not zero balance when requestDeposit
+##it should revert with maxDepositRequest
 
 
 
