@@ -251,9 +251,8 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
             epochs[lastRequestId].depositRequestBalance[receiver];
         bool hasClaimableRequest =
             lastRequestBalance > 0 && lastRequestId != epochId;
-        if (hasClaimableRequest) return 0;
 
-        return isOpen || paused() ? 0 : type(uint256).max;
+        return isOpen || paused() || hasClaimableRequest ? 0 : type(uint256).max;
     }
 
     // tree todo
@@ -264,8 +263,8 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
             epochs[lastRequestId].redeemRequestBalance[owner];
         bool hasClaimableRequest =
             lastRequestBalance > 0 && lastRequestId != epochId;
-        if (hasClaimableRequest) return 0;
-        return isOpen || paused() ? 0 : balanceOf(owner);
+
+        return isOpen || paused() || hasClaimableRequest ? 0 : balanceOf(owner);
     }
 
     // tree later
