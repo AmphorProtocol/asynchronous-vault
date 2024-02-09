@@ -27,7 +27,7 @@ contract GOERLI_DeployAmphorSynthetic is Script {
         Options memory deploy;
         deploy.constructorData = abi.encode(permit2);
         UpgradeableBeacon beacon = UpgradeableBeacon(
-            Upgrades.deployBeacon("SynthVault.sol", owner, deploy)
+            Upgrades.deployBeacon("AsyncSynthVault.sol", owner, deploy)
         );
 
         BeaconProxy proxy = BeaconProxy(

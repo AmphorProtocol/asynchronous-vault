@@ -63,13 +63,16 @@ contract GOERLI_DeployAmphorSynthetic is Script {
         // AsyncSynthVault(address(proxy)).initialize(42); // TODO
 
         address newImplInBeacon = UpgradeableBeacon(beacon).implementation();
-        // uint256 variable = AsyncSynthVault(address(proxy)).newVariable(); // TODO
+        // uint256 variable = AsyncSynthVault(address(proxy)).newVariable(); //
+        // TODO
         // uint256 variableInImpl =// TODO
         //     AsyncSynthVault(address(newImplInBeacon)).newVariable();// TODO
 
-        // console.log("Synthetic vault USDC new variable in proxy: ", variable); // TODO
+        // console.log("Synthetic vault USDC new variable in proxy: ",
+        // variable); // TODO
         // console.log(// TODO
-        //     "Synthetic vault USDC new variable in new implementation: ",// TODO
+        //     "Synthetic vault USDC new variable in new implementation: ",//
+        // TODO
         //     variableInImpl// TODO
         // );// TODO
         console.log(
