@@ -356,7 +356,6 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
             revert(); //todo add error
         }
 
-        if (_msgSender() != owner) _spendAllowance(owner, _msgSender(), shares);
         transferFrom(owner, address(this), shares);
 
         // Create a new request
