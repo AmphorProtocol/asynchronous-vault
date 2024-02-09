@@ -475,9 +475,9 @@ contract AsyncSynthVault is
 
         transfer(receiver, shares);
 
-        emit Withdraw(_msgSender(), owner, address(this), assets, shares);
-        emit Deposit(_msgSender(), owner, assets, shares);
-        emit ClaimDeposit(lastRequestId, _msgSender(), receiver, assets,
+        emit Withdraw(owner, owner, address(this), assets, shares);
+        emit Deposit(owner, owner, assets, shares);
+        emit ClaimDeposit(lastRequestId, owner, receiver, assets,
         shares);
     }
 
