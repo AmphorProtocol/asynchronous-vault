@@ -1,8 +1,6 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { IERC7540, IERC165, IERC7540Redeem } from "./interfaces/IERC7540.sol";
-import { ERC7540Receiver } from "./interfaces/ERC7540Receiver.sol";
 import { Ownable2StepUpgradeable } from
     "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {
@@ -19,6 +17,7 @@ import { Initializable } from
     "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import { ERC20Permit } from
     "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
+import { IERC4626 } from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import { IAllowanceTransfer } from
     "permit2/src/interfaces/IAllowanceTransfer.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -39,7 +38,7 @@ import "forge-std/console.sol"; //todo remove
  *         @@@@@@@@@@@@@@@@@@@+  Amphor  *@@@@@@@@@@@@@@@@@@@
  *         @@@@@@@@@@@@@@@@@@@*==========#@@@@@@@@@@@@@@@@@@@
  *         @@@@@@@@@@@@@@@@@@@+==========*@@@@@@@@@@@@@@@@@@@
- *         @@@@@@@@@@@@@@@@@@@=  Async   +@@@@@@@@@@@@@@@@@@@
+ *         @@@@@@@@@@@@@@@@@@@=   Sync   +@@@@@@@@@@@@@@@@@@@
  *         @@@@@@@@@@@@@@@@@@@%  Vault  .@@@@@@@@@@@@@@@@@@@@
  *         @@@@@@@@@@@@@@@@@@@@=        +@@@@@@@@@@@@@@@@@@@@
  *         @@@@@@@@@@@@@@@@@@@@%       .@@@@@@@@@@@@@@@@@@@@@
@@ -72,13 +71,6 @@ import "forge-std/console.sol"; //todo remove
 using Math for uint256; // only used for `mulDiv` operations.
 using SafeERC20 for IERC20; // `safeTransfer` and `safeTransferFrom`
 
-struct EpochData {
-    uint256 totalSupplySnapshot;
-    uint256 totalAssetsSnapshot;
-    mapping(address => uint256) depositRequestBalance;
-    mapping(address => uint256) redeemRequestBalance;
-}
-
 struct PermitParams {
     uint256 value;
     uint256 deadline;
@@ -98,8 +90,8 @@ struct Permit2Params {
 uint256 constant BPS_DIVIDER = 10_000;
 uint16 constant MAX_FEES = 3000; // 30%
 
-contract SynthVault is
-    IERC7540,
+abstract contract SyncSynthVault is
+    IERC4626,
     ERC20PausableUpgradeable,
     Ownable2StepUpgradeable,
     ERC20PermitUpgradeable
@@ -114,12 +106,8 @@ contract SynthVault is
     uint16 public feeInBps;
     uint16 internal _MAX_DRAWDOWN; // guardrail
     IERC20 internal _ASSET; // underlying
-    uint256 public epochId;
     uint256 public totalAssets; // total underlying assets
     bool public isOpen; // vault is open or closed
-    mapping(uint256 epochId => EpochData epoch) public epochs;
-    mapping(address user => uint256 epochId) public lastDepositRequestId;
-    mapping(address user => uint256 epochId) public lastRedeemRequestId;
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     IAllowanceTransfer public immutable permit2; // The canonical permit2
         // contract.
@@ -143,48 +131,6 @@ contract SynthVault is
 
     event FeesChanged(uint16 oldFees, uint16 newFees);
 
-    event AsyncDeposit(
-        uint256 indexed requestId,
-        uint256 requestedAssets,
-        uint256 acceptedAssets
-    );
-
-    event AsyncRedeem(
-        uint256 indexed requestId,
-        uint256 requestedShares,
-        uint256 acceptedShares
-    );
-
-    event DecreaseDepositRequest(
-        uint256 indexed requestId,
-        address indexed owner,
-        uint256 indexed previousRequestedAssets,
-        uint256 newRequestedAssets
-    );
-
-    event DecreaseRedeemRequest(
-        uint256 indexed requestId,
-        address indexed owner,
-        uint256 indexed previousRequestedShares,
-        uint256 newRequestedShares
-    );
-
-    event ClaimDeposit(
-        uint256 indexed requestId,
-        address indexed caller,
-        address indexed receiver,
-        uint256 assets,
-        uint256 shares
-    );
-
-    event ClaimRedeem(
-        uint256 indexed requestId,
-        address indexed caller,
-        address indexed receiver,
-        uint256 assets,
-        uint256 shares
-    );
-
     /**
      * ##########
      * # ERRORS #
@@ -199,16 +145,7 @@ contract SynthVault is
     error ERC4626ExceededMaxMint(address receiver, uint256 shares, uint256 max);
     error ERC4626ExceededMaxWithdraw(address owner, uint256 assets, uint256 max);
     error ERC4626ExceededMaxRedeem(address owner, uint256 shares, uint256 max);
-    error ExceededMaxRedeemRequest(
-        address receiver, uint256 shares, uint256 maxShares
-    );
-    error ExceededMaxDepositRequest(
-        address receiver, uint256 assets, uint256 maxDeposit
-    );
     error VaultIsEmpty(); // We cannot start an epoch with an empty vault
-    error ClaimableRequestPending();
-    error MustClaimFirst();
-    error ReceiverFailed();
     error MaxDrawdownReached();
 
     error InvalidSpender(); //todo check this
@@ -220,30 +157,6 @@ contract SynthVault is
      */
     modifier whenClosed() {
         if (isOpen) revert VaultIsOpen();
-        _;
-    }
-
-    modifier whenNoClaimableDepositRequest(address receiver) {
-        // Check if the user has a claimable request
-        uint256 lastRequestId = lastDepositRequestId[receiver];
-        uint256 lastRequestBalance =
-            epochs[lastRequestId].depositRequestBalance[receiver];
-        bool hasClaimableRequest =
-            lastRequestBalance > 0 && lastRequestId != epochId;
-
-        if (hasClaimableRequest) revert MustClaimFirst();
-        _;
-    }
-
-    modifier whenNoClaimableRedeemRequest(address receiver) {
-        // Check if the user has a claimable request
-        uint256 lastRequestId = lastRedeemRequestId[receiver];
-        uint256 lastRequestBalance =
-            epochs[lastRequestId].redeemRequestBalance[receiver];
-        bool hasClaimableRequest =
-            lastRequestBalance > 0 && lastRequestId != epochId;
-
-        if (hasClaimableRequest) revert MustClaimFirst();
         _;
     }
 
@@ -261,310 +174,17 @@ contract SynthVault is
         string memory symbol
     )
         public
+        virtual
         initializer
     {
         if (fees > MAX_FEES) revert FeesTooHigh();
         feeInBps = fees;
         isOpen = true;
-        epochId = 1;
         __ERC20_init(name, symbol);
         __Ownable_init(owner);
         __ERC20Permit_init(name);
         _ASSET = IERC20(underlying);
         _MAX_DRAWDOWN = 3000; // 30%
-    }
-
-    function isCurrentEpoch(uint256 requestId) internal view returns (bool) {
-        return requestId == epochId;
-    }
-
-    function requestDeposit(
-        uint256 assets,
-        address receiver,
-        address owner,
-        bytes memory data
-    )
-        public
-        whenClosed
-        whenNotPaused
-        whenNoClaimableDepositRequest(receiver)
-    {
-        if (assets > maxDepositRequest(receiver)) {
-            revert ExceededMaxDepositRequest(
-                receiver, assets, maxDepositRequest(receiver)
-            );
-        }
-
-        // Create a new request
-
-        _ASSET.safeTransferFrom(_msgSender(), address(this), assets);
-
-        _createDepositRequest(assets, receiver, owner, data);
-    }
-
-    // transfer must happen before this function is called TOOD maybe change
-    // this
-    function _createDepositRequest(
-        uint256 assets,
-        address receiver,
-        address owner,
-        bytes memory data
-    )
-        internal
-    {
-        if (
-            _msgSender() != owner
-                && _ASSET.allowance(owner, _msgSender()) >= assets
-        ) {
-            SafeERC20.safeTransferFrom(_ASSET, owner, address(this), assets);
-        }
-
-        epochs[epochId].depositRequestBalance[receiver] += assets;
-
-        if (lastDepositRequestId[receiver] != epochId) {
-            lastDepositRequestId[receiver] = epochId;
-        }
-
-        if (
-            data.length > 0
-                && ERC7540Receiver(receiver).onERC7540DepositReceived(
-                    _msgSender(), owner, epochId, data
-                ) != ERC7540Receiver.onERC7540DepositReceived.selector
-        ) revert ReceiverFailed();
-
-        emit DepositRequest(receiver, owner, epochId, _msgSender(), assets);
-    }
-
-    // tree done
-    function totalPendingDeposits() public view returns (uint256) {
-        return isOpen ? 0 : _ASSET.balanceOf(address(this));
-    }
-
-    // tree done
-    function totalPendingRedeems() public view returns (uint256) {
-        return isOpen ? 0 : balanceOf(address(this));
-    }
-
-    // tree done
-    function maxDepositRequest(address) public view returns (uint256) {
-        return isOpen || paused() ? 0 : type(uint256).max;
-    }
-
-    // tree done
-    function maxRedeemRequest(address owner) public view returns (uint256) {
-        return isOpen || paused() ? 0 : balanceOf(owner);
-    }
-
-    // tree later
-    function claimAndRequestDeposit(
-        uint256 assets,
-        address receiver,
-        address owner,
-        bytes memory data
-    )
-        external
-    {
-        claimDeposit(receiver, receiver);
-        requestDeposit(assets, receiver, owner, data);
-    }
-
-    // tree later
-    function claimAndRequestRedeem(
-        uint256 shares,
-        address receiver,
-        address owner,
-        bytes memory data
-    )
-        external
-    {
-        claimRedeem(receiver);
-        requestRedeem(shares, receiver, owner, data);
-    }
-
-    // tree done
-    function decreaseDepositRequest(
-        uint256 assets,
-        address receiver,
-        address owner
-    )
-        external
-        whenClosed
-        whenNotPaused
-    {
-        uint256 oldBalance = epochs[epochId].depositRequestBalance[owner];
-        epochs[epochId].depositRequestBalance[owner] -= assets;
-        _ASSET.safeTransfer(receiver, assets);
-
-        emit DecreaseDepositRequest(
-            epochId,
-            owner,
-            oldBalance,
-            epochs[epochId].depositRequestBalance[owner]
-        );
-    }
-
-    // tree done
-    function pendingDepositRequest(address owner)
-        external
-        view
-        returns (uint256 assets)
-    {
-        return epochs[lastDepositRequestId[owner]].depositRequestBalance[owner];
-    }
-
-    // tree done
-    function claimableDepositRequest(address owner)
-        external
-        view
-        returns (uint256 assets)
-    {
-        uint256 lastRequestId = lastDepositRequestId[owner];
-        return isCurrentEpoch(lastRequestId)
-            ? 0
-            : epochs[lastRequestId].depositRequestBalance[owner];
-    }
-
-    // tree done
-    function requestRedeem(
-        uint256 shares,
-        address receiver,
-        address owner,
-        bytes memory data
-    )
-        public
-        whenClosed
-        whenNotPaused
-        whenNoClaimableRedeemRequest(receiver)
-    {
-        if (shares > maxRedeemRequest(receiver)) {
-            revert ExceededMaxRedeemRequest(
-                receiver, shares, maxRedeemRequest(receiver)
-            );
-        }
-
-        // Create a new request
-        _createRedeemRequest(shares, receiver, owner, data);
-    }
-
-    function _createRedeemRequest(
-        uint256 shares,
-        address receiver,
-        address owner,
-        bytes memory data
-    )
-        internal
-    {
-        transferFrom(owner, address(this), shares);
-        epochs[epochId].redeemRequestBalance[receiver] += shares;
-        lastRedeemRequestId[owner] = epochId;
-
-        if (
-            data.length > 0
-                && ERC7540Receiver(receiver).onERC7540RedeemReceived(
-                    _msgSender(), owner, epochId, data
-                ) != ERC7540Receiver.onERC7540RedeemReceived.selector
-        ) revert ReceiverFailed();
-
-        emit RedeemRequest(receiver, owner, epochId, _msgSender(), shares);
-    }
-
-    function decreaseRedeemRequest(
-        uint256 shares,
-        address receiver,
-        address owner
-    )
-        external
-        whenClosed
-        whenNotPaused
-    {
-        uint256 oldBalance = epochs[epochId].redeemRequestBalance[owner];
-        epochs[epochId].redeemRequestBalance[owner] -= shares;
-        transfer(receiver, shares);
-
-        emit DecreaseRedeemRequest(
-            epochId,
-            owner,
-            oldBalance,
-            epochs[epochId].redeemRequestBalance[owner]
-        );
-    }
-
-    function pendingRedeemRequest(address owner)
-        external
-        view
-        returns (uint256)
-    {
-        return epochs[epochId].redeemRequestBalance[owner];
-    }
-
-    function claimableRedeemRequest(address owner)
-        external
-        view
-        returns (uint256)
-    {
-        uint256 lastRequestId = lastRedeemRequestId[owner];
-        return isCurrentEpoch(lastRequestId)
-            ? 0
-            : epochs[lastRequestId].redeemRequestBalance[owner];
-    }
-
-    function supportsInterface(bytes4 interfaceId) public pure returns (bool) {
-        return interfaceId == type(IERC165).interfaceId
-            || interfaceId == type(IERC7540Redeem).interfaceId;
-    }
-
-    function previewClaimDeposit(address owner) public view returns (uint256) {
-        uint256 lastRequestId = lastDepositRequestId[owner];
-        uint256 assets = epochs[lastRequestId].depositRequestBalance[owner];
-        return _convertToShares(assets, lastRequestId, Math.Rounding.Floor);
-    }
-
-    function previewClaimRedeem(address owner) public view returns (uint256) {
-        uint256 lastRequestId = lastDepositRequestId[owner];
-        uint256 shares = epochs[lastRequestId].redeemRequestBalance[owner];
-        return _convertToAssets(shares, lastRequestId, Math.Rounding.Floor);
-    }
-
-    // todo solve allowance and emit correct ClaimDeposit
-    function claimDeposit(
-        address owner,
-        address receiver
-    )
-        public
-        whenNotPaused
-        returns (uint256 shares)
-    {
-        // address owner = _msgSender();
-        uint256 lastRequestId = lastDepositRequestId[owner];
-
-        shares = previewClaimDeposit(owner);
-
-        uint256 assets = epochs[lastRequestId].depositRequestBalance[owner];
-        epochs[lastRequestId].depositRequestBalance[owner] = 0;
-
-        transfer(owner, shares);
-        emit Withdraw(_msgSender(), owner, address(this), assets, shares);
-        emit Deposit(_msgSender(), owner, assets, shares);
-        // emit ClaimDeposit(lastRequestId, _msgSender(), receiver, assets,
-        // shares);
-    }
-
-    function claimRedeem(address receiver)
-        public
-        whenNotPaused
-        returns (uint256 assets)
-    {
-        address owner = _msgSender();
-        uint256 lastRequestId = lastDepositRequestId[owner];
-
-        assets = previewClaimRedeem(owner);
-
-        uint256 shares = epochs[lastRequestId].redeemRequestBalance[owner];
-        epochs[lastRequestId].redeemRequestBalance[owner] = 0;
-
-        _ASSET.safeTransfer(receiver, assets);
-        emit Deposit(_msgSender(), owner, assets, shares);
-        emit Withdraw(_msgSender(), receiver, address(this), assets, shares);
     }
 
     /*
@@ -580,40 +200,7 @@ contract SynthVault is
 
     // @dev See {IERC4626-convertToShares}.
     function convertToShares(uint256 assets) public view returns (uint256) {
-        return _convertToShares(assets, epochId, Math.Rounding.Floor);
-    }
-
-    function convertToShares(
-        uint256 assets,
-        uint256 _epochId
-    )
-        public
-        view
-        returns (uint256)
-    {
-        return _convertToShares(assets, _epochId, Math.Rounding.Floor);
-    }
-
-    function convertToAssets(
-        uint256 shares,
-        uint256 _epochId
-    )
-        public
-        view
-        returns (uint256)
-    {
-        return _convertToAssets(shares, _epochId, Math.Rounding.Floor);
-    }
-
-    function claimableSharesBalanceInAsset(
-        address owner,
-        uint256 _epochId
-    )
-        public
-        view
-        returns (uint256)
-    {
-        return convertToAssets(epochs[_epochId].depositRequestBalance[owner]);
+        return _convertToShares(assets, Math.Rounding.Floor);
     }
 
     function sharesBalanceInAsset(address owner)
@@ -626,7 +213,7 @@ contract SynthVault is
 
     // @dev See {IERC4626-convertToAssets}.
     function convertToAssets(uint256 shares) public view returns (uint256) {
-        return _convertToAssets(shares, epochId, Math.Rounding.Floor);
+        return _convertToAssets(shares, Math.Rounding.Floor);
     }
 
     /**
@@ -839,23 +426,6 @@ contract SynthVault is
             : assets.mulDiv(totalSupply(), _totalAssets, rounding);
     }
 
-    function _convertToShares(
-        uint256 assets,
-        uint256 requestId,
-        Math.Rounding rounding
-    )
-        internal
-        view
-        returns (uint256)
-    {
-        uint256 _totalAssets = epochs[requestId].totalAssetsSnapshot;
-        return _totalAssets == 0 || requestId == epochId
-            ? assets
-            : assets.mulDiv(
-                epochs[requestId].totalSupplySnapshot, _totalAssets, rounding
-            );
-    }
-
     /**
      * @dev Internal conversion function (from shares to assets) with support
      * for rounding direction.
@@ -876,23 +446,6 @@ contract SynthVault is
         return totalSupply == 0
             ? shares
             : shares.mulDiv(totalAssets, totalSupply, rounding);
-    }
-
-    function _convertToAssets(
-        uint256 shares,
-        uint256 requestId,
-        Math.Rounding rounding
-    )
-        internal
-        view
-        returns (uint256)
-    {
-        uint256 totalSupply = epochs[requestId].totalSupplySnapshot;
-        return totalSupply == 0 || requestId == epochId
-            ? shares
-            : shares.mulDiv(
-                epochs[requestId].totalAssetsSnapshot, totalSupply, rounding
-            );
     }
 
     /**
@@ -989,7 +542,7 @@ contract SynthVault is
      * @param assetReturned The underlying assets amount to be deposited into
      * the vault.
      */
-    function open(uint256 assetReturned) external onlyOwner whenClosed {
+    function _open(uint256 assetReturned) internal onlyOwner whenClosed {
         if (isOpen) revert VaultIsOpen();
 
         if (
@@ -1001,7 +554,6 @@ contract SynthVault is
             revert MaxDrawdownReached();
         }
 
-        uint256 pendingDeposit = _ASSET.balanceOf(address(this));
         uint256 fees;
 
         uint256 _totalAssets = totalAssets;
@@ -1022,26 +574,6 @@ contract SynthVault is
             block.timestamp, _totalAssets, assetReturned, fees, totalSupply()
         );
         isOpen = true;
-        _execRequests(pendingDeposit);
-
-        epochId++;
-    }
-
-    function _execRequests(uint256 pendingDeposit) internal {
-        ////////////////////////////////
-        // Pending deposits treatment //
-        ////////////////////////////////
-        deposit(pendingDeposit, address(this));
-        //////////////////////////////
-        // Pending redeem treatment //
-        //////////////////////////////
-        uint256 pendingRedeem = balanceOf(address(this)); // get the shares of
-
-        // the pending withdraws
-        redeem(pendingRedeem, address(this), address(this));
-
-        epochs[epochId].totalSupplySnapshot = totalSupply();
-        epochs[epochId].totalAssetsSnapshot = totalAssets;
     }
 
     function restruct(uint256 virtualReturnedAsset) external onlyOwner {
@@ -1155,49 +687,6 @@ contract SynthVault is
         return deposit(assets, receiver);
     }
 
-    /**
-     * @dev The `mintWithPermit` function is used to mint the specified shares
-     * amount in exchange of the corresponding underlying assets amount from
-     * `_msgSender()` using a permit for approval.
-     * @param shares The amount of shares to be converted into underlying
-     * assets.
-     * @param receiver The address of the shares receiver.
-     * @param permitParams The permit struct containing the permit signature and
-     * data.
-     * @return Amount of underlying assets deposited in exchange of the
-     * specified
-     * shares amount.
-     */
-    function mintWithPermit(
-        uint256 shares,
-        address receiver,
-        PermitParams calldata permitParams
-    )
-        external
-        returns (uint256)
-    {
-        if (_ASSET.allowance(msg.sender, address(this)) < previewMint(shares)) {
-            execPermit(_msgSender(), address(this), permitParams);
-        }
-        return mint(shares, receiver);
-    }
-
-    // todo add owner
-    function requestDepositWithPermit(
-        uint256 assets,
-        address receiver,
-        bytes memory data,
-        PermitParams calldata permitParams
-    )
-        external
-    {
-        address owner = _msgSender();
-        if (_ASSET.allowance(owner, address(this)) < assets) {
-            execPermit(owner, address(this), permitParams);
-        }
-        return requestDeposit(assets, receiver, _msgSender(), data);
-    }
-
     function execPermit(
         address owner,
         address spender,
@@ -1221,23 +710,6 @@ contract SynthVault is
      * #  Permit 2 RELATED FUNCTIONS   #
      * #################################
     */
-
-    function requestDepositWithPermit2(
-        uint256 assets,
-        address receiver,
-        bytes memory data,
-        IAllowanceTransfer.PermitSingle calldata permitSingle,
-        bytes calldata signature
-    )
-        external
-    {
-        execPermit2(permitSingle, signature);
-        permit2.transferFrom(
-            _msgSender(), address(this), uint160(assets), address(_ASSET)
-        );
-
-        _createDepositRequest(assets, receiver, _msgSender(), data);
-    }
 
     function depositWithPermit2(
         uint256 assets,

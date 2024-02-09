@@ -3,7 +3,7 @@ pragma solidity 0.8.21;
 
 import { Assertions } from "./utils/Assertions/Assertions.sol";
 import { console } from "forge-std/console.sol";
-import { SynthVault } from "../src/SynthVault.sol";
+import { AsyncSynthVault } from "../src/AsyncSynthVault.sol";
 import { VmSafe } from "forge-std/Vm.sol";
 import { IERC4626 } from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -11,7 +11,7 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 contract TestBase is Assertions {
     // OWNER ACTIONS //
 
-    function open(SynthVault vault, int256 performanceInBips) public {
+    function open(AsyncSynthVault vault, int256 performanceInBips) public {
         vm.assume(performanceInBips > -10_000 && performanceInBips < 10_000);
         int256 lastAssetAmount = int256(vault.totalAssets());
         int256 performance = lastAssetAmount * performanceInBips;
@@ -25,19 +25,19 @@ contract TestBase is Assertions {
         vm.stopPrank();
     }
 
-    function close(SynthVault vault) public {
+    function close(AsyncSynthVault vault) public {
         address owner = vault.owner();
         vm.prank(owner);
         vault.close();
     }
 
-    function pause(SynthVault vault) public {
+    function pause(AsyncSynthVault vault) public {
         address owner = vault.owner();
         vm.prank(owner);
         vault.pause();
     }
 
-    function unpause(SynthVault vault) public {
+    function unpause(AsyncSynthVault vault) public {
         address owner = vault.owner();
         vm.prank(owner);
         vault.unpause();
@@ -57,24 +57,24 @@ contract TestBase is Assertions {
 
     // USERS ACTIONS //
 
-    function mint(SynthVault vault, VmSafe.Wallet memory user) public {
+    function mint(AsyncSynthVault vault, VmSafe.Wallet memory user) public {
         mint(vault, user, USDC.balanceOf(user.addr));
     }
 
-    function deposit(SynthVault vault, VmSafe.Wallet memory user) public {
+    function deposit(AsyncSynthVault vault, VmSafe.Wallet memory user) public {
         deposit(vault, user, USDC.balanceOf(user.addr));
     }
 
-    function withdraw(SynthVault vault, VmSafe.Wallet memory user) public {
+    function withdraw(AsyncSynthVault vault, VmSafe.Wallet memory user) public {
         withdraw(vault, user, USDC.balanceOf(user.addr));
     }
 
-    function redeem(SynthVault vault, VmSafe.Wallet memory user) public {
+    function redeem(AsyncSynthVault vault, VmSafe.Wallet memory user) public {
         redeem(vault, user, vault.balanceOf(user.addr));
     }
 
     function mint(
-        SynthVault vault,
+        AsyncSynthVault vault,
         VmSafe.Wallet memory user,
         uint256 amount
     )
@@ -85,7 +85,7 @@ contract TestBase is Assertions {
     }
 
     function deposit(
-        SynthVault vault,
+        AsyncSynthVault vault,
         VmSafe.Wallet memory user,
         uint256 amount
     )
@@ -96,7 +96,7 @@ contract TestBase is Assertions {
     }
 
     function withdraw(
-        SynthVault vault,
+        AsyncSynthVault vault,
         VmSafe.Wallet memory user,
         uint256 amount
     )
@@ -107,7 +107,7 @@ contract TestBase is Assertions {
     }
 
     function redeem(
-        SynthVault vault,
+        AsyncSynthVault vault,
         VmSafe.Wallet memory user,
         uint256 shares
     )

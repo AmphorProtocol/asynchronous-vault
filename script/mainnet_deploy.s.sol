@@ -2,7 +2,7 @@
 pragma solidity 0.8.21;
 
 import { Script, console } from "forge-std/Script.sol";
-import { SynthVault } from "../src/SynthVault.sol";
+import { AsyncSynthVault } from "../src/AsyncSynthVault.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Upgrades, Options } from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import { IPermit2 } from "permit2/src/interfaces/IPermit2.sol";
@@ -35,7 +35,7 @@ contract GOERLI_DeployAmphorSynthetic is Script {
                 Upgrades.deployBeaconProxy(
                     address(beacon),
                     abi.encodeCall(
-                        SynthVault.initialize,
+                        AsyncSynthVault.initialize,
                         (
                             fees,
                             owner,
