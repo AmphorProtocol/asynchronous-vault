@@ -682,8 +682,6 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         PermitParams calldata permitParams
     )
         external
-        whenClosed
-        whenNotPaused
     {
         address owner = _msgSender();
         if (_asset.allowance(owner, address(this)) < assets) {
