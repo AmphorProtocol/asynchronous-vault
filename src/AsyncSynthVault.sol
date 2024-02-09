@@ -13,7 +13,7 @@ import {
 
 import { SyncSynthVault } from "./SyncSynthVault.sol";
 
-import "forge-std/console.sol"; //todo remove
+// import "forge-std/console.sol"; //todo remove
 
 /**
  *         @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -72,10 +72,7 @@ struct EpochData {
 uint256 constant BPS_DIVIDER = 10_000;
 uint16 constant MAX_FEES = 3000; // 30%
 
-contract AsyncSynthVault is
-    IERC7540,
-    SyncSynthVault {
-
+contract AsyncSynthVault is IERC7540, SyncSynthVault {
     /*
      * ####################################
      * # AMPHOR SYNTHETIC RELATED STORAGE #
@@ -87,7 +84,6 @@ contract AsyncSynthVault is
     mapping(uint256 epochId => EpochData epoch) public epochs;
     mapping(address user => uint256 epochId) public lastDepositRequestId;
     mapping(address user => uint256 epochId) public lastRedeemRequestId;
-    
 
     /*
      * ##########
@@ -157,8 +153,8 @@ contract AsyncSynthVault is
      * # AMPHOR SYNTHETIC FUNCTIONS #
      * ##############################
      */
-
     modifier whenNoClaimableDepositRequest(address receiver) {
+        // todo put in maxDepositRequest
         // Check if the user has a claimable request
         uint256 lastRequestId = lastDepositRequestId[receiver];
         uint256 lastRequestBalance =
@@ -195,8 +191,8 @@ contract AsyncSynthVault is
         string memory symbol
     )
         public
-        initializer
         override
+        initializer
     {
         super.initialize(fees, owner, underlying, name, symbol);
         epochId = 1;
@@ -223,9 +219,18 @@ contract AsyncSynthVault is
             );
         }
 
-        // Create a new request
+        if (
+            _msgSender() != owner
+                && _ASSET.allowance(owner, _msgSender()) >= assets
+        ) {
+            SafeERC20.safeTransferFrom(_ASSET, owner, address(this), assets);
+        } else if (_msgSender() == owner) {
+            _ASSET.safeTransferFrom(_msgSender(), address(this), assets);
+        } else {
+            revert("AsyncSynthVault: insufficient allowance");
+        }
 
-        _ASSET.safeTransferFrom(_msgSender(), address(this), assets);
+        // Create a new request
 
         _createDepositRequest(assets, receiver, owner, data);
     }
@@ -240,13 +245,6 @@ contract AsyncSynthVault is
     )
         internal
     {
-        if (
-            _msgSender() != owner
-                && _ASSET.allowance(owner, _msgSender()) >= assets
-        ) {
-            SafeERC20.safeTransferFrom(_ASSET, owner, address(this), assets);
-        }
-
         epochs[epochId].depositRequestBalance[receiver] += assets;
 
         if (lastDepositRequestId[receiver] != epochId) {
@@ -274,7 +272,17 @@ contract AsyncSynthVault is
     }
 
     // tree done
-    function maxDepositRequest(address) public view returns (uint256) {
+    function maxDepositRequest(address receiver)
+        public
+        view
+        returns (uint256)
+    {
+        // uint256 lastRequestId = lastDepositRequestId[receiver];
+        // uint256 lastRequestBalance =
+        //     epochs[lastRequestId].depositRequestBalance[receiver];
+        // bool hasClaimableRequest =
+        //     lastRequestBalance > 0 && lastRequestId != epochId;
+        // if (hasClaimableRequest) return 0;
         return isOpen || paused() ? 0 : type(uint256).max;
     }
 
@@ -292,7 +300,7 @@ contract AsyncSynthVault is
     )
         external
     {
-        claimDeposit(receiver, receiver);
+        _claimDeposit(receiver, receiver);
         requestDeposit(assets, receiver, owner, data);
     }
 
@@ -453,16 +461,22 @@ contract AsyncSynthVault is
         return _convertToAssets(shares, lastRequestId, Math.Rounding.Floor);
     }
 
-    // todo solve allowance and emit correct ClaimDeposit
-    function claimDeposit(
-        address owner,
-        address receiver
-    )
+    function claimDeposit(address receiver)
         public
         whenNotPaused
         returns (uint256 shares)
     {
-        // address owner = _msgSender();
+        return _claimDeposit(_msgSender(), receiver);
+    }
+
+    // todo decide events
+    function _claimDeposit(
+        address owner,
+        address receiver
+    )
+        internal
+        returns (uint256 shares)
+    {
         uint256 lastRequestId = lastDepositRequestId[owner];
 
         shares = previewClaimDeposit(owner);
@@ -470,11 +484,11 @@ contract AsyncSynthVault is
         uint256 assets = epochs[lastRequestId].depositRequestBalance[owner];
         epochs[lastRequestId].depositRequestBalance[owner] = 0;
 
-        transfer(owner, shares);
+        transfer(receiver, shares);
         emit Withdraw(_msgSender(), owner, address(this), assets, shares);
         emit Deposit(_msgSender(), owner, assets, shares);
-        // emit ClaimDeposit(lastRequestId, _msgSender(), receiver, assets,
-        // shares);
+        emit ClaimDeposit(lastRequestId, _msgSender(), receiver, assets, shares);
+        return shares;
     }
 
     function claimRedeem(address receiver)

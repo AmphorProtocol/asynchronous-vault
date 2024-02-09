@@ -105,7 +105,7 @@ abstract contract SyncSynthVault is
     // @return Amount of the perf fees applied on the positive yield.
     uint16 public feeInBps;
     uint16 internal _MAX_DRAWDOWN; // guardrail
-    IERC20 internal _ASSET; // underlying
+    IERC20 internal _ASSET; // underlying todo make small cap
     uint256 public totalAssets; // total underlying assets
     bool public isOpen; // vault is open or closed
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
@@ -542,7 +542,7 @@ abstract contract SyncSynthVault is
      * @param assetReturned The underlying assets amount to be deposited into
      * the vault.
      */
-    function _open(uint256 assetReturned) internal onlyOwner whenClosed {
+    function _open(uint256 assetReturned) internal {
         if (isOpen) revert VaultIsOpen();
 
         if (
