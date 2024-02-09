@@ -7,6 +7,7 @@ import {
     IERC20,
     SafeERC20,
     IAllowanceTransfer,
+    ERC20Upgradeable,
     Math,
     PermitParams
 } from "./SyncSynthVault.sol";
@@ -716,5 +717,24 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         );
 
         _createDepositRequest(assets, receiver, owner, data);
+    }
+
+    // we must do it because we want to be able to take users shares and keep
+    // them temporarily until the end of the epoch
+    function transferFrom(
+        address from,
+        address to,
+        uint256 value
+    )
+        public
+        override(IERC20, ERC20Upgradeable)
+        returns (bool)
+    {
+        address spender = _msgSender();
+        if (to != address(this)) {
+            _spendAllowance(from, spender, value);
+        }
+        _transfer(from, to, value);
+        return true;
     }
 }
