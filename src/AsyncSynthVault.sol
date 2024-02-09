@@ -209,7 +209,7 @@ contract AsyncSynthVault is
     function requestDeposit(
         uint256 assets,
         address receiver,
-        address owner,
+        address owner, // this should not be here
         bytes memory data
     )
         public
@@ -217,6 +217,9 @@ contract AsyncSynthVault is
         whenNotPaused
         whenNoClaimableDepositRequest(receiver)
     {
+        if (_msgSender() != owner) {
+            revert();
+        }
         if (assets > maxDepositRequest(receiver)) {
             revert ExceededMaxDepositRequest(
                 receiver, assets, maxDepositRequest(receiver)
@@ -225,7 +228,7 @@ contract AsyncSynthVault is
 
         // Create a new request
 
-        _ASSET.safeTransferFrom(_msgSender(), address(this), assets);
+        _ASSET.safeTransferFrom(owner, address(this), assets);
 
         _createDepositRequest(assets, receiver, owner, data);
     }
@@ -382,6 +385,8 @@ contract AsyncSynthVault is
     )
         internal
     {
+        if (_msgSender() != owner) _spendAllowance(owner, _msgSender(), shares);
+
         transferFrom(owner, address(this), shares);
         epochs[epochId].redeemRequestBalance[receiver] += shares;
         lastRedeemRequestId[owner] = epochId;
@@ -453,7 +458,6 @@ contract AsyncSynthVault is
         return _convertToAssets(shares, lastRequestId, Math.Rounding.Floor);
     }
 
-    // todo solve allowance and emit correct ClaimDeposit
     function claimDeposit(
         address owner,
         address receiver
@@ -462,19 +466,21 @@ contract AsyncSynthVault is
         whenNotPaused
         returns (uint256 shares)
     {
-        // address owner = _msgSender();
         uint256 lastRequestId = lastDepositRequestId[owner];
 
         shares = previewClaimDeposit(owner);
 
+        if (_msgSender() != owner) _spendAllowance(owner, _msgSender(), shares);
+
         uint256 assets = epochs[lastRequestId].depositRequestBalance[owner];
         epochs[lastRequestId].depositRequestBalance[owner] = 0;
 
-        transfer(owner, shares);
+        transfer(receiver, shares);
+
         emit Withdraw(_msgSender(), owner, address(this), assets, shares);
         emit Deposit(_msgSender(), owner, assets, shares);
-        // emit ClaimDeposit(lastRequestId, _msgSender(), receiver, assets,
-        // shares);
+        emit ClaimDeposit(lastRequestId, _msgSender(), receiver, assets,
+        shares);
     }
 
     function claimRedeem(address receiver)
@@ -614,7 +620,6 @@ contract AsyncSynthVault is
      * #################################
     */
 
-    // todo add owner
     function requestDepositWithPermit(
         uint256 assets,
         address receiver,
@@ -627,7 +632,7 @@ contract AsyncSynthVault is
         if (_ASSET.allowance(owner, address(this)) < assets) {
             execPermit(owner, address(this), permitParams);
         }
-        return requestDeposit(assets, receiver, _msgSender(), data);
+        return requestDeposit(assets, receiver, owner, data);
     }
 
     /*
@@ -645,11 +650,12 @@ contract AsyncSynthVault is
     )
         external
     {
+        address owner = _msgSender();
         execPermit2(permitSingle, signature);
         permit2.transferFrom(
-            _msgSender(), address(this), uint160(assets), address(_ASSET)
+            owner, address(this), uint160(assets), address(_ASSET)
         );
 
-        _createDepositRequest(assets, receiver, _msgSender(), data);
+        _createDepositRequest(assets, receiver, owner, data);
     }
 }

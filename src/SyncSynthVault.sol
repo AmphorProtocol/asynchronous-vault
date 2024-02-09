@@ -148,8 +148,6 @@ abstract contract SyncSynthVault is
     error VaultIsEmpty(); // We cannot start an epoch with an empty vault
     error MaxDrawdownReached();
 
-    error InvalidSpender(); //todo check this
-
     /**
      * ##############################
      * # AMPHOR SYNTHETIC FUNCTIONS #
@@ -499,9 +497,7 @@ abstract contract SyncSynthVault is
     )
         internal
     {
-        if (_msgSender() != owner) {
-            _spendAllowance(owner, _msgSender(), shares);
-        }
+        if (_msgSender() != owner) _spendAllowance(owner, _msgSender(), shares);
 
         _burn(owner, shares);
         totalAssets -= assets;
@@ -546,13 +542,12 @@ abstract contract SyncSynthVault is
         if (isOpen) revert VaultIsOpen();
 
         if (
-            assetReturned
-                < BPS_DIVIDER - _MAX_DRAWDOWN * totalAssets / BPS_DIVIDER
-        ) {
-            // todo solve this shit
-
-            revert MaxDrawdownReached();
-        }
+            assetReturned < totalAssets.mulDiv(
+                (BPS_DIVIDER - _MAX_DRAWDOWN),
+                BPS_DIVIDER,
+                Math.Rounding.Ceil
+            )
+        ) revert MaxDrawdownReached();
 
         uint256 fees;
 
@@ -660,7 +655,6 @@ abstract contract SyncSynthVault is
      * #################################
     */
 
-    // todo add an owner and do the righ thing with allowance
     /**
      * @dev The `depositWithPermit` function is used to deposit underlying
      * assets
@@ -740,7 +734,6 @@ abstract contract SyncSynthVault is
     )
         internal
     {
-        if (permitSingle.spender != address(this)) revert InvalidSpender();
         permit2.permit(_msgSender(), permitSingle, signature);
     }
 }
