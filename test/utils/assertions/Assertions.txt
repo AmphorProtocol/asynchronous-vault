@@ -1,9 +1,6 @@
-TestDeposit
+Assertions
 
-#given vaultClosed when deposit
-##it should revert with ERC4626ExceededMaxDeposit
-
-#given vault open when deposit
+when assertDeposit
 ##it should revert if the deposit amount is higher than the allowance of the owner to the vault
 ##it should revert if the deposit amount is higher than the balance of the owner
 ##it should decrease the underlying balance of the owner by the specified assets amount input
@@ -13,21 +10,3 @@ TestDeposit
 ##it should return the same value as the increase of receiver shares balance
 ##it should increase the total supply of shares by the previewDeposit(assetsAmount) returned value
 ##it should return the same value as the one returned by previewDeposit
-
-#given vault open given receiver not equal owner when deposit
-##same as above
-
-#given vault open given vault empty when deposit
-##same as above
-
-#given vault open given deposit amount equal 0 when deposit
-##same as above
-
-#given vault open given vault paused when deposit
-##it should revert with EnforcedPause
-
-#given vault closed given  paused when deposit
-##it should revert with ERC4626ExceededMaxDeposit
-
-#given receiver is address 0 when deposit
-##it should revert with ERC20InvalidReceiver

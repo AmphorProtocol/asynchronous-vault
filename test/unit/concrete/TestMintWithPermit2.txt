@@ -1,7 +1,13 @@
-TestMint
+TestMintWithPermit2
 
-#given vault closed when mint
+#given vault closed when mintWithPermit2
 ##it should revert with ERC4626ExceededMaxMint
+
+#given vault paused when mintWithPermit2
+##it should revert with EnforcedPause
+
+#given allowance is less than  when mintWithPermit2
+
 
 #given vault open when mint
 ##it should revert if the requested amount of shares converted in asset is higher than the allowance of the owner to the vault
