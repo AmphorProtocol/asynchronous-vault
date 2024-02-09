@@ -354,6 +354,7 @@ abstract contract SyncSynthVault is
      * @return Amount of shares received in exchange of the specified underlying
      * assets amount.
      */
+    // tree done
     function withdraw(
         uint256 assets,
         address receiver,
@@ -514,7 +515,7 @@ abstract contract SyncSynthVault is
      * # AMPHOR SYNTHETIC RELATED FUNCTIONS #
      * ######################################
     */
-
+    // todo
     function restruct(uint256 virtualReturnedAsset) external onlyOwner {
         uint256 _totalAssets = totalAssets;
         emit EpochEnd(

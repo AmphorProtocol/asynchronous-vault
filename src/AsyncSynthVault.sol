@@ -356,7 +356,9 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
             revert(); //todo add error
         }
 
-        transferFrom(owner, address(this), shares);
+        // transferFrom(owner, address(this), shares);
+        _burn(owner, shares);
+        mint(shares, address(this));
 
         // Create a new request
         _createRedeemRequest(shares, receiver, owner, data);
@@ -719,22 +721,23 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         _createDepositRequest(assets, receiver, owner, data);
     }
 
-    // we must do it because we want to be able to take users shares and keep
-    // them temporarily until the end of the epoch
-    function transferFrom(
-        address from,
-        address to,
-        uint256 value
-    )
-        public
-        override(IERC20, ERC20Upgradeable)
-        returns (bool)
-    {
-        address spender = _msgSender();
-        if (to != address(this)) {
-            _spendAllowance(from, spender, value);
-        }
-        _transfer(from, to, value);
-        return true;
-    }
+    // // we must do it because we want to be able to take users shares and keep
+    // // them temporarily until the end of the epoch
+    // // todo fix vulnerability anybody can call it
+    // function transferFrom(
+    //     address from,
+    //     address to,
+    //     uint256 value
+    // )
+    //     public
+    //     override(IERC20, ERC20Upgradeable)
+    //     returns (bool)
+    // {
+    //     address spender = _msgSender();
+    //     if (to != address(this)) {
+    //         _spendAllowance(from, spender, value);
+    //     }
+    //     _transfer(from, to, value);
+    //     return true;
+    // }
 }

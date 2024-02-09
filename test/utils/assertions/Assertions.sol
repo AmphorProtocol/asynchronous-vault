@@ -131,7 +131,7 @@ abstract contract Assertions is EventsAssertions {
         assertDepositEvent(vault, owner, receiver, previewedAssets, shares); // deposit
             // event
 
-        // deposit //
+        // mint //
         vm.prank(owner);
         uint256 mintReturn = vault.mint(shares, receiver);
 
@@ -169,6 +169,27 @@ abstract contract Assertions is EventsAssertions {
             vault, receiver, sharesValueBeforeDep.receiver + mintReturn
         );
     }
+
+    function assertWithdraw(
+        IERC4626 vault,
+        address owner,
+        address receiver,
+        uint256 shares
+    )
+        public
+        virtual;
+
+    function assertRedeem(
+        IERC4626 vault,
+        address owner,
+        address receiver,
+        uint256 shares
+    )
+        public
+        virtual;
+
+    // open close txt puis assert
+    // et requestDep et requestRedeem
 
     function getAssetsData(
         IERC4626 vault,
