@@ -356,9 +356,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
             revert(); //todo add error
         }
 
-        // transferFrom(owner, address(this), shares);
-        _burn(owner, shares);
-        mint(shares, address(this));
+        _update(owner, address(this), shares);
 
         // Create a new request
         _createRedeemRequest(shares, receiver, owner, data);
