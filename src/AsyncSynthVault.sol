@@ -173,6 +173,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         super.initialize(fees, owner, underlying, name, symbol);
         epochId = 1;
         _asset.forceApprove(address(this), type(uint256).max); // allowing futur deposits into own vault
+        approve(address(this), type(uint256).max); // allowing futur redeem into own vault
     }
 
     function isCurrentEpoch(uint256 requestId) internal view returns (bool) {
@@ -658,9 +659,9 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         ////////////////////////////////
         // Pending deposits treatment //
         ////////////////////////////////
-        uint256 shares = deposit(pendingDeposit, address(this));
-        totalAssets += pendingDeposit;
-        claimableShares += shares;
+        uint256 sharesToMint = previewDeposit(pendingDeposit);
+        _deposit(address(this), address(this), pendingDeposit, sharesToMint);
+        claimableShares += sharesToMint;
 
         //////////////////////////////
         // Pending redeem treatment //
@@ -668,7 +669,9 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         uint256 pendingRedeem = balanceOf(address(this)) - claimableShares; // get the shares of
 
         // the pending withdraws
-        claimableAssets += redeem(pendingRedeem, address(this), address(this));
+        uint256 assetsToRedeem = previewRedeem(pendingRedeem);
+        _withdraw(address(this), address(this), assetsToRedeem, pendingRedeem);
+        claimableAssets += assetsToRedeem;
 
         epochs[epochId].totalSupplySnapshot = totalSupply();
         epochs[epochId].totalAssetsSnapshot = totalAssets;
