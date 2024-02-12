@@ -172,6 +172,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
     {
         super.initialize(fees, owner, underlying, name, symbol);
         epochId = 1;
+        _asset.forceApprove(address(this), type(uint256).max); // allowing futur deposits into own vault
     }
 
     function isCurrentEpoch(uint256 requestId) internal view returns (bool) {
@@ -657,11 +658,9 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         ////////////////////////////////
         // Pending deposits treatment //
         ////////////////////////////////
-        uint256 shares = previewDeposit(pendingDeposit);
-        totalAssets += shares; // todo
-        _mint(address(this), shares);
+        uint256 shares = deposit(pendingDeposit, address(this));
+        totalAssets += pendingDeposit;
         claimableShares += shares;
-        emit Deposit(address(this), address(this), pendingDeposit, shares);
 
         //////////////////////////////
         // Pending redeem treatment //
