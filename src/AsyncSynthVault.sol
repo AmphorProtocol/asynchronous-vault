@@ -7,6 +7,7 @@ import {
     IERC20,
     SafeERC20,
     IAllowanceTransfer,
+    ERC20Upgradeable,
     Math,
     PermitParams
 } from "./SyncSynthVault.sol";
@@ -16,28 +17,27 @@ import { SyncSynthVault } from "./SyncSynthVault.sol";
 // import "forge-std/console.sol"; //todo remove
 
 /**
- *         @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  *         @@@@@@@@@@@@@@@@@@@@%=::::::=%@@@@@@@@@@@@@@@@@@@@
- *         @@@@@@@@@@@@@@@@@@@@+=#---=*=*@@@@@@@@@@@@@@@@@@@@
- *         @@@@@@@@@@@@@@@@@@@@:*=   .-#:@@@@@@@@@@@@@@@@@@@@
- *         @@@@@@@@@@@@@@@@@@@@:@@   .@@:@@@@@@@@@@@@@@@@@@@@
- *         @@@@@@@@@@@@@@@@@@@@:@@   .@@:@@@@@@@@@@@@@@@@@@@@
- *         @@@@@@@@@@@@@@@@@@@@:@@   .@@:@@@@@@@@@@@@@@@@@@@@
- *         @@@@@@@@@@@@@@@@@@@@+:.    .-*@@@@@@@@@@@@@@@@@@@@
- *         @@@@@@@@@@@@@@@@@@@@+        *@@@@@@@@@@@@@@@@@@@@
- *         @@@@@@@@@@@@@@@@@@@%         .@@@@@@@@@@@@@@@@@@@@
- *         @@@@@@@@@@@@@@@@@@@+  Amphor  *@@@@@@@@@@@@@@@@@@@
+ *         @@@@@@@@@@@@@@@@@@@@*=#=--=*=*@@@@@@@@@@@@@@@@@@@@
+ *         @@@@@@@@@@@@@@@@@@@@:*=    =#:@@@@@@@@@@@@@@@@@@@@
+ *         @@@@@@@@@@@@@@@@@@@@:@@    @@:@@@@@@@@@@@@@@@@@@@@
+ *         @@@@@@@@@@@@@@@@@@@@:@@    @@:@@@@@@@@@@@@@@@@@@@@
+ *         @@@@@@@@@@@@@@@@@@@@:@@    @@:@@@@@@@@@@@@@@@@@@@@
+ *         @@@@@@@@@@@@@@@@@@@@*-.    .-*@@@@@@@@@@@@@@@@@@@@
+ *         @@@@@@@@@@@@@@@@@@@@*        *@@@@@@@@@@@@@@@@@@@@
+ *         @@@@@@@@@@@@@@@@@@@.         .@@@@@@@@@@@@@@@@@@@@
+ *         @@@@@@@@@@@@@@@@@@@*  Amphor  *@@@@@@@@@@@@@@@@@@@
  *         @@@@@@@@@@@@@@@@@@@*==========#@@@@@@@@@@@@@@@@@@@
  *         @@@@@@@@@@@@@@@@@@@+==========*@@@@@@@@@@@@@@@@@@@
- *         @@@@@@@@@@@@@@@@@@@=  Async   +@@@@@@@@@@@@@@@@@@@
- *         @@@@@@@@@@@@@@@@@@@%  Vault  .@@@@@@@@@@@@@@@@@@@@
+ *         @@@@@@@@@@@@@@@@@@*   ASync   *@@@@@@@@@@@@@@@@@@@
+ *         @@@@@@@@@@@@@@@@@@@%  Vault  %@@@@@@@@@@@@@@@@@@@@
  *         @@@@@@@@@@@@@@@@@@@@=        +@@@@@@@@@@@@@@@@@@@@
- *         @@@@@@@@@@@@@@@@@@@@%       .@@@@@@@@@@@@@@@@@@@@@
- *         @@@@@@@@@@@@@@@@@@@@@=      +@@@@@@@@@@@@@@@@@@@@@
+ *         @@@@@@@@@@@@@@@@@@@@%       %@@@@@@@@@@@@@@@@@@@@@
+ *         @@@@@@@@@@@@@@@@@@@@@=      =@@@@@@@@@@@@@@@@@@@@@
  *         @@@@@@@@@@@@@@@@@@@@@%     .@@@@@@@@@@@@@@@@@@@@@@
- *         @@@@@@@@@@@@@@@@@@@@@@=    +@@@@@@@@@@@@@@@@@@@@@@
- *         @@@@@@@@@@@@@@@@@@@@@@%----@@@@@@@@@@@@@@@@@@@@@@@
- *         @@@@@@@@@@@@@@@@@@@@%+::::::+@@@@@@@@@@@@@@@@@@@@@
+ *         @@@@@@@@@@@@@@@@@@@@@@=    =@@@@@@@@@@@@@@@@@@@@@@
+ *         @@@@@@@@@@@@@@@@@@@@@@%----%@@@@@@@@@@@@@@@@@@@@@@
+ *         @@@@@@@@@@@@@@@@@@@@%+:::::+%@@@@@@@@@@@@@@@@@@@@@
  *         @@@@@@@@@@@@@@@@@@@@@########@@@@@@@@@@@@@@@@@@@@@
  *         @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  *
@@ -133,7 +133,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         uint256 shares
     );
 
-    /**
+    /*
      * ##########
      * # ERRORS #
      * ##########
@@ -146,7 +146,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
     );
     error ReceiverFailed();
 
-    /**
+    /*
      * ##############################
      * # AMPHOR SYNTHETIC FUNCTIONS #
      * ##############################
@@ -214,7 +214,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         internal
     {
         epochs[epochId].depositRequestBalance[receiver] += assets;
-
+        // epochs[lastDepositRequestId[owner]].depositRequestBalance[owner];
         if (lastDepositRequestId[receiver] != epochId) {
             lastDepositRequestId[receiver] = epochId;
         }
@@ -321,7 +321,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         view
         returns (uint256 assets)
     {
-        return epochs[lastDepositRequestId[owner]].depositRequestBalance[owner];
+        return epochs[epochId].depositRequestBalance[owner];
     }
 
     // tree done
@@ -356,8 +356,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
             revert(); //todo add error
         }
 
-        if (_msgSender() != owner) _spendAllowance(owner, _msgSender(), shares);
-        transferFrom(owner, address(this), shares);
+        _update(owner, address(this), shares);
 
         // Create a new request
         _createRedeemRequest(shares, receiver, owner, data);
@@ -654,7 +653,11 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         ////////////////////////////////
         // Pending deposits treatment //
         ////////////////////////////////
-        deposit(pendingDeposit, address(this));
+        uint256 shares = previewDeposit(pendingDeposit);
+        totalAssets += shares;
+        _mint(address(this), shares);
+        emit Deposit(address(this), address(this), pendingDeposit, shares);
+
         //////////////////////////////
         // Pending redeem treatment //
         //////////////////////////////
@@ -715,4 +718,24 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
 
         _createDepositRequest(assets, receiver, owner, data);
     }
+
+    // // we must do it because we want to be able to take users shares and keep
+    // // them temporarily until the end of the epoch
+    // // todo fix vulnerability anybody can call it
+    // function transferFrom(
+    //     address from,
+    //     address to,
+    //     uint256 value
+    // )
+    //     public
+    //     override(IERC20, ERC20Upgradeable)
+    //     returns (bool)
+    // {
+    //     address spender = _msgSender();
+    //     if (to != address(this)) {
+    //         _spendAllowance(from, spender, value);
+    //     }
+    //     _transfer(from, to, value);
+    //     return true;
+    // }
 }

@@ -2,7 +2,8 @@
 pragma solidity 0.8.21;
 
 import {
-    Ownable2Step, Ownable
+    Ownable2Step,
+    Ownable
 } from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
 import { SafeERC20 } from
@@ -190,7 +191,7 @@ contract VaultZapper is Ownable2Step, Pausable {
       USER RELATED FUNCTIONS
      ########################
     */
-
+    // todo maybe remove minshares
     function zapAndDeposit(
         IERC20 tokenIn,
         IERC4626 vault,
@@ -209,7 +210,8 @@ contract VaultZapper is Ownable2Step, Pausable {
         if (minShares == 0) revert NullMinShares();
 
         uint256 initialTokenOutBalance =
-            IERC20(vault.asset()).balanceOf(address(this)); // tokenOut balance to deposit, not final value
+            IERC20(vault.asset()).balanceOf(address(this)); // tokenOut balance to
+            // deposit, not final value
 
         // Zap
         _zapIn(tokenIn, router, amount, data);
@@ -221,11 +223,12 @@ contract VaultZapper is Ownable2Step, Pausable {
             _msgSender()
         );
 
-        if (shares < minShares)
+        if (shares < minShares) {
             revert NotEnoughSharesMinted({
                 sharesMinted: shares,
                 minSharesMinted: minShares
             });
+        }
 
         emit ZapAndDeposit({
             vault: vault,
@@ -238,6 +241,7 @@ contract VaultZapper is Ownable2Step, Pausable {
         return shares;
     }
 
+    // todo check if swap is enough
     function zapAndRequestDeposit(
         IERC20 tokenIn,
         IERC7540 vault,
@@ -282,20 +286,6 @@ contract VaultZapper is Ownable2Step, Pausable {
      ##########################
     */
 
-    function zapAndRequestDepositWithPermit(
-        IERC20 tokenIn,
-        IERC7540 vault,
-        address router,
-        uint256 amount,
-        bytes calldata data,
-        bytes calldata swapData,
-        PermitParams calldata permitParams
-    ) public {
-        if (tokenIn.allowance(_msgSender(), address(this)) < amount)
-            _executePermit(tokenIn, _msgSender(), address(this), permitParams);
-        zapAndRequestDeposit(tokenIn, vault, router, amount, data, swapData);
-    }
-
     function zapAndDepositWithPermit(
         IERC20 tokenIn,
         IERC4626 vault,
@@ -304,10 +294,32 @@ contract VaultZapper is Ownable2Step, Pausable {
         uint256 minShares,
         bytes calldata swapData,
         PermitParams calldata permitParams
-    ) public returns (uint256) {
-        if (tokenIn.allowance(_msgSender(), address(this)) < amount)
+    )
+        public
+        returns (uint256)
+    {
+        if (tokenIn.allowance(_msgSender(), address(this)) < amount) {
             _executePermit(tokenIn, _msgSender(), address(this), permitParams);
-        return zapAndDeposit(tokenIn, vault, router, amount, minShares, swapData);
+        }
+        return
+            zapAndDeposit(tokenIn, vault, router, amount, minShares, swapData);
+    }
+
+    function zapAndRequestDepositWithPermit(
+        IERC20 tokenIn,
+        IERC7540 vault,
+        address router,
+        uint256 amount,
+        bytes calldata data,
+        bytes calldata swapData,
+        PermitParams calldata permitParams
+    )
+        public
+    {
+        if (tokenIn.allowance(_msgSender(), address(this)) < amount) {
+            _executePermit(tokenIn, _msgSender(), address(this), permitParams);
+        }
+        zapAndRequestDeposit(tokenIn, vault, router, amount, data, swapData);
     }
 
     function _executeZap(
@@ -331,7 +343,9 @@ contract VaultZapper is Ownable2Step, Pausable {
         address owner,
         address spender,
         PermitParams calldata permitParams
-    ) internal {
+    )
+        internal
+    {
         ERC20Permit(address(token)).permit(
             owner,
             spender,
@@ -385,11 +399,19 @@ contract VaultZapper is Ownable2Step, Pausable {
         bytes calldata data,
         bytes calldata swapData,
         Permit2Params calldata permit2Params
-    ) external {
-        if (IERC20(permit2Params.token).allowance(_msgSender(), address(this)) < amount)
+    )
+        external
+    {
+        if (
+            IERC20(permit2Params.token).allowance(_msgSender(), address(this))
+                < amount
+        ) {
             execPermit2(permit2Params);
+        }
 
-        zapAndRequestDeposit(IERC20(permit2Params.token), vault, router, amount, data, swapData);
+        zapAndRequestDeposit(
+            IERC20(permit2Params.token), vault, router, amount, data, swapData
+        );
     }
 
     function zapAndDepositWithPermit2(
@@ -399,10 +421,24 @@ contract VaultZapper is Ownable2Step, Pausable {
         uint256 minShares,
         bytes calldata swapData,
         Permit2Params calldata permit2Params
-    ) external returns (uint256) {
-        if (IERC20(permit2Params.token).allowance(_msgSender(), address(this)) < amount)
+    )
+        external
+        returns (uint256)
+    {
+        if (
+            IERC20(permit2Params.token).allowance(_msgSender(), address(this))
+                < amount
+        ) {
             execPermit2(permit2Params);
+        }
 
-        return zapAndDeposit(IERC20(permit2Params.token), vault, router, amount, minShares, swapData);
+        return zapAndDeposit(
+            IERC20(permit2Params.token),
+            vault,
+            router,
+            amount,
+            minShares,
+            swapData
+        );
     }
 }

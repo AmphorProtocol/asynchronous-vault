@@ -24,29 +24,28 @@ import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import "forge-std/console.sol"; //todo remove
 
-/**
- *         @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+/*
  *         @@@@@@@@@@@@@@@@@@@@%=::::::=%@@@@@@@@@@@@@@@@@@@@
- *         @@@@@@@@@@@@@@@@@@@@+=#---=*=*@@@@@@@@@@@@@@@@@@@@
- *         @@@@@@@@@@@@@@@@@@@@:*=   .-#:@@@@@@@@@@@@@@@@@@@@
- *         @@@@@@@@@@@@@@@@@@@@:@@   .@@:@@@@@@@@@@@@@@@@@@@@
- *         @@@@@@@@@@@@@@@@@@@@:@@   .@@:@@@@@@@@@@@@@@@@@@@@
- *         @@@@@@@@@@@@@@@@@@@@:@@   .@@:@@@@@@@@@@@@@@@@@@@@
- *         @@@@@@@@@@@@@@@@@@@@+:.    .-*@@@@@@@@@@@@@@@@@@@@
- *         @@@@@@@@@@@@@@@@@@@@+        *@@@@@@@@@@@@@@@@@@@@
- *         @@@@@@@@@@@@@@@@@@@%         .@@@@@@@@@@@@@@@@@@@@
- *         @@@@@@@@@@@@@@@@@@@+  Amphor  *@@@@@@@@@@@@@@@@@@@
+ *         @@@@@@@@@@@@@@@@@@@@*=#=--=*=*@@@@@@@@@@@@@@@@@@@@
+ *         @@@@@@@@@@@@@@@@@@@@:*=    =#:@@@@@@@@@@@@@@@@@@@@
+ *         @@@@@@@@@@@@@@@@@@@@:@@    @@:@@@@@@@@@@@@@@@@@@@@
+ *         @@@@@@@@@@@@@@@@@@@@:@@    @@:@@@@@@@@@@@@@@@@@@@@
+ *         @@@@@@@@@@@@@@@@@@@@:@@    @@:@@@@@@@@@@@@@@@@@@@@
+ *         @@@@@@@@@@@@@@@@@@@@*-.    .-*@@@@@@@@@@@@@@@@@@@@
+ *         @@@@@@@@@@@@@@@@@@@@*        *@@@@@@@@@@@@@@@@@@@@
+ *         @@@@@@@@@@@@@@@@@@@.         .@@@@@@@@@@@@@@@@@@@@
+ *         @@@@@@@@@@@@@@@@@@@*  Amphor  *@@@@@@@@@@@@@@@@@@@
  *         @@@@@@@@@@@@@@@@@@@*==========#@@@@@@@@@@@@@@@@@@@
  *         @@@@@@@@@@@@@@@@@@@+==========*@@@@@@@@@@@@@@@@@@@
- *         @@@@@@@@@@@@@@@@@@@=   Sync   +@@@@@@@@@@@@@@@@@@@
- *         @@@@@@@@@@@@@@@@@@@%  Vault  .@@@@@@@@@@@@@@@@@@@@
+ *         @@@@@@@@@@@@@@@@@@@*   Sync   *@@@@@@@@@@@@@@@@@@@
+ *         @@@@@@@@@@@@@@@@@@@%  Vault  %@@@@@@@@@@@@@@@@@@@@
  *         @@@@@@@@@@@@@@@@@@@@=        +@@@@@@@@@@@@@@@@@@@@
- *         @@@@@@@@@@@@@@@@@@@@%       .@@@@@@@@@@@@@@@@@@@@@
- *         @@@@@@@@@@@@@@@@@@@@@=      +@@@@@@@@@@@@@@@@@@@@@
+ *         @@@@@@@@@@@@@@@@@@@@%       %@@@@@@@@@@@@@@@@@@@@@
+ *         @@@@@@@@@@@@@@@@@@@@@=      =@@@@@@@@@@@@@@@@@@@@@
  *         @@@@@@@@@@@@@@@@@@@@@%     .@@@@@@@@@@@@@@@@@@@@@@
- *         @@@@@@@@@@@@@@@@@@@@@@=    +@@@@@@@@@@@@@@@@@@@@@@
- *         @@@@@@@@@@@@@@@@@@@@@@%----@@@@@@@@@@@@@@@@@@@@@@@
- *         @@@@@@@@@@@@@@@@@@@@%+::::::+@@@@@@@@@@@@@@@@@@@@@
+ *         @@@@@@@@@@@@@@@@@@@@@@=    =@@@@@@@@@@@@@@@@@@@@@@
+ *         @@@@@@@@@@@@@@@@@@@@@@%----%@@@@@@@@@@@@@@@@@@@@@@
+ *         @@@@@@@@@@@@@@@@@@@@%+:::::+%@@@@@@@@@@@@@@@@@@@@@
  *         @@@@@@@@@@@@@@@@@@@@@########@@@@@@@@@@@@@@@@@@@@@
  *         @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  *
@@ -92,9 +91,9 @@ uint16 constant MAX_FEES = 3000; // 30%
 
 abstract contract SyncSynthVault is
     IERC4626,
-    ERC20PausableUpgradeable,
     Ownable2StepUpgradeable,
-    ERC20PermitUpgradeable
+    ERC20PermitUpgradeable,
+    ERC20PausableUpgradeable
 {
     /*
      * ####################################
@@ -131,7 +130,7 @@ abstract contract SyncSynthVault is
 
     event FeesChanged(uint16 oldFees, uint16 newFees);
 
-    /**
+    /*
      * ##########
      * # ERRORS #
      * ##########
@@ -149,7 +148,7 @@ abstract contract SyncSynthVault is
     error MaxDrawdownReached();
     error InvalidSpender(); // for permit2
 
-    /**
+    /*
      * ##############################
      * # AMPHOR SYNTHETIC FUNCTIONS #
      * ##############################
@@ -182,6 +181,7 @@ abstract contract SyncSynthVault is
         __ERC20_init(name, symbol);
         __Ownable_init(owner);
         __ERC20Permit_init(name);
+        __ERC20Pausable_init(); // will audit
         _asset = IERC20(underlying);
         _maxDrawdown = 3000; // 30%
     }
@@ -215,8 +215,8 @@ abstract contract SyncSynthVault is
         return _convertToAssets(shares, Math.Rounding.Floor);
     }
 
-    /**
-     * @dev The `maxDeposit` function is used to calculate the maximum deposit.
+    /*
+    * @dev The `maxDeposit` function is used to calculate the maximum deposit.
      * @notice If the vault is locked or paused, users are not allowed to
      * deposit,
      * the maxDeposit is 0.
@@ -296,6 +296,7 @@ abstract contract SyncSynthVault is
      * @return Amount of shares received in exchange of the
      * specified underlying assets amount.
      */
+    //tree done
     function deposit(
         uint256 assets,
         address receiver
@@ -325,6 +326,7 @@ abstract contract SyncSynthVault is
      * specified
      * amount of shares.
      */
+    // tree done
     function mint(
         uint256 shares,
         address receiver
@@ -353,6 +355,7 @@ abstract contract SyncSynthVault is
      * @return Amount of shares received in exchange of the specified underlying
      * assets amount.
      */
+    // tree done
     function withdraw(
         uint256 assets,
         address receiver,
@@ -383,6 +386,7 @@ abstract contract SyncSynthVault is
      * @return Amount of underlying assets received in exchange of the specified
      * amount of shares.
      */
+    // tree done
     function redeem(
         uint256 shares,
         address receiver,
@@ -512,7 +516,7 @@ abstract contract SyncSynthVault is
      * # AMPHOR SYNTHETIC RELATED FUNCTIONS #
      * ######################################
     */
-
+    // todo
     function restruct(uint256 virtualReturnedAsset) external onlyOwner {
         uint256 _totalAssets = totalAssets;
         emit EpochEnd(
@@ -587,9 +591,8 @@ abstract contract SyncSynthVault is
         internal
         virtual
         override(ERC20Upgradeable, ERC20PausableUpgradeable)
-        whenNotPaused
     {
-        super._update(from, to, value);
+        ERC20PausableUpgradeable._update(from, to, value); // will audit
     }
 
     /*
