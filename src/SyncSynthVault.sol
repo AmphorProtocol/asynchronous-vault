@@ -215,7 +215,7 @@ abstract contract SyncSynthVault is
     }
 
     /*
-     * @dev The `maxDeposit` function is used to calculate the maximum deposit.
+    * @dev The `maxDeposit` function is used to calculate the maximum deposit.
      * @notice If the vault is locked or paused, users are not allowed to
      * deposit,
      * the maxDeposit is 0.
@@ -295,6 +295,7 @@ abstract contract SyncSynthVault is
      * @return Amount of shares received in exchange of the
      * specified underlying assets amount.
      */
+    //tree done
     function deposit(
         uint256 assets,
         address receiver
@@ -324,6 +325,7 @@ abstract contract SyncSynthVault is
      * specified
      * amount of shares.
      */
+    // tree done
     function mint(
         uint256 shares,
         address receiver
@@ -352,6 +354,7 @@ abstract contract SyncSynthVault is
      * @return Amount of shares received in exchange of the specified underlying
      * assets amount.
      */
+    // tree done
     function withdraw(
         uint256 assets,
         address receiver,
@@ -382,6 +385,7 @@ abstract contract SyncSynthVault is
      * @return Amount of underlying assets received in exchange of the specified
      * amount of shares.
      */
+    // tree done
     function redeem(
         uint256 shares,
         address receiver,
@@ -511,7 +515,7 @@ abstract contract SyncSynthVault is
      * # AMPHOR SYNTHETIC RELATED FUNCTIONS #
      * ######################################
     */
-
+    // todo
     function restruct(uint256 virtualReturnedAsset) external onlyOwner {
         uint256 _totalAssets = totalAssets;
         emit EpochEnd(

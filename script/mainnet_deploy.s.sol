@@ -27,7 +27,7 @@ contract GOERLI_DeployAmphorSynthetic is Script {
         Options memory deploy;
         deploy.constructorData = abi.encode(permit2);
         UpgradeableBeacon beacon = UpgradeableBeacon(
-            Upgrades.deployBeacon("SynthVault.sol", owner, deploy)
+            Upgrades.deployBeacon("AsyncSynthVault.sol", owner, deploy)
         );
 
         BeaconProxy proxy = BeaconProxy(
@@ -49,7 +49,7 @@ contract GOERLI_DeployAmphorSynthetic is Script {
         );
 
         address implementation = UpgradeableBeacon(beacon).implementation();
-        console.log("Synthetic vault USDC contract address: ", address(proxy));
+        console.log("Synthetic vault USDC proxy address: ", address(proxy));
         console.log("Synthetic vault USDC beacon address: ", address(beacon));
         console.log(
             "Synthetic vault USDC implementation address: ", implementation

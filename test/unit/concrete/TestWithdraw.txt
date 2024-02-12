@@ -1,32 +1,38 @@
 TestWithdraw
 
-#given vault closed ##it should revert with ERC4626ExceededMaxWithdraw when withdraw
+#given vault closed when withdraw
+##it should revert with ERC4626ExceededMaxWithdraw
 
-#given vault open when withdraw
-##it should revert if the withdraw amount provided by the owner is higher than his shares (converted to assets) balance
-##it should increase the underlying balance of the owner
-##it should emit a Withdraw event
-##it should decrease the underlying balance of the vault by the withdraw amount
-##it should decrease the balance of shares of the receiver by the withdraw amount converted in shares
-##it should return the same value as the one returned by previewWithdraw
-##it should return the same value as the burned (to the owner) shares amount
-##it should decrease the total supply of shares by the value returned by previewWithdraw
-##it should take the shares amount returned by previewWithdraw to the owner
+#given vault is empty and assets is higher than 0 when withdraw
+##it should revert
 
-#given vault open given receiver not equal owner when withdraw
-##Same as above
-
-#given vault open given withdraw amount is 0 when withdraw
-##Same as above
-
-#given vault open given vault empty when withdraw
-##it should revert if the withdraw amount provided by the owner is higher than 0
-
-#given vault open given vault paused when withdraw
+#ggiven vault paused when withdraw
 ##it should revert with EnforcedPause
 
-#given vault closed given vault paused when withdraw
-##it should revert with EnforcedPause
+#given vault closed given vault not paused when withdraw
+##it should revert with ERC4626ExceededMaxWithdraw
 
 #given receiver is address 0 when withdraw
 ##it should revert with ERC20InvalidReceiver
+
+#given assets is higher than owner shares balance converted to assets when withdraw
+##it should revert with ERC4626ExceededMaxWithdraw
+
+#when withdraw pass
+##it should increase the underlying balance of the receiver
+##it should emit a Withdraw event
+##it should decrease the underlying balance of the vault by assets
+##it should decrease the balance of shares of the owner by the withdraw amount converted in shares
+##it should return the same value as the one returned by previewWithdraw
+##it should return the same value as the shares taken from the owner
+##it should decrease the total supply of shares by the value returned by previewWithdraw
+##it should take from the owner the amount returned by previewWithdraw
+##it should decrease the underlying balance of the vault by the value returned by assets
+
+#given vault open given receiver not equal owner when withdraw
+##withdraw pass
+
+#given vault open given withdraw amount is 0 when withdraw
+##withdraw pass
+
+
