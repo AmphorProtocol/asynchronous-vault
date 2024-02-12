@@ -89,6 +89,8 @@ struct Permit2Params {
 uint256 constant BPS_DIVIDER = 10_000;
 uint16 constant MAX_FEES = 3000; // 30%
 
+// todo -> add some batch functions
+
 abstract contract SyncSynthVault is
     IERC4626,
     Ownable2StepUpgradeable,
@@ -553,21 +555,6 @@ abstract contract SyncSynthVault is
     function setMaxDrawdown(uint16 newMaxDrawdown) external onlyOwner {
         if (newMaxDrawdown > 10_000) revert(); // add error
         _maxDrawdown = newMaxDrawdown;
-    }
-
-    /**
-     * @dev The `claimToken` function is used to claim other tokens that have
-     * been sent to the vault.
-     * @notice The `claimToken` function is used to claim other tokens that have
-     * been sent to the vault.
-     * It can only be called by the owner of the contract (`onlyOwner`
-     * modifier).
-     * @param token The IERC20 token to be claimed.
-     */
-    function claimToken(IERC20 token) external onlyOwner {
-        if (token != _asset) {
-            token.safeTransfer(_msgSender(), token.balanceOf(address(this)));
-        }
     }
 
     /*

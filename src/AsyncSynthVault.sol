@@ -81,6 +81,8 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
 
     // @return Amount of the perf fees applied on the positive yield.
     uint256 public epochId;
+    uint256 internal claimableShares;
+    uint256 internal claimableAssets;
     mapping(uint256 epochId => EpochData epoch) public epochs;
     mapping(address user => uint256 epochId) public lastDepositRequestId;
     mapping(address user => uint256 epochId) public lastRedeemRequestId;
@@ -464,6 +466,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
 
         transfer(receiver, shares);
 
+        claimableShares -= shares;
         emit ClaimDeposit(lastRequestId, owner, receiver, assets, shares);
     }
 
@@ -491,6 +494,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         epochs[lastRequestId].redeemRequestBalance[owner] = 0;
 
         _asset.safeTransfer(receiver, assets);
+        claimableAssets -= assets;
         emit ClaimRedeem(lastRequestId, owner, receiver, assets, shares);
     }
 
@@ -603,7 +607,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         onlyOwner
         whenClosed
     {
-        uint256 pendingDeposit = _asset.balanceOf(address(this));
+        uint256 pendingDeposit = _asset.balanceOf(address(this)) - claimableAssets;
         _open(assetReturned);
         _execRequests(pendingDeposit);
         epochId++;
@@ -654,17 +658,18 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         // Pending deposits treatment //
         ////////////////////////////////
         uint256 shares = previewDeposit(pendingDeposit);
-        totalAssets += shares;
+        totalAssets += shares; // todo
         _mint(address(this), shares);
+        claimableShares += shares;
         emit Deposit(address(this), address(this), pendingDeposit, shares);
 
         //////////////////////////////
         // Pending redeem treatment //
         //////////////////////////////
-        uint256 pendingRedeem = balanceOf(address(this)); // get the shares of
+        uint256 pendingRedeem = balanceOf(address(this)) - claimableShares; // get the shares of
 
         // the pending withdraws
-        redeem(pendingRedeem, address(this), address(this));
+        claimableAssets += redeem(pendingRedeem, address(this), address(this));
 
         epochs[epochId].totalSupplySnapshot = totalSupply();
         epochs[epochId].totalAssetsSnapshot = totalAssets;
@@ -718,24 +723,4 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
 
         _createDepositRequest(assets, receiver, owner, data);
     }
-
-    // // we must do it because we want to be able to take users shares and keep
-    // // them temporarily until the end of the epoch
-    // // todo fix vulnerability anybody can call it
-    // function transferFrom(
-    //     address from,
-    //     address to,
-    //     uint256 value
-    // )
-    //     public
-    //     override(IERC20, ERC20Upgradeable)
-    //     returns (bool)
-    // {
-    //     address spender = _msgSender();
-    //     if (to != address(this)) {
-    //         _spendAllowance(from, spender, value);
-    //     }
-    //     _transfer(from, to, value);
-    //     return true;
-    // }
 }
