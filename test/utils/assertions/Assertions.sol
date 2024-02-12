@@ -170,23 +170,25 @@ abstract contract Assertions is EventsAssertions {
         );
     }
 
-    function assertWithdraw(
-        IERC4626 vault,
-        address owner,
-        address receiver,
-        uint256 shares
-    )
-        public
-        virtual;
+    // todo
+    // function assertWithdraw(
+    //     IERC4626 vault,
+    //     address owner,
+    //     address receiver,
+    //     uint256 shares
+    // )
+    //     public
+    //     virtual;
 
-    function assertRedeem(
-        IERC4626 vault,
-        address owner,
-        address receiver,
-        uint256 shares
-    )
-        public
-        virtual;
+    // todo
+    // function assertRedeem(
+    //     IERC4626 vault,
+    //     address owner,
+    //     address receiver,
+    //     uint256 shares
+    // )
+    //     public
+    //     virtual;
 
     // open close txt puis assert
     // et requestDep et requestRedeem

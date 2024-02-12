@@ -91,9 +91,9 @@ uint16 constant MAX_FEES = 3000; // 30%
 
 abstract contract SyncSynthVault is
     IERC4626,
-    ERC20PausableUpgradeable,
     Ownable2StepUpgradeable,
-    ERC20PermitUpgradeable
+    ERC20PermitUpgradeable,
+    ERC20PausableUpgradeable
 {
     /*
      * ####################################
@@ -181,6 +181,7 @@ abstract contract SyncSynthVault is
         __ERC20_init(name, symbol);
         __Ownable_init(owner);
         __ERC20Permit_init(name);
+        __ERC20Pausable_init(); // will audit
         _asset = IERC20(underlying);
         _maxDrawdown = 3000; // 30%
     }
@@ -590,9 +591,8 @@ abstract contract SyncSynthVault is
         internal
         virtual
         override(ERC20Upgradeable, ERC20PausableUpgradeable)
-        whenNotPaused
     {
-        super._update(from, to, value);
+        ERC20PausableUpgradeable._update(from, to, value); // will audit
     }
 
     /*
