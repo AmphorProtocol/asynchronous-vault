@@ -25,14 +25,11 @@ TestRequestDeposit
 #given owner has claimable balance but not receiver when requestDeposit
 ##it should succeed
 
-#given receiver have not approval balance at all when requestDeposit
+#given owner have not enough approval balance when requestDeposit
 ##it should revert with ERC20InsufficientAllowance
 
-#given receiver have not enough assets balance when requestDeposit
+#given owner have not enough assets balance when requestDeposit
 ##it should revert with ERC20InsufficientBalance
-
-#given receiver have not enough approval balance when requestDeposit
-##it should revert with ERC20InsufficientAllowance
 
 #given data param submitted and invalid selector when requestDeposit
 ##it should revert with ReceiverFailed

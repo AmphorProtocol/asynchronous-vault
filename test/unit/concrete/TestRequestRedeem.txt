@@ -34,13 +34,10 @@ TestRequestRedeem
 #given owner has claimable balance but not receiver when requestRedeem
 ##it should succeed
 
-#given receiver have not approval balance at all when requestRedeem
-##it should revert with ERC20InsufficientAllowance
-
-#given receiver have not enough assets balance when requestRedeem
+#given owner have not enough assets balance when requestRedeem
 ##it should revert with ERC20InsufficientBalance
 
-#given receiver have not enough approval balance when requestRedeem
+#given owner have not enough approval balance when requestRedeem
 ##it should revert with ERC20InsufficientAllowance
 
 #given data param submitted and invalid selector when requestRedeem
