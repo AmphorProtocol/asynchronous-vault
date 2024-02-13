@@ -3,7 +3,7 @@ pragma solidity 0.8.21;
 
 import { Test } from "forge-std/Test.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import { AsyncSynthVault } from "../../src/AsyncSynthVault.sol";
+import { TestAsyncVault } from "./TestAsyncVault.sol";
 import { IPermit2 } from "permit2/src/interfaces/IPermit2.sol";
 import { VmSafe } from "forge-std/Vm.sol";
 
@@ -32,17 +32,17 @@ abstract contract Constants is Test {
     // USDC vault
     string vaultNameUSDC = vm.envString("SYNTHETIC_USDC_V1_NAME");
     string vaultSymbolUSDC = vm.envString("SYNTHETIC_USDC_V1_SYMBOL");
-    AsyncSynthVault vaultUSDC = new AsyncSynthVault(permit2);
+    TestAsyncVault immutable vaultUSDC = new TestAsyncVault(permit2);
 
     // WSTETH vault
     string vaultNameWSTETH = vm.envString("SYNTHETIC_WSTETH_V1_NAME");
     string vaultSymbolWSTETH = vm.envString("SYNTHETIC_WSTETH_V1_SYMBOL");
-    AsyncSynthVault immutable vaultWSTETH = new AsyncSynthVault(permit2);
+    TestAsyncVault immutable vaultWSTETH = new TestAsyncVault(permit2);
 
     // WBTC vault
     string vaultNameWBTC = vm.envString("SYNTHETIC_WBTC_V1_NAME");
     string vaultSymbolWBTC = vm.envString("SYNTHETIC_WBTC_V1_SYMBOL");
-    AsyncSynthVault immutable vaultWBTC = new AsyncSynthVault(permit2);
+    TestAsyncVault immutable vaultWBTC = new TestAsyncVault(permit2);
 
     // Zapper
     //AsyncVaultZapper immutable zapper = new AsyncVaultZapper(permit2);
