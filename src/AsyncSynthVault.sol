@@ -74,7 +74,11 @@ uint16 constant MAX_FEES = 3000; // 30%
 
 contract LiquidityContainer {
     constructor () {
-        IERC20(AsyncSynthVault(msg.sender).asset()).approve(msg.sender, type(uint256).max);
+        IERC20(AsyncSynthVault(msg.sender).asset()).approve(
+            msg.sender,
+            type(uint256).max
+            );
+        AsyncSynthVault(msg.sender).approve(msg.sender, type(uint256).max);
     }
 }
 
