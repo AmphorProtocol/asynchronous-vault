@@ -65,7 +65,12 @@ contract TestBase is Assertions {
         deposit(vault, user, USDC.balanceOf(user.addr));
     }
 
-    function withdraw(AsyncSynthVault vault, VmSafe.Wallet memory user) public {
+    function withdraw(
+        AsyncSynthVault vault,
+        VmSafe.Wallet memory user
+    )
+        public
+    {
         withdraw(vault, user, USDC.balanceOf(user.addr));
     }
 
