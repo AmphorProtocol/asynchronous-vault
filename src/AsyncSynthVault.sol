@@ -72,7 +72,7 @@ struct EpochData {
 uint256 constant BPS_DIVIDER = 10_000;
 uint16 constant MAX_FEES = 3000; // 30%
 
-contract LiquidityContainer {
+contract PendingLiquidityPool {
     constructor () {
         IERC20(AsyncSynthVault(msg.sender).asset()).approve(
             msg.sender,
@@ -91,7 +91,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
 
     // @return Amount of the perf fees applied on the positive yield.
     uint256 public epochId;
-    LiquidityContainer public liquidityContainer;
+    PendingLiquidityPool public pendingLiquidityPool;
     mapping(uint256 epochId => EpochData epoch) public epochs;
     mapping(address user => uint256 epochId) public lastDepositRequestId;
     mapping(address user => uint256 epochId) public lastRedeemRequestId;
@@ -181,7 +181,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
     {
         super.initialize(fees, owner, underlying, name, symbol);
         epochId = 1;
-        liquidityContainer = new LiquidityContainer();
+        pendingLiquidityPool = new PendingLiquidityPool();
         _asset.forceApprove(address(this), type(uint256).max); // allowing futur
             // deposits into own vault
         approve(address(this), type(uint256).max); // allowing futur redeem into
@@ -214,7 +214,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
             );
         }
 
-        _asset.safeTransferFrom(owner, address(liquidityContainer), assets);
+        _asset.safeTransferFrom(owner, address(pendingLiquidityPool), assets);
 
         _createDepositRequest(assets, receiver, owner, data);
     }
@@ -372,7 +372,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
             revert(); //todo add error
         }
 
-        _update(owner, address(liquidityContainer), shares);
+        _update(owner, address(pendingLiquidityPool), shares);
 
         // Create a new request
         _createRedeemRequest(shares, receiver, owner, data);
@@ -619,7 +619,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         onlyOwner
         whenClosed
     {
-        uint256 pendingDeposit = _asset.balanceOf(address(liquidityContainer));
+        uint256 pendingDeposit = _asset.balanceOf(address(pendingLiquidityPool));
         _open(assetReturned);
         _execRequests(pendingDeposit);
         epochId++;
@@ -672,7 +672,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
 
         uint256 sharesToMint = previewDeposit(pendingDeposit);
         _deposit(
-            address(liquidityContainer),
+            address(pendingLiquidityPool),
             address(this),
             pendingDeposit,
             sharesToMint
@@ -681,11 +681,11 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         //////////////////////////////
         // Pending redeem treatment //
         //////////////////////////////
-        uint256 pendingRedeem = balanceOf(address(liquidityContainer));
+        uint256 pendingRedeem = balanceOf(address(pendingLiquidityPool));
         uint256 assetsToRedeem = previewRedeem(pendingRedeem);
         _withdraw(
             address(this),
-            address(liquidityContainer),
+            address(pendingLiquidityPool),
             assetsToRedeem,
             pendingRedeem
         );
