@@ -13,6 +13,7 @@ abstract contract Assertions is EventsAssertions {
     // Struct for assets data of owner,receiver and vault
     struct AssetsData {
         uint256 owner;
+        uint256 sender;
         uint256 vault;
         uint256 totalAssets;
         uint256 receiver;
@@ -21,6 +22,7 @@ abstract contract Assertions is EventsAssertions {
     // Struct for shares data of owner,receiver and vault
     struct SharesData {
         uint256 owner;
+        uint256 sender;
         uint256 vault;
         uint256 receiver;
         uint256 totalSupply;
@@ -29,6 +31,7 @@ abstract contract Assertions is EventsAssertions {
     // Struct for shares value in assets of owner and receiver
     struct SharesValueData {
         uint256 owner;
+        uint256 sender;
         uint256 receiver;
     }
 
@@ -41,14 +44,16 @@ abstract contract Assertions is EventsAssertions {
         public
     {
         // assets data before deposit
-        AssetsData memory assetsBefore = getAssetsData(vault, owner, receiver);
+        AssetsData memory assetsBefore =
+            getAssetsData(vault, owner, owner, receiver);
 
         // shares data before deposit
-        SharesData memory sharesBefore = getSharesData(vault, owner, receiver);
+        SharesData memory sharesBefore =
+            getSharesData(vault, owner, owner, receiver);
 
         // shares value in assets before deposit
         SharesValueData memory sharesValueBeforeDep =
-            getSharesValueData(vault, owner, receiver);
+            getSharesValueData(vault, owner, owner, receiver);
 
         // expected shares after deposit
         uint256 previewedShares = vault.previewDeposit(assets);
@@ -110,14 +115,16 @@ abstract contract Assertions is EventsAssertions {
         public
     {
         // assets data before deposit
-        AssetsData memory assetsBefore = getAssetsData(vault, owner, receiver);
+        AssetsData memory assetsBefore =
+            getAssetsData(vault, owner, owner, receiver);
 
         // shares data before deposit
-        SharesData memory sharesBefore = getSharesData(vault, owner, receiver);
+        SharesData memory sharesBefore =
+            getSharesData(vault, owner, owner, receiver);
 
         // shares value in assets before deposit
-        SharesValueData memory sharesValueBeforeDep =
-            getSharesValueData(vault, owner, receiver);
+        SharesValueData memory sharesValueBefore =
+            getSharesValueData(vault, owner, owner, receiver);
 
         // expected assets after deposit
         uint256 previewedAssets = vault.previewMint(shares);
@@ -150,120 +157,195 @@ abstract contract Assertions is EventsAssertions {
         assertVaultAssetBalance(vault, assetsBefore.vault + previewedAssets);
 
         // assertion on shares
+        assertSharesBalance(vault, receiver, sharesBefore.receiver + shares);
         if (owner != receiver) {
             assertSharesBalance(vault, owner, sharesBefore.owner);
         }
-        assertSharesBalance(vault, receiver, sharesBefore.receiver + shares);
         assertSharesBalance(vault, address(vault), sharesBefore.vault);
 
         // assertion on assets
-        assertAssetBalance(
-            vault, receiver, assetsBefore.receiver - previewedAssets
-        );
+        assertAssetBalance(vault, owner, assetsBefore.owner - previewedAssets);
         if (owner != receiver) {
             assertAssetBalance(vault, receiver, assetsBefore.receiver);
         }
 
         // assertion on shares value in assets
         assertSharesValueInAssets(
-            vault, receiver, sharesValueBeforeDep.receiver + mintReturn
+            vault, receiver, sharesValueBefore.receiver + mintReturn
         );
     }
 
     function assertWithdraw(
         IERC4626 vault,
+        address sender,
+        address owner,
+        address receiver,
+        uint256 assets
+    )
+        public
+    {
+        // assets data before withdraw
+        AssetsData memory assetsBefore =
+            getAssetsData(vault, sender, owner, receiver);
+
+        // shares data before withdraw
+        SharesData memory sharesBefore =
+            getSharesData(vault, sender, owner, receiver);
+
+        // shares value in assets before withdraw
+        SharesValueData memory sharesValueBefore =
+            getSharesValueData(vault, owner, owner, receiver);
+
+        // expected shares after withdraw
+        uint256 previewedShares = vault.previewWithdraw(assets);
+
+        // assertions on events
+        assertTransferEvent(
+            IERC20(vault.asset()), address(vault), receiver, assets
+        ); // transfer from owner to vault of its assets
+        assertTransferEvent(vault, owner, address(0), previewedShares); // transfer
+            // from vault to receiver of its shares
+        assertWithdrawEvent(
+            vault, sender, owner, receiver, assets, previewedShares
+        );
+
+        // mint //
+        vm.prank(sender);
+        uint256 withdrawReturn = vault.withdraw(assets, receiver, owner);
+
+        // first check this to simplify the rest of the assertions
+        assertEq(
+            withdrawReturn,
+            previewedShares,
+            "Withdraw return is not equal to previewWithdraw return"
+        );
+
+        // assertion on total supply
+        assertTotalSupply(vault, sharesBefore.totalSupply - previewedShares);
+
+        // assertion on total assets
+        assertTotalAssets(vault, assetsBefore.totalAssets - assets);
+        assertVaultAssetBalance(vault, assetsBefore.vault - assets);
+
+        // assertion on shares
+        assertSharesBalance(vault, owner, sharesBefore.owner - previewedShares);
+        if (owner != receiver) {
+            assertSharesBalance(vault, receiver, sharesBefore.receiver);
+        }
+        if (sender != owner) {
+            assertSharesBalance(vault, sender, sharesBefore.sender);
+        }
+        assertSharesBalance(vault, address(vault), sharesBefore.vault);
+
+        // assertion on assets
+        assertAssetBalance(vault, receiver, assetsBefore.receiver + assets);
+        if (owner != receiver) {
+            assertAssetBalance(vault, owner, assetsBefore.owner);
+        }
+        if (sender != owner) {
+            assertAssetBalance(vault, sender, assetsBefore.sender);
+        }
+
+        // assertion on shares value in assets
+        assertSharesValueInAssets(
+            vault, receiver, sharesValueBefore.receiver + assets
+        );
+    }
+
+    function assertRedeem(
+        IERC4626 vault,
+        address sender,
         address owner,
         address receiver,
         uint256 shares
     )
         public
     {
-        // assets data before withdraw
-        AssetsData memory assetsBefore = getAssetsData(vault, owner, receiver);
+        // assets data before redeem
+        AssetsData memory assetsBefore =
+            getAssetsData(vault, owner, owner, receiver);
 
-        // shares data before withdraw
-        SharesData memory sharesBefore = getSharesData(vault, owner, receiver);
+        // shares data before redeem
+        SharesData memory sharesBefore =
+            getSharesData(vault, owner, owner, receiver);
 
-        // shares value in assets before withdraw
-        SharesValueData memory sharesValueBeforeDep =
-            getSharesValueData(vault, owner, receiver);
+        // shares value in assets before redeem
+        SharesValueData memory sharesValueBefore =
+            getSharesValueData(vault, sender, owner, receiver);
 
-        // expected assets after withdraw
-        uint256 previewedAssets = vault.previewMint(shares);
+        // expected shares after redeem
+        uint256 previewedAssets = vault.previewRedeem(shares);
 
         // assertions on events
         assertTransferEvent(
-            IERC20(vault.asset()), owner, address(vault), previewedAssets
+            IERC20(vault.asset()), address(vault), receiver, previewedAssets
         ); // transfer from owner to vault of its assets
-        assertTransferEvent(vault, address(0), receiver, shares); // transfer
+        assertTransferEvent(vault, owner, address(0), shares); // transfer
             // from vault to receiver of its shares
-        assertDepositEvent(vault, owner, receiver, previewedAssets, shares); // deposit
-            // event
+        assertWithdrawEvent(
+            vault, sender, owner, receiver, previewedAssets, shares
+        );
 
         // mint //
-        vm.prank(owner);
-        uint256 mintReturn = vault.mint(shares, receiver);
+        vm.prank(sender);
+        uint256 redeemReturn = vault.redeem(shares, receiver, owner);
 
         // first check this to simplify the rest of the assertions
         assertEq(
-            mintReturn,
+            redeemReturn,
             previewedAssets,
-            "Mint return is not equal to previewMint return"
+            "Redeem return is not equal to previewRedeem return"
         );
 
         // assertion on total supply
-        assertTotalSupply(vault, sharesBefore.totalSupply + shares);
+        assertTotalSupply(vault, sharesBefore.totalSupply - shares);
 
         // assertion on total assets
-        assertTotalAssets(vault, assetsBefore.totalAssets + previewedAssets);
-        assertVaultAssetBalance(vault, assetsBefore.vault + previewedAssets);
+        assertTotalAssets(vault, assetsBefore.totalAssets - previewedAssets);
+        assertVaultAssetBalance(vault, assetsBefore.vault - previewedAssets);
 
         // assertion on shares
-        if (owner != receiver) {
-            assertSharesBalance(vault, owner, sharesBefore.owner);
+        assertSharesBalance(vault, owner, sharesBefore.owner - shares);
+        if (receiver != owner) {
+            assertSharesBalance(vault, receiver, sharesBefore.receiver);
         }
-        assertSharesBalance(vault, receiver, sharesBefore.receiver + shares);
+        if (sender != owner) {
+            assertSharesBalance(vault, sender, sharesBefore.sender);
+        }
         assertSharesBalance(vault, address(vault), sharesBefore.vault);
 
         // assertion on assets
         assertAssetBalance(
-            vault, receiver, assetsBefore.receiver - previewedAssets
+            vault, receiver, assetsBefore.receiver + previewedAssets
         );
-        if (owner != receiver) {
-            assertAssetBalance(vault, receiver, assetsBefore.receiver);
+        if (receiver != owner) {
+            assertAssetBalance(vault, owner, assetsBefore.owner);
+        }
+        if (sender != owner) {
+            assertAssetBalance(vault, sender, assetsBefore.sender);
         }
 
         // assertion on shares value in assets
         assertSharesValueInAssets(
-            vault, receiver, sharesValueBeforeDep.receiver + mintReturn
+            vault, receiver, sharesValueBefore.receiver + previewedAssets
         );
     }
 
-    // todo
-    // function assertWithdraw(
-    //     IERC4626 vault,
-    //     address owner,
-    //     address receiver,
-    //     uint256 shares
-    // )
-    //     public
-    //     virtual;
-
-    // todo
-    // function assertRedeem(
-    //     IERC4626 vault,
-    //     address owner,
-    //     address receiver,
-    //     uint256 shares
-    // )
-    //     public
-    //     virtual;
+    function assertRedeem(
+        IERC4626 vault,
+        address owner,
+        address receiver,
+        uint256 shares
+    )
+        public
+        virtual;
 
     // open close txt puis assert
     // et requestDep et requestRedeem
 
     function getAssetsData(
         IERC4626 vault,
+        address sender,
         address owner,
         address receiver
     )
@@ -272,8 +354,9 @@ abstract contract Assertions is EventsAssertions {
         returns (AssetsData memory)
     {
         return AssetsData({
-            owner: IERC20(vault.asset()).balanceOf(owner),
             vault: IERC20(vault.asset()).balanceOf(address(vault)),
+            sender: IERC20(vault.asset()).balanceOf(sender),
+            owner: IERC20(vault.asset()).balanceOf(owner),
             totalAssets: vault.totalAssets(),
             receiver: IERC20(vault.asset()).balanceOf(receiver)
         });
@@ -281,6 +364,7 @@ abstract contract Assertions is EventsAssertions {
 
     function getSharesData(
         IERC4626 vault,
+        address sender,
         address owner,
         address receiver
     )
@@ -290,6 +374,7 @@ abstract contract Assertions is EventsAssertions {
     {
         return SharesData({
             owner: vault.balanceOf(owner),
+            sender: vault.balanceOf(sender),
             vault: vault.balanceOf(address(vault)),
             receiver: vault.balanceOf(receiver),
             totalSupply: vault.totalSupply()
@@ -298,6 +383,7 @@ abstract contract Assertions is EventsAssertions {
 
     function getSharesValueData(
         IERC4626 vault,
+        address sender,
         address owner,
         address receiver
     )
@@ -307,6 +393,7 @@ abstract contract Assertions is EventsAssertions {
     {
         return SharesValueData({
             owner: vault.convertToAssets(vault.balanceOf(owner)),
+            sender: vault.convertToAssets(vault.balanceOf(sender)),
             receiver: vault.convertToAssets(vault.balanceOf(receiver))
         });
     }

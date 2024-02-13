@@ -18,6 +18,9 @@ TestWithdraw
 #given assets is higher than owner shares balance converted to assets when withdraw
 ##it should revert with ERC4626ExceededMaxWithdraw
 
+#given sender not owner and allowance(sender, owner) is lower than withdraw amount when withdraw
+##it should revert with ERC20InsufficientAllowance
+
 #when withdraw pass
 ##it should increase the underlying balance of the receiver
 ##it should emit a Withdraw event
@@ -29,10 +32,13 @@ TestWithdraw
 ##it should take from the owner the amount returned by previewWithdraw
 ##it should decrease the underlying balance of the vault by the value returned by assets
 
-#given vault open given receiver not equal owner when withdraw
+#given receiver not equal owner when withdraw
 ##withdraw pass
 
-#given vault open given withdraw amount is 0 when withdraw
+#given withdraw amount is 0 when withdraw
+##withdraw pass
+
+given sender not owner and allowance(sender, owner) is higher than withdraw amount when withdraw
 ##withdraw pass
 
 
