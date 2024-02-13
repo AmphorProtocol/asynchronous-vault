@@ -11,11 +11,11 @@ contract TestAsyncVault is AsyncSynthVault {
     constructor(IAllowanceTransfer _permit2) AsyncSynthVault(_permit2) { }
 
     function getClaimableAssets() public view returns (uint256) {
-        return claimableAssets;
+        return IERC20(asset()).balanceOf(address(this));
     }
 
     function getClaimableShares() public view returns (uint256) {
-        return claimableShares;
+        return balanceOf(address(this));
     }
 
     function getMaxDrawdown() public view returns (uint16) {

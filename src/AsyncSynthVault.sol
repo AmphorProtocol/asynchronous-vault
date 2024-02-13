@@ -72,6 +72,12 @@ struct EpochData {
 uint256 constant BPS_DIVIDER = 10_000;
 uint16 constant MAX_FEES = 3000; // 30%
 
+contract LiquidityContainer {
+    constructor () {
+        IERC20(AsyncSynthVault(msg.sender).asset()).approve(msg.sender, type(uint256).max);
+    }
+}
+
 contract AsyncSynthVault is IERC7540, SyncSynthVault {
     /*
      * ####################################
@@ -81,8 +87,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
 
     // @return Amount of the perf fees applied on the positive yield.
     uint256 public epochId;
-    uint256 internal claimableShares;
-    uint256 internal claimableAssets;
+    LiquidityContainer public liquidityContainer;
     mapping(uint256 epochId => EpochData epoch) public epochs;
     mapping(address user => uint256 epochId) public lastDepositRequestId;
     mapping(address user => uint256 epochId) public lastRedeemRequestId;
@@ -172,6 +177,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
     {
         super.initialize(fees, owner, underlying, name, symbol);
         epochId = 1;
+        liquidityContainer = new LiquidityContainer();
         _asset.forceApprove(address(this), type(uint256).max); // allowing futur
             // deposits into own vault
         approve(address(this), type(uint256).max); // allowing futur redeem into
@@ -204,7 +210,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
             );
         }
 
-        _asset.safeTransferFrom(owner, address(this), assets);
+        _asset.safeTransferFrom(owner, address(liquidityContainer), assets);
 
         _createDepositRequest(assets, receiver, owner, data);
     }
@@ -362,7 +368,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
             revert(); //todo add error
         }
 
-        _update(owner, address(this), shares);
+        _update(owner, address(liquidityContainer), shares);
 
         // Create a new request
         _createRedeemRequest(shares, receiver, owner, data);
@@ -470,7 +476,6 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
 
         transfer(receiver, shares);
 
-        claimableShares -= shares;
         emit ClaimDeposit(lastRequestId, owner, receiver, assets, shares);
     }
 
@@ -498,7 +503,6 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         epochs[lastRequestId].redeemRequestBalance[owner] = 0;
 
         _asset.safeTransfer(receiver, assets);
-        claimableAssets -= assets;
         emit ClaimRedeem(lastRequestId, owner, receiver, assets, shares);
     }
 
@@ -611,8 +615,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         onlyOwner
         whenClosed
     {
-        uint256 pendingDeposit =
-            _asset.balanceOf(address(this)) - claimableAssets;
+        uint256 pendingDeposit = _asset.balanceOf(address(liquidityContainer));
         _open(assetReturned);
         _execRequests(pendingDeposit);
         epochId++;
@@ -659,21 +662,29 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
     }
 
     function _execRequests(uint256 pendingDeposit) internal {
-        //////////////////////////////
+        ////////////////////////////////
         // Pending deposits treatment //
+        ////////////////////////////////
 
         uint256 sharesToMint = previewDeposit(pendingDeposit);
-        _deposit(address(this), address(this), pendingDeposit, sharesToMint);
-        claimableShares += sharesToMint;
-        //////////////////////////////
+        _deposit(
+            address(liquidityContainer),
+            address(this),
+            pendingDeposit,
+            sharesToMint
+        );
+
         //////////////////////////////
         // Pending redeem treatment //
         //////////////////////////////
-        uint256 pendingRedeem = balanceOf(address(this)) - claimableShares;
+        uint256 pendingRedeem = balanceOf(address(liquidityContainer));
         uint256 assetsToRedeem = previewRedeem(pendingRedeem);
-        _withdraw(address(this), address(this), assetsToRedeem, pendingRedeem);
-        claimableAssets += assetsToRedeem;
-        //////////////////////////////
+        _withdraw(
+            address(this),
+            address(liquidityContainer),
+            assetsToRedeem,
+            pendingRedeem
+        );
 
         epochs[epochId].totalSupplySnapshot = totalSupply();
         epochs[epochId].totalAssetsSnapshot = totalAssets;
