@@ -6,7 +6,7 @@ TestWithdraw
 #given vault is empty and assets is higher than 0 when withdraw
 ##it should revert
 
-#ggiven vault paused when withdraw
+#given vault paused when withdraw
 ##it should revert with EnforcedPause
 
 #given vault closed given vault not paused when withdraw
@@ -38,7 +38,7 @@ TestWithdraw
 #given withdraw amount is 0 when withdraw
 ##withdraw pass
 
-given sender not owner and allowance(sender, owner) is higher than withdraw amount when withdraw
+#given sender not owner and allowance(sender, owner) is higher than withdraw amount when withdraw
 ##withdraw pass
 
 
