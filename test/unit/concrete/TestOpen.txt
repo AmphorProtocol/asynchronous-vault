@@ -14,7 +14,7 @@ TestOpen
 
 #when open succeed
 ##it should set isOpen to true
-##it shoud emit EpochEnd(block.timestamp, _totalAssets, assetReturned, fees, totalSupply())
+##it should emit EpochEnd(block.timestamp, _totalAssets, assetReturned, fees, totalSupply())
 ##it should _mint previewDeposit(pendingDeposit)
 ##it should emit Deposit(address(this), address(this), pendingDeposit, previewDeposit(pendingDeposit))
 ##it should _deposit the pendingDeposit value to the vault

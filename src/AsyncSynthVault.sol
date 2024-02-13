@@ -147,6 +147,8 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         address receiver, uint256 assets, uint256 maxDeposit
     );
     error ReceiverFailed();
+    error NotOwner();
+    error NullRequest();
 
     /*
      * ##############################
@@ -189,14 +191,14 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         bytes memory data
     )
         public
-        whenClosed
         whenNotPaused
+        whenClosed
     {
         if (_msgSender() != owner) {
-            revert(); //todo add error
+            revert NotOwner();
         }
         if (assets == 0) {
-            revert(); //todo add error
+            revert NullRequest();
         }
         if (assets > maxDepositRequest(receiver)) {
             revert ExceededMaxDepositRequest(
@@ -350,8 +352,8 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         bytes memory data
     )
         public
-        whenClosed
         whenNotPaused
+        whenClosed
     {
         if (shares > maxRedeemRequest(receiver)) {
             revert ExceededMaxRedeemRequest(
@@ -359,7 +361,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
             );
         }
         if (shares == 0) {
-            revert(); //todo add error
+            revert NullRequest();
         }
 
         _update(owner, address(this), shares);
