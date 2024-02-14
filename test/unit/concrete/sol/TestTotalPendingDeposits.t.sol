@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
+import { TestBase } from "../../../Base.t.sol";
+
 contract TestTotalPendingDeposits {
     function test_GivenVaultOpenWhenTotalPendingDeposits() external {
         // it should return 0

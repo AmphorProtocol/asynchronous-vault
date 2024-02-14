@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
+import { TestBase } from "../../../Base.t.sol";
+
 contract TestSharesBalanceInAsset {
     function test_GivenUserHas0Shares() external {
         // it should return 0
