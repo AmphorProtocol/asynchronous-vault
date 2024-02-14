@@ -97,6 +97,74 @@ abstract contract AssertionsRequest is Assertions {
         assertTotalPendingDeposits(vault, pendingDepositsBefore.vault + assets);
     }
 
+    function assertRequestRedeem(
+        AsyncSynthVault vault,
+        address sender,
+        address owner,
+        address receiver,
+        uint256 shares,
+        bytes memory data
+    )
+        public
+    {
+        uint256 epochId = vault.epochId();
+
+        // assets data before deposit
+        AssetsData memory assetsBefore =
+            getAssetsData(vault, sender, owner, receiver);
+
+        // shares data before deposit
+        SharesData memory sharesBefore =
+            getSharesData(vault, sender, owner, receiver);
+
+        // pending deposits data before deposit
+        PendingRedeemsData memory pendingRedeemsBefore = getPendingRedeemData(
+            AsyncSynthVault(address(vault)), sender, owner, receiver
+        );
+
+        // assertions on events
+        assertTransferEvent(vault, owner, address(vault), shares); // transfer
+            // from owner to vault of its assets
+        assertRedeemRequestEvent(
+            vault, receiver, owner, epochId, sender, shares
+        );
+
+        // request redeem //
+        vm.prank(sender);
+        vault.requestRedeem(shares, receiver, owner, data);
+
+        // total supply should not change
+        assertTotalSupply(vault, sharesBefore.totalSupply);
+
+        // totalAssets() should not change
+        assertTotalAssets(vault, assetsBefore.totalAssets);
+
+        // assertion on vault asset balance, should not change
+        assertVaultAssetBalance(vault, assetsBefore.vault);
+
+        // assertion on shares, owner should decrease, receiver should not,
+        // vault should increase
+        assertSharesBalance(vault, owner, sharesBefore.owner - shares);
+        assertSharesBalance(vault, sender, sharesBefore.sender);
+        assertSharesBalance(vault, receiver, sharesBefore.receiver);
+        assertSharesBalance(vault, address(vault), sharesBefore.vault + shares);
+
+        // assertion on assets, should not change
+        assertAssetBalance(vault, owner, assetsBefore.owner);
+        if (owner != receiver) {
+            assertAssetBalance(vault, receiver, assetsBefore.receiver);
+        }
+
+        // assertion on pending deposits redeems, only total and receiver should
+        // increase
+        assertPendingRedeemRequest(vault, owner, pendingRedeemsBefore.owner);
+        assertPendingRedeemRequest(vault, sender, pendingRedeemsBefore.sender);
+        assertPendingRedeemRequest(
+            vault, receiver, pendingRedeemsBefore.receiver + shares
+        );
+        assertTotalPendingDeposits(vault, pendingRedeemsBefore.vault + shares);
+    }
+
     function assertPendingDepositRequest(
         IERC7540 vault,
         address owner,
