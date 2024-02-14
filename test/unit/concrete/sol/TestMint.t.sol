@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
+import { TestBase } from "../../../Base.t.sol";
+
 contract TestMint {
     function test_GivenVaultClosedWhenMint() external {
         // it should revert with ERC4626ExceededMaxMint

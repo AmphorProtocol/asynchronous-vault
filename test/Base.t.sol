@@ -163,12 +163,4 @@ contract TestBase is Assertions {
         vaultWBTC.deposit(wbtcDeposit, owner);
         vm.stopPrank();
     }
-
-    // todo
-    function assertRedeem(
-        IERC4626 vault,
-        address owner,
-        address receiver,
-        uint256 shares
-    ) public virtual override {}
 }

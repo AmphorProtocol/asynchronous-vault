@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
+import { TestBase } from "../../../Base.t.sol";
+
 contract TestRedeem {
     function test_RevertGiven_SharesProvidedIsHigherThanOwnerSharesBalanceWhenRedeem() external {
         // it should revert

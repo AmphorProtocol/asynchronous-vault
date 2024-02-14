@@ -3,9 +3,14 @@ pragma solidity 0.8.21;
 
 import { Test } from "forge-std/Test.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import { TestAsyncVault } from "./TestAsyncVault.sol";
+import { TestVault, AsyncSynthVault } from "./TestVault.sol";
 import { IPermit2 } from "permit2/src/interfaces/IPermit2.sol";
 import { VmSafe } from "forge-std/Vm.sol";
+import { Upgrades, Options } from "openzeppelin-foundry-upgrades/Upgrades.sol";
+import { UpgradeableBeacon } from
+    "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
+import { BeaconProxy } from
+    "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
 abstract contract Constants is Test {
     // ERC20 tokens
@@ -32,17 +37,17 @@ abstract contract Constants is Test {
     // USDC vault
     string vaultNameUSDC = vm.envString("SYNTHETIC_USDC_V1_NAME");
     string vaultSymbolUSDC = vm.envString("SYNTHETIC_USDC_V1_SYMBOL");
-    TestAsyncVault immutable vaultUSDC = new TestAsyncVault(permit2);
+    TestVault vaultUSDC;
 
     // WSTETH vault
     string vaultNameWSTETH = vm.envString("SYNTHETIC_WSTETH_V1_NAME");
     string vaultSymbolWSTETH = vm.envString("SYNTHETIC_WSTETH_V1_SYMBOL");
-    TestAsyncVault immutable vaultWSTETH = new TestAsyncVault(permit2);
+    TestVault vaultWSTETH;
 
     // WBTC vault
     string vaultNameWBTC = vm.envString("SYNTHETIC_WBTC_V1_NAME");
     string vaultSymbolWBTC = vm.envString("SYNTHETIC_WBTC_V1_SYMBOL");
-    TestAsyncVault immutable vaultWBTC = new TestAsyncVault(permit2);
+    TestVault vaultWBTC;
 
     // Zapper
     //AsyncVaultZapper immutable zapper = new AsyncVaultZapper(permit2);
@@ -101,14 +106,59 @@ abstract contract Constants is Test {
         users.push(user9);
         users.push(user10);
 
-        vaultUSDC.initialize(
-            fees, amphorLabs, USDC, vaultNameUSDC, vaultSymbolUSDC
+        vaultUSDC = _proxyDeploy(
+            amphorLabs,
+            USDC,
+            vaultNameUSDC,
+            vaultSymbolUSDC
         );
-        vaultWSTETH.initialize(
-            fees, amphorLabs, WSTETH, vaultNameWSTETH, vaultSymbolWSTETH
+
+        vaultWSTETH = _proxyDeploy(
+            amphorLabs,
+            WSTETH,
+            vaultNameWSTETH,
+            vaultSymbolWSTETH
         );
-        vaultWBTC.initialize(
-            fees, amphorLabs, WBTC, vaultNameWBTC, vaultSymbolWBTC
+
+        vaultWBTC = _proxyDeploy(
+            amphorLabs,
+            WBTC,
+            vaultNameWBTC,
+            vaultSymbolWBTC
         );
+    }
+
+    function _proxyDeploy(
+        address owner,
+        ERC20 underlying,
+        string memory vaultName,
+        string memory vaultSymbol
+    ) internal returns (TestVault) {
+        Options memory deploy;
+        deploy.constructorData = abi.encode(permit2);
+
+        UpgradeableBeacon beacon = UpgradeableBeacon(
+            Upgrades.deployBeacon("AsyncSynthVault.sol", owner, deploy)
+        );
+
+        BeaconProxy proxy = BeaconProxy(
+            payable(
+                Upgrades.deployBeaconProxy(
+                    address(beacon),
+                    abi.encodeCall(
+                        AsyncSynthVault.initialize,
+                        (
+                            fees,
+                            owner,
+                            underlying,
+                            vaultName,
+                            vaultSymbol
+                        )
+                    )
+                )
+            )
+        );
+
+        return TestVault(address(proxy));
     }
 }

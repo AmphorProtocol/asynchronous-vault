@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
+import { TestBase } from "../../../Base.t.sol";
+
 contract TestIsCurrentEpoch {
     function test_GivenEpochIdEquals10GivenRequestIdEquals10WhenIsCurrentEpoch() external {
         // it should not revert
