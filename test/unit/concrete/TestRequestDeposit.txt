@@ -1,30 +1,37 @@
 TestRequestDeposit
 
-#given vault open given vault open when requestDeposit
+#given vault open and not paused when requestDeposit
 ##it should revert VaultIsOpen
 
-#given vault open given vault paused when requestDeposit
+#given vault closed and paused when requestDeposit
 ##it should revert EnforcedPause
 
-#given vault closed given vault not paused given receiver doesn't have any claimable balance when requestDeposit
-##it should decrease the owner underlying balance by the specified assets value
-##it should increase the vault underlying balance by the specified assets value
-##it should increase pendingDepositRequest balance of receiver
-##it should increase totalPendingDepositRequest balance
-##it should emit DepositRequest event
+#given vault open and paused when requestDeposit
+##it should revert EnforcedPause
 
-#given vault closed given vault not paused given receiver have not approval balance at all when requestDeposit
-##it should revert with ERC20InsufficientAllowance
+#given msg.sender != owner when requestDeposit
+##it should revert NotOwner
 
-#given vault closed given vault not paused given receiver have not enough assets balance when requestDeposit
-##it should revert with ERC20InsufficientBalance
-
-#given vault closed given vault not paused given receiver have not enough approval balance when requestDeposit
-##it should revert with ERC20InsufficientAllowance
-
-#given receiver have claimable and amount is not zero balance when requestDeposit
+#given receiver has claimable balance when requestDeposit
 ##it should revert with maxDepositRequest
 
+#when requestDeposit succeed
+##it should decrease the owner underlying balance by the specified value
+##it should increase the vault underlying balance by the specified value
+##it should increase pendingDepositRequest balance of receiver by the specified value
+##it should not modify the owner pendingDepositRequest balance
+##it should emit DepositRequest event
 
+#given owner has claimable balance but not receiver when requestDeposit
+##it should succeed
+
+#given owner have not enough approval balance when requestDeposit
+##it should revert with ERC20InsufficientAllowance
+
+#given owner have not enough assets balance when requestDeposit
+##it should revert with ERC20InsufficientBalance
+
+#given data param submitted and invalid selector when requestDeposit
+##it should revert with ReceiverFailed
 
 ##todo check ERC7540Receiver (and ReceiverFailed)
