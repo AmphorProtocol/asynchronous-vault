@@ -1,0 +1,9 @@
+TestMaxRedeemRequest
+├── given vault open when maxRedeemRequest
+│   └── it should return 0
+├── given vault paused when maxRedeemRequest
+│   └── it should return 0
+├── given vault closed and paused when maxRedeemRequest
+│   └── it should return 0
+└── given vault closed and not paused when maxRedeemRequest
+    └── it should return the owner shares balance
