@@ -6,6 +6,7 @@ import { Test } from "forge-std/Test.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Events } from "../Events.sol";
 import { Constants } from "../Constants.sol";
+import { IERC7540 } from "../../../src/interfaces/IERC7540.sol";
 
 abstract contract EventsAssertions is Test, Constants, Events {
     // ERC20 EVENTS
@@ -60,5 +61,33 @@ abstract contract EventsAssertions is Test, Constants, Events {
     {
         vm.expectEmit(address(vault));
         emit Withdraw(sender, receiver, owner, assets, shares);
+    }
+
+    function assertDepositRequestEvent(
+        IERC7540 vault,
+        address receiver,
+        address owner,
+        uint256 requestId,
+        address sender,
+        uint256 assets
+    )
+        public
+    {
+        vm.expectEmit(address(vault));
+        emit DepositRequest(receiver, owner, requestId, sender, assets);
+    }
+
+    function assertRedeemRequestEvent(
+        IERC7540 vault,
+        address receiver,
+        address owner,
+        uint256 requestId,
+        address sender,
+        uint256 shares
+    )
+        public
+    {
+        vm.expectEmit(address(vault));
+        emit RedeemRequest(receiver, owner, requestId, sender, shares);
     }
 }
