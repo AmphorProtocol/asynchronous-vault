@@ -1,0 +1,25 @@
+TestRedeem
+├── given shares provided is higher than owner shares balance when redeem
+│   └── it should revert
+├── given vault closed when redeem
+│   └── it should revert with ERC4626ExceededMaxWithdraw
+├── given vault paused when redeem
+│   └── it should revert with EnforcedPause
+├── given vault closed and not paused when redeem
+│   └── it should revert with ERC4626ExceededMaxDeposit
+├── given receiver is address 0 when redeem
+│   └── it should revert with ERC20InvalidReceiver
+├── when redeem pass
+│   ├── it should increase the underlying balance of the receiver by convertToAsset(shares)
+│   ├── it should emit a Withdraw event
+│   ├── it should decrease the underlying balance of the vault by convertToAsset() of the shares
+│   ├── it should decrease the balance of shares of the owner by shares
+│   ├── it should return the same value as the one returned by previewRedeem
+│   ├── it should return the same value as the assets taken from the owner
+│   ├── it should decrease the total supply of shares by shares
+│   ├── it should take from the owner the amount returned by previewWithdraw
+│   └── it should decrease the underlying balance of the vault by convertToAsset(shares)
+├── given receiver not equal owner when redeem
+│   └── it should pass when redeem pass
+└── given deposit amount is 0 when redeem
+    └── it should pass when redeem pass

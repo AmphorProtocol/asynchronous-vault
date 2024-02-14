@@ -1,0 +1,9 @@
+TestMaxDepositRequest
+├── given vault open when maxDepositRequest
+│   └── it should return 0
+├── given vault paused when maxDepositRequest
+│   └── it should return 0
+├── given vault closed and paused when maxDepositRequest
+│   └── it should return 0
+└── given vault closed and not paused when maxDepositRequest
+    └── it should return maxUint256
