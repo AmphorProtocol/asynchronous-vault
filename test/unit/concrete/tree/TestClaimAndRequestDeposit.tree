@@ -1,0 +1,14 @@
+TestDecreaseDepositRequest
+├── given vault open when decreaseDepositRequest
+│   └── it should revert with `VaultOpen`
+├── given vault closed and paused when decreaseDepositRequest
+│   └── it should revert with `EnforcedPause`
+├── given vault state ok and assets too high when decreaseDepositRequest
+│   └── it should revert if assets is higher than the owner deposit request balance
+├── given vault state ok and receiver is not owner when decreaseDepositRequest
+│   ├── it should decrease of assets the deposit request balance of owner
+│   ├── it should decrease of assets the vault underlying balance
+│   ├── it should increase of assets the receiver underlying balance
+│   └── it should emit `DepositRequestDecreased` event
+└── given vault state ok and receiver is owner when decreaseDepositRequest
+    └── it should pass same as above

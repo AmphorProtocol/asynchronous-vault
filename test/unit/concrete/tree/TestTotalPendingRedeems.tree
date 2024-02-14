@@ -1,0 +1,5 @@
+TestTotalPendingRedeems
+├── given vault open when totalPendingRedeems
+│   └── it should return 0
+└── given vault closed when totalPendingRedeems
+    └── it should return shares balance of vault

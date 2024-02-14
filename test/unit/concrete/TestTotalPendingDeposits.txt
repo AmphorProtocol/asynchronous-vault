@@ -1,7 +1,0 @@
-TestTotalPendingDeposits
-
-#given vault open when totalPendingDeposits
-##it should return 0
-
-#given vault closed when totalPendingDeposits
-##it should return underlying balance of vault

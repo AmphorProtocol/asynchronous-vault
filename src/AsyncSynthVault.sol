@@ -187,7 +187,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
     function requestDeposit(
         uint256 assets,
         address receiver,
-        address owner, // this should not be here
+        address owner,
         bytes memory data
     )
         public
@@ -237,14 +237,14 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         emit DepositRequest(receiver, owner, epochId, _msgSender(), assets);
     }
 
-    // tree done
+    // tree todo
     function totalPendingDeposits() public view returns (uint256) {
-        return isOpen ? 0 : _asset.balanceOf(address(this));
+        return isOpen ? 0 : _asset.balanceOf(address(this)) - claimableAssets;
     }
 
-    // tree done
+    // tree todo
     function totalPendingRedeems() public view returns (uint256) {
-        return isOpen ? 0 : balanceOf(address(this));
+        return isOpen ? 0 : balanceOf(address(this)) - claimableShares;
     }
 
     // tree todo
