@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
+import { TestBase } from "../../../Base.t.sol";
+
 contract TestRequestRedeem {
     function test_GivenVaultClosedAndNotPausedWhenRequestRedeem() external {
         // it should decrease owner shares balance by shares param
