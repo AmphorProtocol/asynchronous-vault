@@ -14,6 +14,8 @@ import { Constants } from "../Constants.sol";
 import { AsyncSynthVault } from "../../../src/AsyncSynthVault.sol";
 
 abstract contract AssertionsRequest is Assertions {
+    // those are the pendingDeposit values of owner, sender, receiver and vault
+    // (total)
     struct PendingDepositsData {
         uint256 owner;
         uint256 sender;
@@ -21,6 +23,8 @@ abstract contract AssertionsRequest is Assertions {
         uint256 receiver;
     }
 
+    // those are the pendingRedeems values of owner, sender, receiver and vault
+    // (total)
     struct PendingRedeemsData {
         uint256 owner;
         uint256 sender;
