@@ -19,16 +19,21 @@ contract TestBase is Assertions {
         address owner = vault.owner();
         deal(owner, type(uint256).max);
         _approveVaults(owner);
-        vm.startPrank(owner);
-        _dealAsset(address(WSTETH), owner, uint256(toSendBack));
+        _dealAsset(vault.asset(), owner, uint256(toSendBack));
+        vm.prank(owner);
         vault.open(uint256(toSendBack));
-        vm.stopPrank();
     }
 
     function close(AsyncSynthVault vault) public {
         address owner = vault.owner();
         vm.prank(owner);
         vault.close();
+    }
+
+    function closeVaults() public {
+        close(vaultUSDC);
+        close(vaultWSTETH);
+        close(vaultWBTC);
     }
 
     function pause(AsyncSynthVault vault) public {
@@ -105,6 +110,34 @@ contract TestBase is Assertions {
         vault.redeem(shares, user.addr, user.addr);
     }
 
+    function requestDeposit(
+        AsyncSynthVault vault,
+        VmSafe.Wallet memory user,
+        uint256 amount
+    ) public {
+        vm.startPrank(user.addr);
+        vault.requestDeposit(
+            amount,
+            user.addr,
+            user.addr,
+            ""
+        );
+    }
+
+    function requestRedeem(
+        AsyncSynthVault vault,
+        VmSafe.Wallet memory user,
+        uint256 amount
+    ) public {
+        vm.startPrank(user.addr);
+        vault.requestRedeem(
+            amount,
+            user.addr,
+            user.addr,
+            ""
+        );
+    }
+
     // USERS CONFIGURATION //
 
     function usersDealApproveAndDeposit(uint256 userMax) public {
@@ -113,11 +146,35 @@ contract TestBase is Assertions {
         usersDeposit(userMax);
     }
 
+    function usersDealApproveAndRequestDeposit(uint256 userMax) public {
+        userMax = userMax > users.length ? users.length : userMax;
+        usersDealApprove(userMax);
+        usersRequestDeposit(userMax);
+    }
+
+    function usersDealApproveAndRequestRedeem(uint256 userMax) public {
+        userMax = userMax > users.length ? users.length : userMax;
+        usersDealApprove(userMax);
+        usersRequestRedeem(userMax);
+    }
+
     function usersDeposit(uint256 userMax) public {
         userMax = userMax > users.length ? users.length : userMax;
         for (uint256 i = 0; i < userMax; i++) {
             _depositInVaults(users[i].addr);
         }
+    }
+
+    function usersRequestDeposit(uint256 userMax) public {
+        userMax = userMax > users.length ? users.length : userMax;
+        for (uint256 i = 0; i < userMax; i++)
+            _requestDepositInVaults(users[i].addr);
+    }
+
+    function usersRequestRedeem(uint256 userMax) public {
+        userMax = userMax > users.length ? users.length : userMax;
+        for (uint256 i = 0; i < userMax; i++)
+            _requestRedeemInVaults(users[i].addr);
     }
 
     function usersDealApprove(uint256 userMax) public {
@@ -161,6 +218,22 @@ contract TestBase is Assertions {
         vaultWSTETH.deposit(wstethDeposit, owner);
         uint256 wbtcDeposit = WBTC.balanceOf(owner) / 4;
         vaultWBTC.deposit(wbtcDeposit, owner);
+        vm.stopPrank();
+    }
+
+    function _requestDepositInVaults(address owner) internal {
+        vm.startPrank(owner);
+        vaultUSDC.requestDeposit(USDC.balanceOf(owner)/4, owner, owner, "");
+        vaultWSTETH.requestDeposit(USDC.balanceOf(owner)/4, owner, owner, "");
+        vaultWBTC.requestDeposit(USDC.balanceOf(owner)/4, owner, owner, "");
+        vm.stopPrank();
+    }
+
+    function _requestRedeemInVaults(address owner) internal {
+        vm.startPrank(owner);
+        vaultUSDC.requestRedeem(vaultUSDC.balanceOf(owner), owner, owner, "");
+        vaultWSTETH.requestRedeem(vaultWSTETH.balanceOf(owner), owner, owner, "");
+        vaultWBTC.requestRedeem(vaultWBTC.balanceOf(owner), owner, owner, "");
         vm.stopPrank();
     }
 }
