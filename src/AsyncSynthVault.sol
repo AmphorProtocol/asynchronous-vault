@@ -170,6 +170,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
     )
         public
         override
+        virtual // wrap it !!
         initializer
     {
         super.initialize(fees, owner, underlying, name, symbol);

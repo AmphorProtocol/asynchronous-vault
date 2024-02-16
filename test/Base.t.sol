@@ -223,16 +223,22 @@ contract TestBase is Assertions {
 
     function _requestDepositInVaults(address owner) internal {
         vm.startPrank(owner);
+        console.log("USDC deposit request amount:", USDC.balanceOf(owner)/4);
         vaultUSDC.requestDeposit(USDC.balanceOf(owner)/4, owner, owner, "");
-        vaultWSTETH.requestDeposit(USDC.balanceOf(owner)/4, owner, owner, "");
-        vaultWBTC.requestDeposit(USDC.balanceOf(owner)/4, owner, owner, "");
+        console.log("WSTETH deposit request amount", WSTETH.balanceOf(owner)/4);
+        vaultWSTETH.requestDeposit(WSTETH.balanceOf(owner)/4, owner, owner, "");
+        console.log("WBTC deposit request amount", WBTC.balanceOf(owner)/4);
+        vaultWBTC.requestDeposit(WBTC.balanceOf(owner)/4, owner, owner, "");
         vm.stopPrank();
     }
 
     function _requestRedeemInVaults(address owner) internal {
         vm.startPrank(owner);
+        console.log("USDC redeem request amount", vaultUSDC.balanceOf(owner));
         vaultUSDC.requestRedeem(vaultUSDC.balanceOf(owner), owner, owner, "");
+        console.log("WSTETH redeem request amount", vaultWSTETH.balanceOf(owner));
         vaultWSTETH.requestRedeem(vaultWSTETH.balanceOf(owner), owner, owner, "");
+        console.log("WBTC redeem request amount", vaultWBTC.balanceOf(owner));
         vaultWBTC.requestRedeem(vaultWBTC.balanceOf(owner), owner, owner, "");
         vm.stopPrank();
     }
