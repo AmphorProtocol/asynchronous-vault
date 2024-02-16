@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
-import { TestBase } from "../../../Base.t.sol";
+import { TestBase, SyncSynthVault } from "../../../Base.t.sol";
 
-contract TestClose {
+contract TestClose is TestBase {
     function test_GivenVaultIsClosedWhenClose() external {
         // it should revert with VaultIsLocked
+        usersDealApproveAndDeposit(1); // vault should not be empty
+        closeVaults();
+        closeRevert(vaultUSDC);
     }
 
     function test_GivenMsgSenderIsNotOwnerWhenClose() external {

@@ -3,7 +3,7 @@ pragma solidity 0.8.21;
 
 import { Assertions } from "./utils/Assertions/Assertions.sol";
 import { console } from "forge-std/console.sol";
-import { AsyncSynthVault } from "../src/AsyncSynthVault.sol";
+import { AsyncSynthVault, SyncSynthVault } from "../src/AsyncSynthVault.sol";
 import { VmSafe } from "forge-std/Vm.sol";
 import { IERC4626 } from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -28,6 +28,14 @@ contract TestBase is Assertions {
         address owner = vault.owner();
         vm.prank(owner);
         vault.close();
+    }
+
+    function closeRevert(AsyncSynthVault vault) public {
+        address owner = vault.owner();
+        vm.startPrank(owner);
+        vm.expectRevert(SyncSynthVault.VaultIsLocked.selector);
+        vault.close();
+        vm.stopPrank();
     }
 
     function closeVaults() public {
