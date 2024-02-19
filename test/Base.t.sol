@@ -142,7 +142,40 @@ contract TestBase is Assertions {
             amount,
             user.addr,
             user.addr,
-            ""
+            "" // todo
+        );
+    }
+
+    function decreaseDepositRequest(
+        AsyncSynthVault vault,
+        VmSafe.Wallet memory user,
+        uint256 amount
+    ) public {
+        vm.startPrank(user.addr);
+        vault.decreaseDepositRequest(
+            amount,
+            user.addr
+        );
+    }
+
+    function decreaseRedeemRequest(
+        AsyncSynthVault vault,
+        VmSafe.Wallet memory user,
+        uint256 amount
+    ) public {
+        decreaseRedeemRequest(vault, user, user, amount);
+    }
+
+    function decreaseRedeemRequest(
+        AsyncSynthVault vault,
+        VmSafe.Wallet memory user,
+        VmSafe.Wallet memory receiver,
+        uint256 amount
+    ) public {
+        vm.startPrank(user.addr);
+        vault.decreaseRedeemRequest(
+            amount,
+            receiver.addr
         );
     }
 
