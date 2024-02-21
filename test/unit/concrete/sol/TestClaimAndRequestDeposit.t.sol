@@ -32,31 +32,15 @@ contract TestDecreaseDepositRequest is TestBase {
     }
 
     function test_GivenVaultStateOkAndReceiverIsNotOwnerWhenDecreaseDepositRequest() external {
-        decreaseDepositPass(user2.addr);
+        usersDealApproveAndDeposit(1);
+        close(vaultUSDC);
+        assertDecreaseDeposit(vaultUSDC, user2.addr);
     }
 
     function test_GivenVaultStateOkAndReceiverIsOwnerWhenDecreaseDepositRequest() external {
         // it should pass same as above
-        decreaseDepositPass(user1.addr);
-    }
-
-    function decreaseDepositPass(address receiver) internal {
-        // it should decrease of assets the deposit request balance of owner
-        // it should decrease of assets the vault underlying balance
-        // it should increase of assets the receiver underlying balance
-        // it should emit `DepositRequestDecreased` event -> todo
-
         usersDealApproveAndDeposit(1);
         close(vaultUSDC);
-        
-        uint256 ownerDepRequestBalance = vaultUSDC.pendingDepositRequest(user1.addr);
-        uint256 ownerDecreaseAmount = ownerDepRequestBalance/2;
-        uint256 finalOwnerDepRequestBalance = ownerDepRequestBalance - ownerDecreaseAmount;
-        uint256 vaultUnderlyingBalanceBef = IERC20(vaultUSDC.asset()).balanceOf(address(vaultUSDC));
-        uint256 user2UnderlyingBalanceBef = IERC20(vaultUSDC.asset()).balanceOf(receiver);
-        decreaseRedeemRequest(vaultUSDC, user1, user2, ownerDecreaseAmount);
-        assertEq(vaultUSDC.pendingDepositRequest(user1.addr), finalOwnerDepRequestBalance);
-        assertEq(IERC20(vaultUSDC.asset()).balanceOf(address(vaultUSDC)), vaultUnderlyingBalanceBef - ownerDecreaseAmount);
-        assertEq(IERC20(vaultUSDC.asset()).balanceOf(receiver), user2UnderlyingBalanceBef + ownerDecreaseAmount);
+        assertDecreaseDeposit(vaultUSDC, user1.addr);
     }
 }

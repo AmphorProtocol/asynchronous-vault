@@ -41,7 +41,12 @@ contract TestBase is Assertions {
     function closeRevertUnauthorized(AsyncSynthVault vault) public {
         address user = users[0].addr;
         vm.startPrank(user);
-        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", user));
+        vm.expectRevert(
+            abi.encodeWithSignature(
+                "OwnableUnauthorizedAccount(address)",
+                user
+            )
+        );
         vault.close();
         vm.stopPrank();
     }
@@ -82,6 +87,14 @@ contract TestBase is Assertions {
         deposit(vault, user, USDC.balanceOf(user.addr));
     }
 
+    function depositRevert(
+        AsyncSynthVault vault,
+        VmSafe.Wallet memory user,
+        bytes4 selector
+    ) public {
+        depositRevert(vault, user, USDC.balanceOf(user.addr), selector);
+    }
+
     function withdraw(AsyncSynthVault vault, VmSafe.Wallet memory user) public {
         withdraw(vault, user, USDC.balanceOf(user.addr));
     }
@@ -103,8 +116,30 @@ contract TestBase is Assertions {
         AsyncSynthVault vault,
         VmSafe.Wallet memory user,
         uint256 amount
+    ) private {
+        vm.startPrank(user.addr);
+        vault.deposit(amount, user.addr);
+    }
+
+    function depositRevert(
+        AsyncSynthVault vault,
+        VmSafe.Wallet memory user,
+        uint256 amount,
+        bytes4 selector
     ) public {
         vm.startPrank(user.addr);
+        vm.expectRevert(selector);
+        vault.deposit(amount, user.addr);
+    }
+
+    function depositRevert2(
+        AsyncSynthVault vault,
+        VmSafe.Wallet memory user,
+        uint256 amount,
+        bytes calldata revertData
+    ) public {
+        vm.startPrank(user.addr);
+        vm.expectRevert(revertData);
         vault.deposit(amount, user.addr);
     }
 

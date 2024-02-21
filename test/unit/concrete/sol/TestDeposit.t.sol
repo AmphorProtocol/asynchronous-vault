@@ -4,12 +4,24 @@ pragma solidity 0.8.21;
 import { TestBase, SyncSynthVault } from "../../../Base.t.sol";
 
 contract TestDeposit is TestBase {
+
     function test_GivenVaultClosedWhenDeposit() external {
         // it should revert with ERC4626ExceededMaxDeposit
+        usersDealApproveAndDeposit(1); // vault should not be empty
+        closeVaults();
+        //depositRevert(vaultUSDC, user1, SyncSynthVault.ERC4626ExceededMaxDeposit.selector);
     }
 
     function test_GivenAmountHigherThanOwnerAllowanceToTheVaultWhenDeposit() external {
         // it should revert with ERC20InsufficientAllowance
+        // depositRevert2(
+        //     vaultUSDC, user1, 1, abi.encodeWithSignature(
+        //         "ERC20InsufficientAllowance(address,uint256,uint256)",
+        //         user1.addr,
+        //         0,
+        //         1
+        //     )
+        // );
     }
 
     function test_GivenAmountHigherThanOwnerBalanceWhenDeposit() external {
