@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
-import { TestBase } from "../../../Base.t.sol";
+import { TestBase, SyncSynthVault } from "../../../Base.t.sol";
 
-contract TestDeposit {
+contract TestDeposit is TestBase {
     function test_GivenVaultClosedWhenDeposit() external {
         // it should revert with ERC4626ExceededMaxDeposit
     }

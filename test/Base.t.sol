@@ -30,10 +30,18 @@ contract TestBase is Assertions {
         vault.close();
     }
 
-    function closeRevert(AsyncSynthVault vault) public {
+    function closeRevertLocked(AsyncSynthVault vault) public {
         address owner = vault.owner();
         vm.startPrank(owner);
         vm.expectRevert(SyncSynthVault.VaultIsLocked.selector);
+        vault.close();
+        vm.stopPrank();
+    }
+
+    function closeRevertUnauthorized(AsyncSynthVault vault) public {
+        address user = users[0].addr;
+        vm.startPrank(user);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", user));
         vault.close();
         vm.stopPrank();
     }
