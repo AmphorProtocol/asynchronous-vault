@@ -11,19 +11,6 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 contract TestBase is Assertions {
     // OWNER ACTIONS //
 
-    function open(AsyncSynthVault vault, int256 performanceInBips) public {
-        vm.assume(performanceInBips > -10_000 && performanceInBips < 10_000);
-        int256 lastAssetAmount = int256(vault.totalAssets());
-        int256 performance = lastAssetAmount * performanceInBips;
-        int256 toSendBack = performance / bipsDivider + lastAssetAmount;
-        address owner = vault.owner();
-        deal(owner, type(uint256).max);
-        _approveVaults(owner);
-        _dealAsset(vault.asset(), owner, uint256(toSendBack));
-        vm.prank(owner);
-        vault.open(uint256(toSendBack));
-    }
-
     function close(AsyncSynthVault vault) public {
         address owner = vault.owner();
         vm.prank(owner);
@@ -41,7 +28,9 @@ contract TestBase is Assertions {
     function closeRevertUnauthorized(AsyncSynthVault vault) public {
         address user = users[0].addr;
         vm.startPrank(user);
-        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", user));
+        vm.expectRevert(
+            abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", user)
+        );
         vault.close();
         vm.stopPrank();
     }
@@ -262,22 +251,6 @@ contract TestBase is Assertions {
         _dealAsset(address(WSTETH), owner, 100 * 10 ** WSTETH.decimals());
         _dealAsset(address(WBTC), owner, 10 * 10 ** WBTC.decimals());
         _dealAsset(address(USDC), owner, 1000 * 10 ** USDC.decimals());
-    }
-
-    function _dealAsset(
-        address asset,
-        address owner,
-        uint256 amount
-    )
-        internal
-    {
-        if (asset == address(USDC)) {
-            vm.startPrank(USDC_WHALE);
-            USDC.transfer(owner, amount);
-            vm.stopPrank();
-        } else {
-            deal(asset, owner, amount);
-        }
     }
 
     function _depositInVaults(address owner) internal {

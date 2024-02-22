@@ -11,6 +11,7 @@ import {
     Math,
     PermitParams
 } from "./SyncSynthVault.sol";
+import { console } from "forge-std/console.sol";
 
 import { SyncSynthVault } from "./SyncSynthVault.sol";
 
@@ -81,8 +82,8 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
 
     // @return Amount of the perf fees applied on the positive yield.
     uint256 public epochId;
-    uint256 internal claimableShares;
-    uint256 internal claimableAssets;
+    uint256 public claimableShares;
+    uint256 public claimableAssets;
     mapping(uint256 epochId => EpochData epoch) public epochs;
     mapping(address user => uint256 epochId) public lastDepositRequestId;
     mapping(address user => uint256 epochId) public lastRedeemRequestId;
