@@ -6,11 +6,19 @@ import { AsyncSynthVault } from "../../../src/AsyncSynthVault.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { VmSafe } from "forge-std/Vm.sol";
 
+import { SafeERC20 } from
+    "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
 import { EventsAssertions } from "./EventsAssertions.sol";
 import { Constants } from "../Constants.sol";
+import { AsyncSynthVault } from "../../../src/AsyncSynthVault.sol";
+import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
+import { console } from "forge-std/console.sol";
 
 abstract contract Assertions is EventsAssertions {
+    using Math for uint256;
     // Struct for assets data of owner,receiver and vault
+
     struct AssetsData {
         uint256 owner;
         uint256 sender;
@@ -369,6 +377,53 @@ abstract contract Assertions is EventsAssertions {
         });
     }
 
+    struct VaultState {
+        uint256 lastSavedBalance;
+        uint256 feeInBps;
+        uint256 vaultBalance;
+        uint256 totalSupply;
+        uint256 totalAssets;
+        uint256 pendingDeposit;
+        uint256 pendingRedeem;
+        uint256 claimableShares;
+        uint256 claimableAssets;
+    }
+
+    function getVaultState(AsyncSynthVault vault)
+        public
+        view
+        returns (VaultState memory)
+    {
+        uint256 lastSavedBalance = vault.totalAssets();
+        uint256 feeInBps = vault.feeInBps();
+
+        uint256 vaultBalance = IERC20(vault.asset()).balanceOf(address(vault));
+
+        // vault totalSupply and totalAssets before open
+        uint256 totalSupply = vault.totalSupply();
+        uint256 totalAssets = vault.totalAssets();
+
+        // amount of pending deposits and redeems
+        uint256 pendingDeposit = vault.totalPendingDeposits();
+        uint256 pendingRedeem = vault.totalPendingRedeems();
+
+        //  amount of claimable shares and assets before open
+        uint256 claimableShares = vault.claimableShares();
+        uint256 claimableAssets = vault.claimableAssets();
+
+        return VaultState({
+            lastSavedBalance: lastSavedBalance,
+            feeInBps: feeInBps,
+            vaultBalance: vaultBalance,
+            totalSupply: totalSupply,
+            totalAssets: totalAssets,
+            pendingDeposit: pendingDeposit,
+            pendingRedeem: pendingRedeem,
+            claimableShares: claimableShares,
+            claimableAssets: claimableAssets
+        });
+    }
+
     function getSharesValueData(
         IERC4626 vault,
         address sender,
@@ -404,6 +459,156 @@ abstract contract Assertions is EventsAssertions {
             string.concat(userLabel, " is in loss in ", vaultLabel, explanation)
         );
     }
+
+    function assertOpen(
+        AsyncSynthVault vault,
+        int256 performanceInBps
+    )
+        public
+    {
+        console.log("vaultusdc", address(vault));
+        VaultState memory stateBefore = getVaultState(vault);
+        // expected shares and assets to mint and withdraw when request are
+        // executed
+        uint256 expectedSharesToMint =
+            vault.previewDeposit(stateBefore.pendingDeposit);
+        uint256 expectedAssetsToWithdraw =
+            vault.previewRedeem(stateBefore.pendingRedeem);
+        // expected asset returned
+        uint256 assetReturned = performanceToAssets(
+            int256(stateBefore.lastSavedBalance), performanceInBps
+        );
+        console.log(uint256(int256(stateBefore.lastSavedBalance)));
+
+        // // Request management
+        // assertDepositEvent(
+        //     vault,
+        //     address(vault),
+        //     address(vault),
+        //     stateBefore.pendingDeposit,
+        //     expectedSharesToMint
+        // );
+        // assertWithdrawEvent(
+        //     vault,
+        //     address(vault),
+        //     address(vault),
+        //     address(vault),
+        //     stateBefore.pendingRedeem,
+        //     expectedAssetsToWithdraw
+        // );
+
+        // assertEpochEndEvent(
+        //     vault,
+        //     block.timestamp,
+        //     stateBefore.lastSavedBalance,
+        //     assetReturned,
+        //     expectedFees,
+        //     vault.totalSupply()
+        // );
+        uint256 expectedFees;
+        if (
+            assetReturned > stateBefore.lastSavedBalance
+                && stateBefore.feeInBps > 0
+        ) {
+            uint256 profits;
+            unchecked {
+                profits = assetReturned - stateBefore.lastSavedBalance;
+            }
+            expectedFees = (profits).mulDiv(
+                stateBefore.feeInBps, 10_000, Math.Rounding.Ceil
+            );
+        }
+
+        // open
+
+        open(vault, performanceInBps);
+
+        // it should set isOpen to true
+        assertEq(vault.isOpen(), true, "Vault is not open");
+
+        // amount of claimable shares and assets should increase
+        assertEq(
+            vault.claimableShares(),
+            stateBefore.claimableShares + expectedSharesToMint,
+            "Claimable shares is not correct"
+        );
+
+        assertEq(
+            vault.claimableAssets(),
+            stateBefore.claimableAssets + expectedAssetsToWithdraw,
+            "Claimable assets is not correct"
+        );
+
+        //amount of pending deposits and redeems should be 0
+        assertEq(vault.totalPendingDeposits(), 0, "Pending deposits is not 0");
+        assertEq(vault.totalPendingRedeems(), 0, "Pending redeems is not 0");
+
+        // totalSupply should be equal to totalSupplyBefore +
+        // expectedSharesToMint - pendingRedeem
+        assertTotalSupply(
+            vault,
+            stateBefore.totalSupply + expectedSharesToMint
+                - stateBefore.pendingRedeem
+        );
+
+        assertTotalAssets(
+            vault,
+            assetReturned - expectedFees - expectedAssetsToWithdraw
+                + stateBefore.pendingDeposit
+        );
+
+        // vault balance in assets should increase by assetReturned -
+        // expectedFees + pendingDeposit
+        assertVaultAssetBalance(
+            vault, assetReturned - expectedFees + stateBefore.pendingDeposit
+        );
+    }
+
+    function performanceToAssets(
+        int256 lastAssetAmount,
+        int256 performanceInBips
+    )
+        public
+        pure
+        returns (uint256)
+    {
+        int256 performance = lastAssetAmount * performanceInBips;
+        int256 toSendBack = performance / bipsDivider + lastAssetAmount;
+        return uint256(toSendBack);
+    }
+
+    function open(AsyncSynthVault vault, int256 performanceInBips) public {
+        vm.assume(performanceInBips > -10_000 && performanceInBips < 10_000);
+        uint256 lastSavedBalance = vault.totalAssets();
+        uint256 toSendBack = uint256(
+            performanceToAssets(int256(lastSavedBalance), performanceInBips)
+        );
+        address owner = vault.owner();
+        deal(owner, type(uint256).max);
+        vm.startPrank(owner);
+        SafeERC20.forceApprove(
+            IERC20(vault.asset()), address(vault), type(uint256).max
+        );
+        vm.stopPrank();
+        _dealAsset(vault.asset(), owner, toSendBack);
+        vm.prank(owner);
+        vault.open(toSendBack);
+    }
+
+    function _dealAsset(address asset, address owner, uint256 amount) public {
+        if (asset == address(USDC)) {
+            vm.startPrank(USDC_WHALE);
+            USDC.transfer(owner, amount);
+            vm.stopPrank();
+        } else {
+            deal(asset, owner, amount);
+        }
+    }
+
+    // it should verify totalAssets == totalsAssetsBefore - assetsToRedeem +
+    // pendingDeposit
+    // it should verify totalSupply == totalSupplyBefore +
+    // previewDeposit(pendingDeposit) - pendingRedeem
 
     function assertIsInLoss(
         IERC4626 vault,
@@ -519,9 +724,7 @@ abstract contract Assertions is EventsAssertions {
         string memory vaultLabel = vm.getLabel(address(vault));
         string memory explanation = " | Current (left) != Expected (right)";
         assertEq(
-            vault.convertToAssets(
-                IERC20(vault.asset()).balanceOf(address(vault))
-            ),
+            IERC20(vault.asset()).balanceOf(address(vault)),
             expected,
             string.concat(
                 "Vault balance in assets in ", vaultLabel, explanation
