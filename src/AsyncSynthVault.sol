@@ -74,12 +74,8 @@ uint256 constant BPS_DIVIDER = 10_000;
 uint16 constant MAX_FEES = 3000; // 30%
 
 contract Silo {
-    constructor () {
-        IERC20(AsyncSynthVault(msg.sender).asset()).approve(
-            msg.sender,
-            type(uint256).max
-            );
-        AsyncSynthVault(msg.sender).approve(msg.sender, type(uint256).max);
+    constructor(IERC20 underlying) {
+        underlying.approve(msg.sender, type(uint256).max);
     }
 }
 
@@ -186,10 +182,16 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
     {
         super.initialize(fees, owner, underlying, name, symbol);
         epochId = 1;
-        _asset.forceApprove(address(this), type(uint256).max); // allowing futur
-            // deposits into own vault
-        approve(address(this), type(uint256).max); // allowing futur redeem into
-            // own vault
+        // _asset.forceApprove(address(this), type(uint256).max); // allowing
+        // futur
+        // deposits into own vault
+        // approve(address(this), type(uint256).max); // allowing futur redeem
+        // into
+        // own vault
+        pendingSilo = new Silo(underlying);
+        _approve(address(pendingSilo), address(this), type(uint256).max);
+        claimableSilo = new Silo(underlying);
+        _approve(address(claimableSilo), address(this), type(uint256).max);
     }
 
     function isCurrentEpoch(uint256 requestId) internal view returns (bool) {
