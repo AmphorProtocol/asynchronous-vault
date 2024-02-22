@@ -89,10 +89,6 @@ abstract contract Constants is Test {
         vm.label(address(amphorLabs), "amphorLabs");
         vm.label(address(permit2), "permit2");
 
-        vm.label(address(vaultUSDC), "vaultUSDC");
-        vm.label(address(vaultWSTETH), "vaultWSTETH");
-        vm.label(address(vaultWBTC), "vaultWBTC");
-
         //vm.label(address(zapper), "zapper");
 
         users.push(user1);
@@ -106,26 +102,17 @@ abstract contract Constants is Test {
         users.push(user9);
         users.push(user10);
 
-        vaultUSDC = _proxyDeploy(
-            amphorLabs,
-            USDC,
-            vaultNameUSDC,
-            vaultSymbolUSDC
-        );
+        vaultUSDC =
+            _proxyDeploy(amphorLabs, USDC, vaultNameUSDC, vaultSymbolUSDC);
+        vm.label(address(vaultUSDC), "vaultUSDC");
 
-        vaultWSTETH = _proxyDeploy(
-            amphorLabs,
-            WSTETH,
-            vaultNameWSTETH,
-            vaultSymbolWSTETH
-        );
+        vaultWSTETH =
+            _proxyDeploy(amphorLabs, WSTETH, vaultNameWSTETH, vaultSymbolWSTETH);
+        vm.label(address(vaultWSTETH), "vaultWSTETH");
 
-        vaultWBTC = _proxyDeploy(
-            amphorLabs,
-            WBTC,
-            vaultNameWBTC,
-            vaultSymbolWBTC
-        );
+        vaultWBTC =
+            _proxyDeploy(amphorLabs, WBTC, vaultNameWBTC, vaultSymbolWBTC);
+        vm.label(address(vaultWBTC), "vaultWBTC");
     }
 
     function _proxyDeploy(
@@ -133,7 +120,10 @@ abstract contract Constants is Test {
         ERC20 underlying,
         string memory vaultName,
         string memory vaultSymbol
-    ) internal returns (TestVault) {
+    )
+        internal
+        returns (TestVault)
+    {
         Options memory deploy;
         deploy.constructorData = abi.encode(permit2);
 
@@ -147,13 +137,7 @@ abstract contract Constants is Test {
                     address(beacon),
                     abi.encodeCall(
                         AsyncSynthVault.initialize,
-                        (
-                            fees,
-                            owner,
-                            underlying,
-                            vaultName,
-                            vaultSymbol
-                        )
+                        (fees, owner, underlying, vaultName, vaultSymbol)
                     )
                 )
             )
