@@ -1,0 +1,40 @@
+TestMintWithPermit2
+├── given vault closed when mint
+│   └── it should revert with ERC4626ExceededMaxMint
+├── given required assets higher than owner allowance to the vault when deposit
+│   └── it should revert with ERC20InsufficientAllowance
+├── given required assets higher than owner balance when deposit
+│   └── it should revert with ERC20InsufficientBalance
+├── given vault paused when mint
+│   └── it should revert with EnforcedPause
+├── given vault closed given vault not paused when mint
+│   └── it should revert with ERC4626ExceededMaxDeposit
+├── given receiver is address 0 when mint
+│   └── it should revert with ERC20InvalidReceiver
+├── given amount is 0 when mint
+│   └── it should revert with ERC20ZeroAmount (maybe)
+├── given previewMint is higher than the allowance of the owner to the vault when mint
+│   └── it should revert with ERC20InsufficientAllowance
+├── given requested amount of shares converted in asset is higher than the balance of the owner when mint
+│   └── it should revert with ERC20InsufficientBalance
+├── given vault open when mint
+│   ├── it should decrease the underlying balance of the owner by previewMint
+│   ├── it should emit a Deposit event
+│   ├── it should emit TransferEvent of asset from the owner to the vault
+│   ├── it should emit TransferEvent of shares from the vault to the receiver
+│   ├── it should increase the underlying balance of the vault by previewMint
+│   ├── it should increase the balance of shares of the receiver by previewMint
+│   ├── it should return the same value as the one returned by previewMint
+│   ├── it should return the same value as the assets taken from the owner
+│   ├── it should increase the totalSupply by the specified shares
+│   └── it should decrease the underlying balance of the owner by the amount returned by previewMint to the owner
+├── given receiver not equal owner when mint
+│   └── it should pass above
+├── given vault empty when mint
+│   └── it should pass above
+├── given deposit amount is 0 when mint
+│   └── it should pass above
+├── given permit2 spender is not the vault when mint
+│   └── it should revert with InvalidSpender()
+└── given permit2 deadline is in the past when mint
+    └── it should revert with ExpiredDeadline()

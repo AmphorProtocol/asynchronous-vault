@@ -1,0 +1,10 @@
+TestIsCurrentEpoch
+├── given epochId equals 10 given requestId equals 10 when isCurrentEpoch
+│   └── it should not revert
+│   └── it should returns true
+├── given epochId equals 10 given requestId equals 9 when isCurrentEpoch
+│   ├── it should not revert
+│   └── it should returns false
+└── given epochId equals 9 given requestId equals 10 when isCurrentEpoch
+    ├── it should not revert
+    └── it should returns false

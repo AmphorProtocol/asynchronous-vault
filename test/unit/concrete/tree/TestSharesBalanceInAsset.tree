@@ -1,0 +1,7 @@
+TestSharesBalanceInAsset
+├── given user Has 0 shares
+│   └── it should return 0
+├── given user has 10 shares and PPS is p
+│   └── it should return 10 * p
+└── given user has 10 shares and and convert to assets of 10 is n
+    └── it should return n

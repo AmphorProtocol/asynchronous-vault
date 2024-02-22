@@ -4,11 +4,14 @@ pragma solidity 0.8.21;
 import {
     AsyncSynthVault,
     IAllowanceTransfer,
-    IERC20
+    IERC20,
+    SafeERC20
 } from "../../src/AsyncSynthVault.sol";
 
-contract TestAsyncVault is AsyncSynthVault {
-    constructor(IAllowanceTransfer _permit2) AsyncSynthVault(_permit2) { }
+using SafeERC20 for IERC20;
+
+contract TestVault is AsyncSynthVault {
+    constructor(IAllowanceTransfer _permit2) AsyncSynthVault(_permit2) {}
 
     function getClaimableAssets() public view returns (uint256) {
         return IERC20(asset()).balanceOf(address(this));

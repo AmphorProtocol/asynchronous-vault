@@ -1,0 +1,31 @@
+TestRequestRedeem
+├── given vault closed and not paused when requestRedeem
+│   ├── it should decrease owner shares balance by shares param
+│   ├── it should decrease shares total supply by shares param
+│   ├── it should create a pending redeem request for the receiver
+│   └── it should emit RedeemRequest
+├── given vault open and not paused when requestRedeem
+│   └── it should revert VaultIsOpen
+├── given vault closed and paused when requestRedeem
+│   └── it should revert EnforcedPause
+├── given vault open and paused when requestRedeem
+│   └── it should revert EnforcedPause
+├── given msgSender not equal owner when requestRedeem
+│   └── it should revert NotOwner
+├── given receiver has claimable balance when requestRedeem
+│   └── it should revert with maxRedeemRequest
+├── when requestRedeem succeed
+│   ├── it should decrease the owner shares balance by the specified value
+│   ├── it should increase the vault shares balance by the specified value
+│   ├── it should increase pendingRedeemRequest balance of receiver by the specified value
+│   ├── it should not modify the owner pendingRedeemRequest balance
+│   └── it should emit RedeemRequest event
+├── given owner has claimable balance but not receiver when requestRedeem
+│   └── it should succeed
+├── given owner have not enough assets balance when requestRedeem
+│   └── it should revert with ERC20InsufficientBalance
+├── given owner have not enough approval balance when requestRedeem
+│   └── it should revert with ERC20InsufficientAllowance
+└── given data param submitted and invalid selector when requestRedeem
+    ├── it should revert with ReceiverFailed
+    └── it todo check ERC7540Receiver (and ReceiverFailed)

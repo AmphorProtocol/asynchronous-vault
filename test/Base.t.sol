@@ -47,11 +47,7 @@ contract TestBase is Assertions {
     function vaultAssetBalanceOf(
         IERC4626 vault,
         address user
-    )
-        public
-        view
-        returns (uint256)
-    {
+    ) public view returns (uint256) {
         return IERC20(vault.asset()).balanceOf(user);
     }
 
@@ -65,12 +61,7 @@ contract TestBase is Assertions {
         deposit(vault, user, USDC.balanceOf(user.addr));
     }
 
-    function withdraw(
-        AsyncSynthVault vault,
-        VmSafe.Wallet memory user
-    )
-        public
-    {
+    function withdraw(AsyncSynthVault vault, VmSafe.Wallet memory user) public {
         withdraw(vault, user, USDC.balanceOf(user.addr));
     }
 
@@ -82,9 +73,7 @@ contract TestBase is Assertions {
         AsyncSynthVault vault,
         VmSafe.Wallet memory user,
         uint256 amount
-    )
-        public
-    {
+    ) public {
         vm.startPrank(user.addr);
         vault.mint(amount, user.addr);
     }
@@ -93,9 +82,7 @@ contract TestBase is Assertions {
         AsyncSynthVault vault,
         VmSafe.Wallet memory user,
         uint256 amount
-    )
-        public
-    {
+    ) public {
         vm.startPrank(user.addr);
         vault.deposit(amount, user.addr);
     }
@@ -104,9 +91,7 @@ contract TestBase is Assertions {
         AsyncSynthVault vault,
         VmSafe.Wallet memory user,
         uint256 amount
-    )
-        public
-    {
+    ) public {
         vm.startPrank(user.addr);
         vault.withdraw(amount, user.addr, user.addr);
     }
@@ -115,9 +100,7 @@ contract TestBase is Assertions {
         AsyncSynthVault vault,
         VmSafe.Wallet memory user,
         uint256 shares
-    )
-        public
-    {
+    ) public {
         vm.startPrank(user.addr);
         vault.redeem(shares, user.addr, user.addr);
     }
@@ -160,13 +143,7 @@ contract TestBase is Assertions {
         _dealAsset(address(USDC), owner, 1000 * 10 ** USDC.decimals());
     }
 
-    function _dealAsset(
-        address asset,
-        address owner,
-        uint256 amount
-    )
-        internal
-    {
+    function _dealAsset(address asset, address owner, uint256 amount) internal {
         if (asset == address(USDC)) {
             vm.startPrank(USDC_WHALE);
             USDC.transfer(owner, amount);
