@@ -2,7 +2,7 @@
 pragma solidity 0.8.21;
 
 import { IERC4626 } from "@openzeppelin/contracts/interfaces/IERC4626.sol";
-import { Test } from "forge-std/Test.sol";
+import { AsyncSynthVault } from "../../../src/AsyncSynthVault.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { VmSafe } from "forge-std/Vm.sol";
 
@@ -544,5 +544,26 @@ abstract contract Assertions is EventsAssertions {
                 "Vault balance in assets in ", vaultLabel, explanation
             )
         );
+    }
+
+    function assertDecreaseDeposit(AsyncSynthVault vault, address receiver) internal {
+        // it should decrease of assets the deposit request balance of owner
+        // it should decrease of assets the vault underlying balance
+        // it should increase of assets the receiver underlying balance
+        // it should emit `DepositRequestDecreased` event -> todo
+        uint256 ownerDepRequestBalance = vault.pendingDepositRequest(user1.addr);
+        uint256 ownerDecreaseAmount = ownerDepRequestBalance/2;
+        uint256 finalOwnerDepRequestBalance = ownerDepRequestBalance - ownerDecreaseAmount;
+        uint256 vaultUnderlyingBalanceBef = IERC20(vault.asset()).balanceOf(address(vault));
+        uint256 user2UnderlyingBalanceBef = IERC20(vault.asset()).balanceOf(receiver);
+        vm.startPrank(user1.addr);
+        vault.decreaseRedeemRequest(
+            ownerDecreaseAmount,
+            user2.addr
+        );
+        vm.stopPrank();
+        assertEq(vault.pendingDepositRequest(user1.addr), finalOwnerDepRequestBalance);
+        assertEq(IERC20(vault.asset()).balanceOf(address(vault)), vaultUnderlyingBalanceBef - ownerDecreaseAmount);
+        assertEq(IERC20(vault.asset()).balanceOf(receiver), user2UnderlyingBalanceBef + ownerDecreaseAmount);
     }
 }

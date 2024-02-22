@@ -169,6 +169,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         string memory symbol
     )
         public
+        virtual // wrap it !!
         override
         initializer
     {
@@ -211,8 +212,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         _createDepositRequest(assets, receiver, owner, data);
     }
 
-    // transfer must happen before this function is called TODO maybe change
-    // this
+    // transfer must happen before this function is called
     function _createDepositRequest(
         uint256 assets,
         address receiver,
@@ -222,7 +222,6 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         internal
     {
         epochs[epochId].depositRequestBalance[receiver] += assets;
-        // epochs[lastDepositRequestId[owner]].depositRequestBalance[owner];
         if (lastDepositRequestId[receiver] != epochId) {
             lastDepositRequestId[receiver] = epochId;
         }
