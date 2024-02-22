@@ -90,4 +90,20 @@ abstract contract EventsAssertions is Test, Constants, Events {
         vm.expectEmit(address(vault));
         emit RedeemRequest(receiver, owner, requestId, sender, shares);
     }
+
+    function assertEpochEndEvent(
+        IERC4626 vault,
+        uint256 timestamp,
+        uint256 lastSavedBalance,
+        uint256 assetsReturned,
+        uint256 fees,
+        uint256 totalSupply
+    )
+        public
+    {
+        vm.expectEmit(address(vault));
+        emit EpochEnd(
+            timestamp, lastSavedBalance, assetsReturned, fees, totalSupply
+        );
+    }
 }
