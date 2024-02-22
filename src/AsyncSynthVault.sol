@@ -11,7 +11,7 @@ import {
     Math,
     PermitParams
 } from "./SyncSynthVault.sol";
-import { console } from "forge-std/console.sol";
+// import { console } from "forge-std/console.sol";
 
 import { SyncSynthVault } from "./SyncSynthVault.sol";
 
@@ -186,8 +186,6 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
     {
         super.initialize(fees, owner, underlying, name, symbol);
         epochId = 1;
-        pendingSilo = new Silo();
-        claimableSilo = new Silo();
         _asset.forceApprove(address(this), type(uint256).max); // allowing futur
             // deposits into own vault
         approve(address(this), type(uint256).max); // allowing futur redeem into
