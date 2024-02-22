@@ -176,18 +176,12 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         string memory symbol
     )
         public
-        virtual // wrap it !!
+        virtual
         override
         initializer
     {
         super.initialize(fees, owner, underlying, name, symbol);
         epochId = 1;
-        // _asset.forceApprove(address(this), type(uint256).max); // allowing
-        // futur
-        // deposits into own vault
-        // approve(address(this), type(uint256).max); // allowing futur redeem
-        // into
-        // own vault
         pendingSilo = new Silo(underlying);
         _approve(address(pendingSilo), address(this), type(uint256).max);
         claimableSilo = new Silo(underlying);
