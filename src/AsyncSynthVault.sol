@@ -93,6 +93,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
     // @return Amount of the perf fees applied on the positive yield.
     uint256 public epochId;
     Silo public pendingSilo;
+    Silo public claimableSilo;
     mapping(uint256 epochId => EpochData epoch) public epochs;
     mapping(address user => uint256 epochId) public lastDepositRequestId;
     mapping(address user => uint256 epochId) public lastRedeemRequestId;
@@ -186,6 +187,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         super.initialize(fees, owner, underlying, name, symbol);
         epochId = 1;
         pendingSilo = new Silo();
+        claimableSilo = new Silo();
         _asset.forceApprove(address(this), type(uint256).max); // allowing futur
             // deposits into own vault
         approve(address(this), type(uint256).max); // allowing futur redeem into
@@ -255,6 +257,14 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
     // tree todo
     function totalPendingRedeems() public view returns (uint256) {
         return isOpen ? 0 : balanceOf(address(pendingSilo));
+    }
+
+    function totalClaimableDeposits() public view returns (uint256) {
+        return balanceOf(address(claimableSilo));
+    }
+
+    function totalClaimableRedeems() public view returns (uint256) {
+        return _asset.balanceOf(address(claimableSilo));
     }
 
     // tree todo
@@ -675,7 +685,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         uint256 sharesToMint = previewDeposit(pendingDeposit);
         _deposit(
             address(pendingSilo),
-            address(this),
+            address(claimableSilo),
             pendingDeposit,
             sharesToMint
         );
@@ -686,7 +696,8 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         uint256 pendingRedeem = balanceOf(address(pendingSilo));
         uint256 assetsToRedeem = previewRedeem(pendingRedeem);
         _withdraw(
-            address(this),
+            address(pendingSilo), // we are lying hehe
+            address(claimableSilo),
             address(pendingSilo),
             assetsToRedeem,
             pendingRedeem

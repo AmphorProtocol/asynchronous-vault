@@ -408,8 +408,8 @@ abstract contract Assertions is EventsAssertions {
         uint256 pendingRedeem = vault.totalPendingRedeems();
 
         //  amount of claimable shares and assets before open
-        uint256 claimableShares = vault.claimableShares();
-        uint256 claimableAssets = vault.claimableAssets();
+        uint256 claimableShares = vault.totalClaimableDeposits();
+        uint256 claimableAssets = vault.totalClaimableRedeems();
 
         return VaultState({
             lastSavedBalance: lastSavedBalance,
@@ -528,13 +528,13 @@ abstract contract Assertions is EventsAssertions {
 
         // amount of claimable shares and assets should increase
         assertEq(
-            vault.claimableShares(),
+            vault.totalClaimableDeposits(),
             stateBefore.claimableShares + expectedSharesToMint,
             "Claimable shares is not correct"
         );
 
         assertEq(
-            vault.claimableAssets(),
+            vault.totalClaimableRedeems(),
             stateBefore.claimableAssets + expectedAssetsToWithdraw,
             "Claimable assets is not correct"
         );

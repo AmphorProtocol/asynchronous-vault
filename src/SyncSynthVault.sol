@@ -373,7 +373,7 @@ abstract contract SyncSynthVault is
         }
 
         uint256 sharesAmount = previewWithdraw(assets);
-        _withdraw(receiver, owner, assets, sharesAmount);
+        _withdraw(_msgSender(), receiver, owner, assets, sharesAmount);
 
         return sharesAmount;
     }
@@ -404,7 +404,7 @@ abstract contract SyncSynthVault is
         }
 
         uint256 assetsAmount = previewRedeem(shares);
-        _withdraw(receiver, owner, assetsAmount, shares);
+        _withdraw(_msgSender(), receiver, owner, assetsAmount, shares);
 
         return assetsAmount;
     }
@@ -497,6 +497,7 @@ abstract contract SyncSynthVault is
      * @param shares The shares amount to be converted into underlying assets.
      */
     function _withdraw(
+        address caller,
         address receiver,
         address owner,
         uint256 assets,
@@ -504,13 +505,13 @@ abstract contract SyncSynthVault is
     )
         internal
     {
-        if (_msgSender() != owner) _spendAllowance(owner, _msgSender(), shares);
+        if (caller != owner) _spendAllowance(owner, caller, shares);
 
         _burn(owner, shares);
         totalAssets -= assets;
         _asset.safeTransfer(receiver, assets);
 
-        emit Withdraw(_msgSender(), receiver, owner, assets, shares);
+        emit Withdraw(caller, receiver, owner, assets, shares);
     }
 
     /*
