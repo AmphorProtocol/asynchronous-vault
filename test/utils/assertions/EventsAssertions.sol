@@ -119,7 +119,7 @@ abstract contract EventsAssertions is Test, Constants, Events {
         emit AsyncDeposit(requestId, requestedAssets, acceptedAssets);
     }
 
-    function assertAsyncRedeemEvent(
+    function assertAsyncWithdrawEvent(
         IERC4626 vault,
         uint256 requestId,
         uint256 requestedShares,
@@ -128,6 +128,6 @@ abstract contract EventsAssertions is Test, Constants, Events {
         public
     {
         vm.expectEmit(address(vault));
-        emit AsyncRedeem(requestId, requestedShares, acceptedShares);
+        emit AsyncWithdraw(requestId, requestedShares, acceptedShares);
     }
 }

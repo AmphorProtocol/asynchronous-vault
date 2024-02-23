@@ -106,7 +106,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         uint256 acceptedAssets
     );
 
-    event AsyncRedeem(
+    event AsyncWithdraw(
         uint256 indexed requestId,
         uint256 requestedShares,
         uint256 acceptedShares
@@ -253,11 +253,11 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         return isOpen ? 0 : balanceOf(address(pendingSilo));
     }
 
-    function totalClaimableDeposits() public view returns (uint256) {
+    function totalClaimableShares() public view returns (uint256) {
         return balanceOf(address(claimableSilo));
     }
 
-    function totalClaimableRedeems() public view returns (uint256) {
+    function totalClaimableAssets() public view returns (uint256) {
         return _asset.balanceOf(address(claimableSilo));
     }
 
@@ -683,12 +683,14 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
             _pendingDeposit,
             sharesToMint
         );
+        emit AsyncDeposit(epochId, _pendingDeposit, _pendingDeposit);
 
         //////////////////////////////
         // Pending redeem treatment //
         //////////////////////////////
         uint256 _pendingRedeem = balanceOf(address(pendingSilo));
         uint256 assetsToWithdraw = previewRedeem(_pendingRedeem);
+        console.log("assetsToWithdraw", assetsToWithdraw);
         _withdraw(
             address(pendingSilo), // to avoid a spending allowance
             address(claimableSilo),
@@ -696,11 +698,10 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
             assetsToWithdraw,
             _pendingRedeem
         );
+        emit AsyncWithdraw(epochId, _pendingRedeem, _pendingRedeem);
 
         epochs[epochId].totalSupplySnapshot = totalSupply();
         epochs[epochId].totalAssetsSnapshot = totalAssets;
-        emit AsyncDeposit(epochId, _pendingDeposit, _pendingDeposit);
-        emit AsyncRedeem(epochId, _pendingRedeem, _pendingRedeem);
     }
 
     /*

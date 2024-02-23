@@ -3,6 +3,7 @@ pragma solidity 0.8.21;
 
 import { TestBase } from "../../../Base.t.sol";
 import { SyncSynthVault } from "../../../../src/SyncSynthVault.sol";
+import "forge-std/console.sol"; //todo remove
 
 contract TestOpen is TestBase {
     function test_GivenVaultIsOpenWhenOpen() external {
@@ -76,5 +77,26 @@ contract TestOpen is TestBase {
         vm.prank(owner);
         vaultUSDC.close();
         assertOpen(vaultUSDC, -3);
+    }
+
+    function test_GivenPeriodIsInProfitAndRequestDepWhenOpen() external {
+        usersDealApproveAndDeposit(2);
+        address owner = vaultUSDC.owner();
+        vm.prank(owner);
+        vaultUSDC.close();
+
+        usersDealApproveAndRequestDeposit(vaultUSDC, 2, "");
+        assertOpen(vaultUSDC, 3);
+    }
+
+    function test_GivenPeriodIsInProfitAndRequestsWhenOpen() external {
+        usersDealApproveAndDeposit(2);
+        address owner = vaultUSDC.owner();
+        vm.prank(owner);
+        vaultUSDC.close();
+
+        usersDealApproveAndRequestDeposit(vaultUSDC, 2, "");
+        usersDealApproveAndRequestRedeem(vaultUSDC, 2, "");
+        assertOpen(vaultUSDC, 3);
     }
 }

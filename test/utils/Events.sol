@@ -74,7 +74,7 @@ abstract contract Events {
         uint256 acceptedAssets
     );
 
-    event AsyncRedeem(
+    event AsyncWithdraw(
         uint256 indexed requestId,
         uint256 requestedShares,
         uint256 acceptedShares
