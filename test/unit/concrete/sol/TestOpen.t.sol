@@ -55,24 +55,26 @@ contract TestOpen is TestBase {
     }
 
     function test_WhenOpenSucceed() external {
-        // it should set the vault state to open
-        // it should set the vault lastOpen to the current block timestamp
-        // it should emit `VaultOpened` event
         usersDealApproveAndDeposit(1);
         address owner = vaultUSDC.owner();
         vm.prank(owner);
         vaultUSDC.close();
-        assertOpen(vaultUSDC, 1);
+        assertOpen(vaultUSDC, 0);
     }
 
     function test_GivenPeriodIsInProfitWhenOpen() external {
-        // it should transfer assetsReturned - ((totalAssets - assetReturned) *
-        // fees / 10 000) from msg.sender to the vault
-        // it should pass when open succeed
+        usersDealApproveAndDeposit(3);
+        address owner = vaultUSDC.owner();
+        vm.prank(owner);
+        vaultUSDC.close();
+        assertOpen(vaultUSDC, 4);
     }
 
     function test_GivenPeriodIsInLossWhenOpen() external {
-        // it should transfer assetsReturned from msg.sender to the vault
-        // it should pass when open succeed
+        usersDealApproveAndDeposit(2);
+        address owner = vaultUSDC.owner();
+        vm.prank(owner);
+        vaultUSDC.close();
+        assertOpen(vaultUSDC, -3);
     }
 }

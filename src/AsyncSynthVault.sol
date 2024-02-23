@@ -9,13 +9,13 @@ import {
     IAllowanceTransfer,
     ERC20Upgradeable,
     Math,
-    PermitParams
+    PermitParams,
+    IERC4626
 } from "./SyncSynthVault.sol";
-// import { console } from "forge-std/console.sol";
 
 import { SyncSynthVault } from "./SyncSynthVault.sol";
 
-// import "forge-std/console.sol"; //todo remove
+import "forge-std/console.sol"; //todo remove
 
 /**
  *         @@@@@@@@@@@@@@@@@@@@%=::::::=%@@@@@@@@@@@@@@@@@@@@
@@ -75,7 +75,7 @@ uint16 constant MAX_FEES = 3000; // 30%
 
 contract Silo {
     constructor(IERC20 underlying) {
-        underlying.approve(msg.sender, type(uint256).max);
+        underlying.forceApprove(msg.sender, type(uint256).max);
     }
 }
 
@@ -625,9 +625,8 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         onlyOwner
         whenClosed
     {
-        uint256 pendingDeposit = _asset.balanceOf(address(pendingSilo));
         _open(assetReturned);
-        _execRequests(pendingDeposit);
+        _execRequests();
         epochId++;
     }
 
@@ -638,69 +637,70 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
      * and only when the vault is locked.
      * If there are profits, the performance fees are taken and sent to the
      * owner of the contract.
-     * @param assetReturned The underlying assets amount to be deposited into
+     * @param returnedAssets The underlying assets amount to be deposited into
      * the vault.
      */
-    function _open(uint256 assetReturned) internal {
+    function _open(uint256 returnedAssets) internal {
+        // check for maxf drawdown
         if (
-            assetReturned
+            returnedAssets
                 < totalAssets.mulDiv(
                     BPS_DIVIDER - _maxDrawdown, BPS_DIVIDER, Math.Rounding.Ceil
                 )
         ) revert MaxDrawdownReached();
 
+        // taking fees if positive yield
         uint256 fees;
-
         uint256 _totalAssets = totalAssets;
-        if (assetReturned > _totalAssets && feeInBps > 0) {
+        if (returnedAssets > _totalAssets && feeInBps > 0) {
             uint256 profits;
             unchecked {
-                profits = assetReturned - _totalAssets;
+                profits = returnedAssets - _totalAssets;
             }
             fees = (profits).mulDiv(feeInBps, BPS_DIVIDER, Math.Rounding.Ceil);
         }
-
-        _totalAssets = assetReturned - fees;
-        totalAssets = _totalAssets;
+        _totalAssets = returnedAssets - fees;
 
         _asset.safeTransferFrom(_msgSender(), address(this), _totalAssets);
 
         emit EpochEnd(
-            block.timestamp, _totalAssets, assetReturned, fees, totalSupply()
+            block.timestamp, totalAssets, returnedAssets, fees, totalSupply()
         );
+        totalAssets = _totalAssets;
         isOpen = true;
     }
 
-    function _execRequests(uint256 pendingDeposit) internal {
+    function _execRequests() internal {
         ////////////////////////////////
         // Pending deposits treatment //
         ////////////////////////////////
 
-        uint256 sharesToMint = previewDeposit(pendingDeposit);
+        uint256 _pendingDeposit = _asset.balanceOf(address(pendingSilo));
+        uint256 sharesToMint = previewDeposit(_pendingDeposit);
         _deposit(
             address(pendingSilo),
             address(claimableSilo),
-            pendingDeposit,
+            _pendingDeposit,
             sharesToMint
         );
 
         //////////////////////////////
         // Pending redeem treatment //
         //////////////////////////////
-        uint256 pendingRedeem = balanceOf(address(pendingSilo));
-        uint256 assetsToRedeem = previewRedeem(pendingRedeem);
+        uint256 _pendingRedeem = balanceOf(address(pendingSilo));
+        uint256 assetsToWithdraw = previewRedeem(_pendingRedeem);
         _withdraw(
-            address(pendingSilo), // we are lying hehe
+            address(pendingSilo), // to avoid a spending allowance
             address(claimableSilo),
             address(pendingSilo),
-            assetsToRedeem,
-            pendingRedeem
+            assetsToWithdraw,
+            _pendingRedeem
         );
 
         epochs[epochId].totalSupplySnapshot = totalSupply();
         epochs[epochId].totalAssetsSnapshot = totalAssets;
-        emit AsyncDeposit(epochId, pendingDeposit, pendingDeposit);
-        emit AsyncRedeem(epochId, pendingRedeem, pendingRedeem);
+        emit AsyncDeposit(epochId, _pendingDeposit, _pendingDeposit);
+        emit AsyncRedeem(epochId, _pendingRedeem, _pendingRedeem);
     }
 
     /*

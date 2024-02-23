@@ -387,6 +387,7 @@ abstract contract Assertions is EventsAssertions {
         uint256 pendingRedeem;
         uint256 claimableShares;
         uint256 claimableAssets;
+        uint256 epochId;
     }
 
     function getVaultState(AsyncSynthVault vault)
@@ -420,7 +421,8 @@ abstract contract Assertions is EventsAssertions {
             pendingDeposit: pendingDeposit,
             pendingRedeem: pendingRedeem,
             claimableShares: claimableShares,
-            claimableAssets: claimableAssets
+            claimableAssets: claimableAssets,
+            epochId: vault.epochId()
         });
     }
 
@@ -466,7 +468,6 @@ abstract contract Assertions is EventsAssertions {
     )
         public
     {
-        console.log("vaultusdc", address(vault));
         VaultState memory stateBefore = getVaultState(vault);
         // expected shares and assets to mint and withdraw when request are
         // executed
@@ -478,33 +479,7 @@ abstract contract Assertions is EventsAssertions {
         uint256 assetReturned = performanceToAssets(
             int256(stateBefore.lastSavedBalance), performanceInBps
         );
-        console.log(uint256(int256(stateBefore.lastSavedBalance)));
 
-        // // Request management
-        // assertDepositEvent(
-        //     vault,
-        //     address(vault),
-        //     address(vault),
-        //     stateBefore.pendingDeposit,
-        //     expectedSharesToMint
-        // );
-        // assertWithdrawEvent(
-        //     vault,
-        //     address(vault),
-        //     address(vault),
-        //     address(vault),
-        //     stateBefore.pendingRedeem,
-        //     expectedAssetsToWithdraw
-        // );
-
-        // assertEpochEndEvent(
-        //     vault,
-        //     block.timestamp,
-        //     stateBefore.lastSavedBalance,
-        //     assetReturned,
-        //     expectedFees,
-        //     vault.totalSupply()
-        // );
         uint256 expectedFees;
         if (
             assetReturned > stateBefore.lastSavedBalance
@@ -519,8 +494,65 @@ abstract contract Assertions is EventsAssertions {
             );
         }
 
-        // open
+        address owner = vault.owner();
+        vm.startPrank(owner);
+        SafeERC20.forceApprove(
+            IERC20(vault.asset()), address(vault), type(uint256).max
+        );
+        vm.stopPrank();
+        _dealAsset(vault.asset(), owner, assetReturned - expectedFees);
 
+        // // Request management
+        // giving back the fund
+        assertTransferEvent(
+            IERC20(vault.asset()),
+            amphorLabs,
+            address(vault),
+            assetReturned - expectedFees
+        );
+
+        // ending the epoch
+        assertEpochEndEvent(
+            vault,
+            block.timestamp,
+            stateBefore.lastSavedBalance,
+            assetReturned,
+            expectedFees,
+            stateBefore.totalSupply
+        );
+
+        assertDepositEvent(
+            vault,
+            address(vault.pendingSilo()),
+            address(vault.claimableSilo()),
+            stateBefore.pendingDeposit,
+            expectedSharesToMint
+        );
+
+        assertWithdrawEvent(
+            vault,
+            address(vault.pendingSilo()),
+            address(vault.claimableSilo()),
+            address(vault.pendingSilo()),
+            stateBefore.pendingRedeem,
+            expectedAssetsToWithdraw
+        );
+
+        assertAsyncDepositEvent(
+            vault,
+            stateBefore.epochId,
+            stateBefore.pendingDeposit,
+            stateBefore.pendingDeposit
+        );
+
+        assertAsyncRedeemEvent(
+            vault,
+            stateBefore.epochId,
+            stateBefore.pendingRedeem,
+            stateBefore.pendingRedeem
+        );
+
+        // open
         open(vault, performanceInBps);
 
         // it should set isOpen to true
@@ -585,12 +617,7 @@ abstract contract Assertions is EventsAssertions {
         );
         address owner = vault.owner();
         deal(owner, type(uint256).max);
-        vm.startPrank(owner);
-        SafeERC20.forceApprove(
-            IERC20(vault.asset()), address(vault), type(uint256).max
-        );
-        vm.stopPrank();
-        _dealAsset(vault.asset(), owner, toSendBack);
+
         vm.prank(owner);
         vault.open(toSendBack);
     }
@@ -749,24 +776,37 @@ abstract contract Assertions is EventsAssertions {
         );
     }
 
-    function assertDecreaseDeposit(AsyncSynthVault vault, address receiver) internal {
+    function assertDecreaseDeposit(
+        AsyncSynthVault vault,
+        address receiver
+    )
+        internal
+    {
         // it should decrease of assets the deposit request balance of owner
         // it should decrease of assets the vault underlying balance
         // it should increase of assets the receiver underlying balance
         // it should emit `DepositRequestDecreased` event -> todo
         uint256 ownerDepRequestBalance = vault.pendingDepositRequest(user1.addr);
-        uint256 ownerDecreaseAmount = ownerDepRequestBalance/2;
-        uint256 finalOwnerDepRequestBalance = ownerDepRequestBalance - ownerDecreaseAmount;
-        uint256 vaultUnderlyingBalanceBef = IERC20(vault.asset()).balanceOf(address(vault));
-        uint256 user2UnderlyingBalanceBef = IERC20(vault.asset()).balanceOf(receiver);
+        uint256 ownerDecreaseAmount = ownerDepRequestBalance / 2;
+        uint256 finalOwnerDepRequestBalance =
+            ownerDepRequestBalance - ownerDecreaseAmount;
+        uint256 vaultUnderlyingBalanceBef =
+            IERC20(vault.asset()).balanceOf(address(vault));
+        uint256 user2UnderlyingBalanceBef =
+            IERC20(vault.asset()).balanceOf(receiver);
         vm.startPrank(user1.addr);
-        vault.decreaseRedeemRequest(
-            ownerDecreaseAmount,
-            user2.addr
-        );
+        vault.decreaseRedeemRequest(ownerDecreaseAmount, user2.addr);
         vm.stopPrank();
-        assertEq(vault.pendingDepositRequest(user1.addr), finalOwnerDepRequestBalance);
-        assertEq(IERC20(vault.asset()).balanceOf(address(vault)), vaultUnderlyingBalanceBef - ownerDecreaseAmount);
-        assertEq(IERC20(vault.asset()).balanceOf(receiver), user2UnderlyingBalanceBef + ownerDecreaseAmount);
+        assertEq(
+            vault.pendingDepositRequest(user1.addr), finalOwnerDepRequestBalance
+        );
+        assertEq(
+            IERC20(vault.asset()).balanceOf(address(vault)),
+            vaultUnderlyingBalanceBef - ownerDecreaseAmount
+        );
+        assertEq(
+            IERC20(vault.asset()).balanceOf(receiver),
+            user2UnderlyingBalanceBef + ownerDecreaseAmount
+        );
     }
 }
