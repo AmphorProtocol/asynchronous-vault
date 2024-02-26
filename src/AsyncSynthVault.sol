@@ -274,6 +274,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         bool hasClaimableRequest =
             lastRequestBalance > 0 && lastRequestId != epochId;
 
+
         return vaultIsOpen || paused() || hasClaimableRequest
             ? 0
             : type(uint256).max;
@@ -675,6 +676,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         emit EpochEnd(
             block.timestamp, _totalAssets, returnedAssets, fees, totalSupply()
         );
+
         vaultIsOpen = true;
     }
 
