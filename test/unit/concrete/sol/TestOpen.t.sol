@@ -3,6 +3,7 @@ pragma solidity 0.8.21;
 
 import { TestBase } from "../../../Base.t.sol";
 import { SyncSynthVault } from "../../../../src/SyncSynthVault.sol";
+import "forge-std/console.sol"; //todo remove
 
 contract TestOpen is TestBase {
     function test_GivenVaultIsOpenWhenOpen() external {
@@ -55,24 +56,47 @@ contract TestOpen is TestBase {
     }
 
     function test_WhenOpenSucceed() external {
-        // it should set the vault state to open
-        // it should set the vault lastOpen to the current block timestamp
-        // it should emit `VaultOpened` event
         usersDealApproveAndDeposit(1);
         address owner = vaultUSDC.owner();
         vm.prank(owner);
         vaultUSDC.close();
-        assertOpen(vaultUSDC, 1);
+        assertOpen(vaultUSDC, 0);
     }
 
     function test_GivenPeriodIsInProfitWhenOpen() external {
-        // it should transfer assetsReturned - ((totalAssets - assetReturned) *
-        // fees / 10 000) from msg.sender to the vault
-        // it should pass when open succeed
+        usersDealApproveAndDeposit(3);
+        address owner = vaultUSDC.owner();
+        vm.prank(owner);
+        vaultUSDC.close();
+        assertOpen(vaultUSDC, 4);
     }
 
     function test_GivenPeriodIsInLossWhenOpen() external {
-        // it should transfer assetsReturned from msg.sender to the vault
-        // it should pass when open succeed
+        usersDealApproveAndDeposit(2);
+        address owner = vaultUSDC.owner();
+        vm.prank(owner);
+        vaultUSDC.close();
+        assertOpen(vaultUSDC, -3);
+    }
+
+    function test_GivenPeriodIsInProfitAndRequestDepWhenOpen() external {
+        usersDealApproveAndDeposit(2);
+        address owner = vaultUSDC.owner();
+        vm.prank(owner);
+        vaultUSDC.close();
+
+        usersDealApproveAndRequestDeposit(vaultUSDC, 2, "");
+        assertOpen(vaultUSDC, 3);
+    }
+
+    function test_GivenPeriodIsInProfitAndRequestsWhenOpen() external {
+        usersDealApproveAndDeposit(2);
+        address owner = vaultUSDC.owner();
+        vm.prank(owner);
+        vaultUSDC.close();
+
+        usersDealApproveAndRequestDeposit(vaultUSDC, 2, "");
+        usersDealApproveAndRequestRedeem(vaultUSDC, 2, "");
+        assertOpen(vaultUSDC, 3);
     }
 }
