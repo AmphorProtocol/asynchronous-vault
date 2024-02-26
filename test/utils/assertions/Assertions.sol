@@ -396,7 +396,7 @@ abstract contract Assertions is EventsAssertions {
         returns (VaultState memory)
     {
         uint256 lastSavedBalance = vault.totalAssets();
-        uint256 feeInBps = vault.feeInBps();
+        uint256 feeInBps = vault.feesInBps();
 
         uint256 vaultBalance = IERC20(vault.asset()).balanceOf(address(vault));
 
@@ -581,7 +581,7 @@ abstract contract Assertions is EventsAssertions {
         open(vault, performanceInBps);
 
         // it should set isOpen to true
-        assertEq(vault.isOpen(), true, "Vault is not open");
+        assertEq(vault.vaultIsOpen(), true, "Vault is not open");
 
         // amount of claimable shares and assets should increase
         assertEq(
