@@ -677,8 +677,6 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
             block.timestamp, _totalAssets, returnedAssets, fees, totalSupply()
         );
 
-        totalAssets = _totalAssets;
-
         vaultIsOpen = true;
     }
 
