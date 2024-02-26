@@ -183,9 +183,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         super.initialize(fees, owner, underlying, name, symbol);
         epochId = 1;
         pendingSilo = new Silo(underlying);
-        _approve(address(pendingSilo), address(this), type(uint256).max);
         claimableSilo = new Silo(underlying);
-        _approve(address(claimableSilo), address(this), type(uint256).max);
     }
 
     function isCurrentEpoch(uint256 requestId) internal view returns (bool) {
@@ -274,11 +272,9 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         bool hasClaimableRequest =
             lastRequestBalance > 0 && lastRequestId != epochId;
 
-
         return vaultIsOpen || paused() || hasClaimableRequest
             ? 0
             : type(uint256).max;
-
     }
 
     // tree todo
@@ -290,11 +286,9 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         bool hasClaimableRequest =
             lastRequestBalance > 0 && lastRequestId != epochId;
 
-
         return vaultIsOpen || paused() || hasClaimableRequest
             ? 0
             : balanceOf(owner);
-
     }
 
     // tree later
@@ -377,9 +371,9 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         whenNotPaused
         whenClosed
     {
-        // if (_msgSender() != owner) {
-        //     _decreaseAllowance(owner, _msgSender(), shares);
-        // }
+        if (_msgSender() != owner) {
+            _spendAllowance(owner, _msgSender(), shares);
+        }
         if (shares > maxRedeemRequest(receiver)) {
             revert ExceededMaxRedeemRequest(
                 receiver, shares, maxRedeemRequest(receiver)
@@ -754,9 +748,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
     {
         address owner = _msgSender();
         execPermit2(permitSingle, signature);
-        PERMIT2.transferFrom(
-            owner, address(this), assets, address(_asset)
-        );
+        PERMIT2.transferFrom(owner, address(this), assets, address(_asset));
 
         _createDepositRequest(assets, receiver, owner, data);
     }
