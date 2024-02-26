@@ -86,6 +86,14 @@ contract TestBase is Assertions {
         depositRevert(vault, user, USDC.balanceOf(user.addr), selector);
     }
 
+    function depositRevert(
+        AsyncSynthVault vault,
+        VmSafe.Wallet memory user,
+        bytes memory revertData
+    ) public {
+        depositRevert(vault, user, USDC.balanceOf(user.addr), revertData);
+    }
+
     function withdraw(
         AsyncSynthVault vault,
         VmSafe.Wallet memory user
@@ -130,11 +138,21 @@ contract TestBase is Assertions {
         vault.deposit(amount, user.addr);
     }
 
-    function depositRevert2(
+    function depositRevert(
+        AsyncSynthVault vault,
+        VmSafe.Wallet memory user,
+        uint256 amount
+    ) public {
+        vm.startPrank(user.addr);
+        vm.expectRevert();
+        vault.deposit(amount, user.addr);
+    }
+
+    function depositRevert(
         AsyncSynthVault vault,
         VmSafe.Wallet memory user,
         uint256 amount,
-        bytes calldata revertData
+        bytes memory revertData
     ) public {
         vm.startPrank(user.addr);
         vm.expectRevert(revertData);

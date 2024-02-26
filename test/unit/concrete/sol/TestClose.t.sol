@@ -28,7 +28,7 @@ contract TestClose is TestBase {
         uint256 totalAssetsBefore = vaultUSDC.totalAssets();
         uint256 totalSupplyBefore = vaultUSDC.totalSupply();
         closeVaults();
-        assertEq(vaultUSDC.isOpen(), false);
+        assertEq(vaultUSDC.vaultIsOpen(), false);
         // todo check the event
         assertEq(vaultUSDC.totalAssets(), totalAssetsBefore);
         assertEq(vaultUSDC.totalSupply(), totalSupplyBefore);
