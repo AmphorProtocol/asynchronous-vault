@@ -107,6 +107,23 @@ abstract contract EventsAssertions is Test, Constants, Events {
         );
     }
 
+    // event EpochStart(
+    //     uint256 indexed timestamp, uint256 lastSavedBalance, uint256
+    // totalShares
+    // );
+
+    function assertEpochStartEvent(
+        IERC4626 vault,
+        uint256 timestamp,
+        uint256 lastSavedBalance,
+        uint256 totalSupply
+    )
+        public
+    {
+        vm.expectEmit(address(vault));
+        emit EpochStart(timestamp, lastSavedBalance, totalSupply);
+    }
+
     function assertAsyncDepositEvent(
         IERC4626 vault,
         uint256 requestId,

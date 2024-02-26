@@ -1,36 +1,44 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
-import { TestBase, SyncSynthVault } from "../../../Base.t.sol";
+import { TestBase } from "../../../Base.t.sol";
+import { SyncSynthVault } from "../../../../src/SyncSynthVault.sol";
+import "forge-std/console.sol"; //todo remove
 
 contract TestClose is TestBase {
-
-    function setUp() public {
-        usersDealApproveAndDeposit(1); // vault should not be empty
-    }
-
     function test_GivenVaultIsClosedWhenClose() external {
-        // it should revert with VaultIsLocked
-        closeVaults();
-        closeRevertLocked(vaultUSDC);
+        // it should revert with VaultIsOpen
+        usersDealApproveAndDeposit(1);
+        address owner = vaultUSDC.owner();
+        vm.startPrank(owner);
+        vaultUSDC.close();
+        vm.expectRevert(SyncSynthVault.VaultIsLocked.selector);
+        vaultUSDC.close();
+        vm.stopPrank();
     }
 
     function test_GivenMsgSenderIsNotOwnerWhenClose() external {
-        // it should revert with OwnableUnauthorizedAccount(msg.sender)
-        closeRevertUnauthorized(vaultUSDC);
+        usersDealApproveAndDeposit(1);
+        vm.expectRevert(
+            abi.encodeWithSignature(
+                "OwnableUnauthorizedAccount(address)", address(this)
+            )
+        );
+        vaultUSDC.close();
+    }
+
+    function test_GivenTotalAssetIs0WhenClose() external {
+        // it should revert with MaxDrawdownReached
+        address owner = vaultUSDC.owner();
+        vm.startPrank(owner);
+        vm.expectRevert(SyncSynthVault.VaultIsEmpty.selector);
+        vaultUSDC.close();
+        vm.stopPrank();
     }
 
     function test_WhenCloseSucceed() external {
-        // it should set isOpen to false
-        // it should emit EpochStart(block.timestamp, _totalAssets, totalSupply())
-        // it should verify totalAssets == totalsAssetsBefore
-        // it should verify totalSupply == totalSupplyBefore
-        uint256 totalAssetsBefore = vaultUSDC.totalAssets();
-        uint256 totalSupplyBefore = vaultUSDC.totalSupply();
-        closeVaults();
-        assertEq(vaultUSDC.vaultIsOpen(), false);
-        // todo check the event
-        assertEq(vaultUSDC.totalAssets(), totalAssetsBefore);
-        assertEq(vaultUSDC.totalSupply(), totalSupplyBefore);
+        usersDealApproveAndDeposit(1);
+        assertClose(vaultUSDC);
+
     }
 }

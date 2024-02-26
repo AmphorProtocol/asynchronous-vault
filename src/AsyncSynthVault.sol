@@ -274,7 +274,11 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         bool hasClaimableRequest =
             lastRequestBalance > 0 && lastRequestId != epochId;
 
-        return vaultIsOpen || paused() || hasClaimableRequest ? 0 : type(uint256).max;
+
+        return vaultIsOpen || paused() || hasClaimableRequest
+            ? 0
+            : type(uint256).max;
+
     }
 
     // tree todo
@@ -286,7 +290,11 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         bool hasClaimableRequest =
             lastRequestBalance > 0 && lastRequestId != epochId;
 
-        return vaultIsOpen || paused() || hasClaimableRequest ? 0 : balanceOf(owner);
+
+        return vaultIsOpen || paused() || hasClaimableRequest
+            ? 0
+            : balanceOf(owner);
+
     }
 
     // tree later
@@ -327,7 +335,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         address owner = _msgSender();
         uint256 oldBalance = epochs[epochId].depositRequestBalance[owner];
         epochs[epochId].depositRequestBalance[owner] -= assets;
-        _asset.safeTransfer(receiver, assets);
+        _asset.safeTransferFrom(address(pendingSilo), receiver, assets);
 
         emit DecreaseDepositRequest(
             epochId,
@@ -369,6 +377,9 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         whenNotPaused
         whenClosed
     {
+        // if (_msgSender() != owner) {
+        //     _decreaseAllowance(owner, _msgSender(), shares);
+        // }
         if (shares > maxRedeemRequest(receiver)) {
             revert ExceededMaxRedeemRequest(
                 receiver, shares, maxRedeemRequest(receiver)
@@ -483,9 +494,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
 
         uint256 assets = epochs[lastRequestId].depositRequestBalance[owner];
         epochs[lastRequestId].depositRequestBalance[owner] = 0;
-
-        transfer(receiver, shares);
-
+        _update(address(claimableSilo), receiver, shares);
         emit ClaimDeposit(lastRequestId, owner, receiver, assets, shares);
     }
 
@@ -667,6 +676,8 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         emit EpochEnd(
             block.timestamp, _totalAssets, returnedAssets, fees, totalSupply()
         );
+
+        totalAssets = _totalAssets;
 
         vaultIsOpen = true;
     }
