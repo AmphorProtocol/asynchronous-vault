@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { Assertions } from "./utils/Assertions/Assertions.sol";
+import { Assertions } from "./utils/assertions/Assertions.sol";
 import { console } from "forge-std/console.sol";
 import { AsyncSynthVault, SyncSynthVault } from "../src/AsyncSynthVault.sol";
 import { VmSafe } from "forge-std/Vm.sol";

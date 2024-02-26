@@ -331,7 +331,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         address owner = _msgSender();
         uint256 oldBalance = epochs[epochId].depositRequestBalance[owner];
         epochs[epochId].depositRequestBalance[owner] -= assets;
-        _asset.safeTransfer(receiver, assets);
+        _asset.safeTransferFrom(address(pendingSilo), receiver, assets);
 
         emit DecreaseDepositRequest(
             epochId,
