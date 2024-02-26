@@ -245,12 +245,12 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
 
     // tree todo
     function totalPendingDeposits() public view returns (uint256) {
-        return isOpen ? 0 : _asset.balanceOf(address(pendingSilo));
+        return vaultIsOpen ? 0 : _asset.balanceOf(address(pendingSilo));
     }
 
     // tree todo
     function totalPendingRedeems() public view returns (uint256) {
-        return isOpen ? 0 : balanceOf(address(pendingSilo));
+        return vaultIsOpen ? 0 : balanceOf(address(pendingSilo));
     }
 
     function totalClaimableShares() public view returns (uint256) {
@@ -274,7 +274,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         bool hasClaimableRequest =
             lastRequestBalance > 0 && lastRequestId != epochId;
 
-        return isOpen || paused() || hasClaimableRequest ? 0 : type(uint256).max;
+        return vaultIsOpen || paused() || hasClaimableRequest ? 0 : type(uint256).max;
     }
 
     // tree todo
@@ -286,7 +286,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         bool hasClaimableRequest =
             lastRequestBalance > 0 && lastRequestId != epochId;
 
-        return isOpen || paused() || hasClaimableRequest ? 0 : balanceOf(owner);
+        return vaultIsOpen || paused() || hasClaimableRequest ? 0 : balanceOf(owner);
     }
 
     // tree later
@@ -599,13 +599,13 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
      * of the contract (`onlyOwner` modifier).
      */
     function close() external override onlyOwner {
-        if (!isOpen) revert VaultIsLocked();
+        if (!vaultIsOpen) revert VaultIsLocked();
 
         uint256 _totalAssets = totalAssets;
         if (_totalAssets == 0) revert VaultIsEmpty();
 
         _asset.safeTransfer(owner(), _totalAssets);
-        isOpen = false;
+        vaultIsOpen = false;
         emit EpochStart(block.timestamp, _totalAssets, totalSupply());
     }
 
@@ -652,22 +652,23 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         // taking fees if positive yield
         uint256 fees;
         uint256 _totalAssets = totalAssets;
-        if (returnedAssets > _totalAssets && feeInBps > 0) {
+        if (returnedAssets > _totalAssets && feesInBps > 0) {
             uint256 profits;
             unchecked {
                 profits = returnedAssets - _totalAssets;
             }
-            fees = (profits).mulDiv(feeInBps, BPS_DIVIDER, Math.Rounding.Ceil);
+            fees = (profits).mulDiv(feesInBps, BPS_DIVIDER, Math.Rounding.Ceil);
         }
         _totalAssets = returnedAssets - fees;
+        totalAssets = _totalAssets;
 
         _asset.safeTransferFrom(_msgSender(), address(this), _totalAssets);
 
         emit EpochEnd(
-            block.timestamp, totalAssets, returnedAssets, fees, totalSupply()
+            block.timestamp, _totalAssets, returnedAssets, fees, totalSupply()
         );
-        totalAssets = _totalAssets;
-        isOpen = true;
+
+        vaultIsOpen = true;
     }
 
     function _execRequests() internal {
@@ -732,7 +733,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
     */
 
     function requestDepositWithPermit2(
-        uint256 assets,
+        uint160 assets,
         address receiver,
         bytes memory data,
         IAllowanceTransfer.PermitSingle calldata permitSingle,
@@ -745,7 +746,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         address owner = _msgSender();
         execPermit2(permitSingle, signature);
         PERMIT2.transferFrom(
-            owner, address(this), uint160(assets), address(_asset)
+            owner, address(this), assets, address(_asset)
         );
 
         _createDepositRequest(assets, receiver, owner, data);
