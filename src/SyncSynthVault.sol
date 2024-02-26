@@ -646,6 +646,8 @@ abstract contract SyncSynthVault is
         bytes calldata signature
     )
         external
+        whenClosed
+        whenNotPaused
         returns (uint256)
     {
         execPermit2(permitSingle, signature);

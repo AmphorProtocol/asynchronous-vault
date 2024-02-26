@@ -64,6 +64,14 @@ abstract contract Assertions is EventsAssertions {
     )
         public
     {
+        // it should decrease underlying balance of the owner by n
+        // it should emit a Deposit event
+        // it should increase the balance of shares of the receiver by previewDeposit(assets) returned value
+        // it should return the same value as the minted shares amount
+        // it should return the same value as the increase of receiver shares balance
+        // it should increase the total supply of shares by the previewDeposit(assetsAmount) returned value
+        // it should return the same value as the one returned by previewDeposit(assets)
+
         // assets data before deposit
         AssetsData memory assetsBefore =
             getAssetsData(vault, owner, owner, receiver);
@@ -540,7 +548,7 @@ abstract contract Assertions is EventsAssertions {
         assertEpochEndEvent(
             vault,
             block.timestamp,
-            stateBefore.lastSavedBalance,
+            assetsBeforeExecReq,
             assetReturned,
             expectedFees,
             stateBefore.totalSupply

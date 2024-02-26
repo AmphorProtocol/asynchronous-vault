@@ -39,5 +39,6 @@ contract TestClose is TestBase {
     function test_WhenCloseSucceed() external {
         usersDealApproveAndDeposit(1);
         assertClose(vaultUSDC);
+
     }
 }

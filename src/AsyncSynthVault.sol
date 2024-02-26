@@ -274,9 +274,11 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         bool hasClaimableRequest =
             lastRequestBalance > 0 && lastRequestId != epochId;
 
+
         return vaultIsOpen || paused() || hasClaimableRequest
             ? 0
             : type(uint256).max;
+
     }
 
     // tree todo
@@ -288,9 +290,11 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         bool hasClaimableRequest =
             lastRequestBalance > 0 && lastRequestId != epochId;
 
+
         return vaultIsOpen || paused() || hasClaimableRequest
             ? 0
             : balanceOf(owner);
+
     }
 
     // tree later
@@ -665,13 +669,16 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
             fees = (profits).mulDiv(feesInBps, BPS_DIVIDER, Math.Rounding.Ceil);
         }
         _totalAssets = returnedAssets - fees;
+        totalAssets = _totalAssets;
 
         _asset.safeTransferFrom(_msgSender(), address(this), _totalAssets);
 
         emit EpochEnd(
-            block.timestamp, totalAssets, returnedAssets, fees, totalSupply()
+            block.timestamp, _totalAssets, returnedAssets, fees, totalSupply()
         );
+
         totalAssets = _totalAssets;
+
         vaultIsOpen = true;
     }
 
@@ -737,7 +744,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
     */
 
     function requestDepositWithPermit2(
-        uint256 assets,
+        uint160 assets,
         address receiver,
         bytes memory data,
         IAllowanceTransfer.PermitSingle calldata permitSingle,
@@ -750,7 +757,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         address owner = _msgSender();
         execPermit2(permitSingle, signature);
         PERMIT2.transferFrom(
-            owner, address(this), uint160(assets), address(_asset)
+            owner, address(this), assets, address(_asset)
         );
 
         _createDepositRequest(assets, receiver, owner, data);
