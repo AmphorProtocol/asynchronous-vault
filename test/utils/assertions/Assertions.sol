@@ -64,6 +64,14 @@ abstract contract Assertions is EventsAssertions {
     )
         public
     {
+        // it should decrease underlying balance of the owner by n
+        // it should emit a Deposit event
+        // it should increase the balance of shares of the receiver by previewDeposit(assets) returned value
+        // it should return the same value as the minted shares amount
+        // it should return the same value as the increase of receiver shares balance
+        // it should increase the total supply of shares by the previewDeposit(assetsAmount) returned value
+        // it should return the same value as the one returned by previewDeposit(assets)
+
         // assets data before deposit
         AssetsData memory assetsBefore =
             getAssetsData(vault, owner, owner, receiver);
@@ -396,7 +404,7 @@ abstract contract Assertions is EventsAssertions {
         returns (VaultState memory)
     {
         uint256 lastSavedBalance = vault.totalAssets();
-        uint256 feeInBps = vault.feeInBps();
+        uint256 feeInBps = vault.feesInBps();
 
         uint256 vaultBalance = IERC20(vault.asset()).balanceOf(address(vault));
 
@@ -462,18 +470,19 @@ abstract contract Assertions is EventsAssertions {
         );
     }
 
-    //    struct VaultState {
-    //     uint256 lastSavedBalance;
-    //     uint256 feeInBps;
-    //     uint256 vaultBalance;
-    //     uint256 totalSupply;
-    //     uint256 totalAssets;
-    //     uint256 pendingDeposit;
-    //     uint256 pendingRedeem;
-    //     uint256 claimableShares;
-    //     uint256 claimableAssets;
-    //     uint256 epochId;
-    // }
+    function assertClose(AsyncSynthVault vault) public {
+        uint256 totalAssetsBefore = vault.totalAssets();
+        uint256 totalSupplyBefore = vault.totalSupply();
+        vm.prank(vault.owner());
+        assertEpochStartEvent(
+            vault, block.timestamp, totalAssetsBefore, totalSupplyBefore
+        );
+        vault.close();
+        assertEq(vault.vaultIsOpen(), false, "Vault is not closed");
+
+        assertTotalAssets(vault, totalAssetsBefore);
+        assertTotalSupply(vault, totalSupplyBefore);
+    }
 
     function assertOpen(
         AsyncSynthVault vault,
@@ -517,7 +526,6 @@ abstract contract Assertions is EventsAssertions {
             stateBefore.totalSupply + expectedSharesToMint,
             stateBefore.pendingRedeem
         );
-        console.log("expectedAssetsToRedeem", expectedAssetsToRedeem);
 
         address owner = vault.owner();
         vm.startPrank(owner);
@@ -540,7 +548,7 @@ abstract contract Assertions is EventsAssertions {
         assertEpochEndEvent(
             vault,
             block.timestamp,
-            stateBefore.lastSavedBalance,
+            assetsBeforeExecReq,
             assetReturned,
             expectedFees,
             stateBefore.totalSupply
@@ -581,7 +589,7 @@ abstract contract Assertions is EventsAssertions {
         open(vault, performanceInBps);
 
         // it should set isOpen to true
-        assertEq(vault.isOpen(), true, "Vault is not open");
+        assertEq(vault.vaultIsOpen(), true, "Vault is not open");
 
         // amount of claimable shares and assets should increase
         assertEq(

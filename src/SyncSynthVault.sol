@@ -104,11 +104,11 @@ abstract contract SyncSynthVault is
     */
 
     // @return Amount of the perf fees applied on the positive yield.
-    uint16 public feeInBps;
+    uint16 public feesInBps;
     uint16 internal _maxDrawdown; // guardrail
     IERC20 internal _asset; // underlying todo make small cap
     uint256 public totalAssets; // total underlying assets
-    bool public isOpen; // vault is open or closed
+    bool public vaultIsOpen; // vault is open or closed
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     IAllowanceTransfer public immutable PERMIT2; // The canonical permit2
         // contract.
@@ -156,7 +156,7 @@ abstract contract SyncSynthVault is
      * ##############################
      */
     modifier whenClosed() {
-        if (isOpen) revert VaultIsOpen();
+        if (vaultIsOpen) revert VaultIsOpen();
         _;
     }
 
@@ -178,8 +178,8 @@ abstract contract SyncSynthVault is
         onlyInitializing
     {
         if (fees > MAX_FEES) revert FeesTooHigh();
-        feeInBps = fees;
-        isOpen = true;
+        feesInBps = fees;
+        vaultIsOpen = true;
         __ERC20_init(name, symbol);
         __Ownable_init(owner);
         __ERC20Permit_init(name);
@@ -225,7 +225,7 @@ abstract contract SyncSynthVault is
      * @return Amount of the maximum underlying assets deposit amount.
      */
     function maxDeposit(address) public view returns (uint256) {
-        return isOpen && !paused() ? type(uint256).max : 0;
+        return vaultIsOpen && !paused() ? type(uint256).max : 0;
     }
 
     /**
@@ -235,7 +235,7 @@ abstract contract SyncSynthVault is
      * @return Amount of the maximum shares mintable for the specified address.
      */
     function maxMint(address) public view returns (uint256) {
-        return isOpen && !paused() ? type(uint256).max : 0;
+        return vaultIsOpen && !paused() ? type(uint256).max : 0;
     }
 
     /**
@@ -245,7 +245,7 @@ abstract contract SyncSynthVault is
      * @return Amount of the maximum number of withdrawable underlying assets.
      */
     function maxWithdraw(address owner) public view returns (uint256) {
-        return isOpen && !paused()
+        return vaultIsOpen && !paused()
             ? _convertToAssets(balanceOf(owner), Math.Rounding.Floor)
             : 0;
     }
@@ -258,7 +258,7 @@ abstract contract SyncSynthVault is
      * @return Amount of the maximum number of redeemable shares.
      */
     function maxRedeem(address owner) public view returns (uint256) {
-        return isOpen && !paused() ? balanceOf(owner) : 0;
+        return vaultIsOpen && !paused() ? balanceOf(owner) : 0;
     }
 
     /**
@@ -547,10 +547,10 @@ abstract contract SyncSynthVault is
      * @param newFee The new perf fees to be applied.
      */
     function setFee(uint16 newFee) external onlyOwner {
-        if (!isOpen) revert VaultIsLocked();
+        if (!vaultIsOpen) revert VaultIsLocked();
         if (newFee > MAX_FEES) revert FeesTooHigh();
-        feeInBps = newFee;
-        emit FeesChanged(feeInBps, newFee);
+        feesInBps = newFee;
+        emit FeesChanged(feesInBps, newFee);
     }
 
     function setMaxDrawdown(uint16 newMaxDrawdown) external onlyOwner {
@@ -646,6 +646,8 @@ abstract contract SyncSynthVault is
         bytes calldata signature
     )
         external
+        whenClosed
+        whenNotPaused
         returns (uint256)
     {
         execPermit2(permitSingle, signature);

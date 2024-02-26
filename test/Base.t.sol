@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { Assertions } from "./utils/Assertions/Assertions.sol";
+import { Assertions } from "./utils/assertions/Assertions.sol";
 import { console } from "forge-std/console.sol";
 import { AsyncSynthVault, SyncSynthVault } from "../src/AsyncSynthVault.sol";
 import { VmSafe } from "forge-std/Vm.sol";
@@ -16,14 +16,6 @@ contract TestBase is Assertions {
         address owner = vault.owner();
         vm.prank(owner);
         vault.close();
-    }
-
-    function closeRevertLocked(AsyncSynthVault vault) public {
-        address owner = vault.owner();
-        vm.startPrank(owner);
-        vm.expectRevert(SyncSynthVault.VaultIsLocked.selector);
-        vault.close();
-        vm.stopPrank();
     }
 
     function closeRevertUnauthorized(AsyncSynthVault vault) public {
@@ -86,6 +78,14 @@ contract TestBase is Assertions {
         depositRevert(vault, user, USDC.balanceOf(user.addr), selector);
     }
 
+    function depositRevert(
+        AsyncSynthVault vault,
+        VmSafe.Wallet memory user,
+        bytes memory revertData
+    ) public {
+        depositRevert(vault, user, USDC.balanceOf(user.addr), revertData);
+    }
+
     function withdraw(
         AsyncSynthVault vault,
         VmSafe.Wallet memory user
@@ -134,14 +134,22 @@ contract TestBase is Assertions {
         vault.deposit(amount, user.addr);
     }
 
-    function depositRevert2(
+    function depositRevert(
+        AsyncSynthVault vault,
+        VmSafe.Wallet memory user,
+        uint256 amount
+    ) public {
+        vm.startPrank(user.addr);
+        vm.expectRevert();
+        vault.deposit(amount, user.addr);
+    }
+
+    function depositRevert(
         AsyncSynthVault vault,
         VmSafe.Wallet memory user,
         uint256 amount,
-        bytes calldata revertData
-    )
-        public
-    {
+        bytes memory revertData
+    ) public {
         vm.startPrank(user.addr);
         vm.expectRevert(revertData);
         vault.deposit(amount, user.addr);
