@@ -557,17 +557,7 @@ abstract contract Assertions is EventsAssertions {
             expectedFees,
             stateBefore.totalSupply
         );
-        // console.log(
-        //     "stateBefore.lastSavedBalance", stateBefore.lastSavedBalance
-        // );
-        // console.log("aasetsBeforeExecReq", assetsBeforeExecReq);
-        // console.log("Expected fees", expectedFees);
-        // console.log("Total supply", stateBefore.totalSupply);
-        //        Epoch end event emitted 500120000
-        //   Asset returned 500150000
-        //   Expected fees 30000
-        //   Total supply 500000000000000000000
-        //   assetsToWithdraw 0
+
         assertDepositEvent(
             vault,
             address(vault.pendingSilo()),
