@@ -162,16 +162,16 @@ abstract contract SyncSynthVault is
     }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(IAllowanceTransfer _permit2, IERC20 underlying) {
+    constructor(IAllowanceTransfer _permit2) {
         _disableInitializers();
         PERMIT2 = _permit2;
         decimalsOffset = 12;
-        _asset = underlying;
     }
 
     function initialize(
         uint16 fees,
         address owner,
+        IERC20 underlying,
         string memory name,
         string memory symbol
     )
@@ -183,6 +183,7 @@ abstract contract SyncSynthVault is
         feesInBps = fees;
         vaultIsOpen = true;
         _maxDrawdown = 3000; // 30%
+        _asset = underlying;
         __ERC20_init(name, symbol);
         __Ownable_init(owner);
         __ERC20Permit_init(name);

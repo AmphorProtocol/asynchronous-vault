@@ -164,13 +164,14 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
      */
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(IAllowanceTransfer _permit2, IERC20 underlying) SyncSynthVault(_permit2, underlying) {
+    constructor(IAllowanceTransfer _permit2) SyncSynthVault(_permit2) {
         _disableInitializers();
     }
 
     function initialize(
         uint16 fees,
         address owner,
+        IERC20 underlying,
         string memory name,
         string memory symbol
     )
@@ -179,7 +180,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         override
         initializer
     {
-        super.initialize(fees, owner, name, symbol);
+        super.initialize(fees, owner, underlying, name, symbol);
         epochId = 1;
         pendingSilo = new Silo(_asset);
         _approve(address(pendingSilo), address(this), type(uint256).max);
