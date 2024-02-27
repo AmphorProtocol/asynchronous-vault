@@ -104,28 +104,39 @@ abstract contract Constants is Test {
         users.push(user9);
         users.push(user10);
 
-        vaultUSDC =
-            _proxyDeploy(amphorLabs, USDC, vaultNameUSDC, vaultSymbolUSDC);
+        Options memory deploy;
+        deploy.constructorData = abi.encode(permit2);
+
+        UpgradeableBeacon beacon = UpgradeableBeacon(
+            Upgrades.deployBeacon("AsyncSynthVault.sol", amphorLabs, deploy)
+        );
+
+        vaultUSDC = _proxyDeploy(
+            beacon, amphorLabs, USDC, vaultNameUSDC, vaultSymbolUSDC
+        );
         vm.label(address(vaultUSDC), "vaultUSDC");
         vm.label(address(vaultUSDC.pendingSilo()), "vaultUSDC.pendingSilo");
         vm.label(address(vaultUSDC.claimableSilo()), "vaultUSDC.claimableSilo");
 
-        vaultWSTETH =
-            _proxyDeploy(amphorLabs, WSTETH, vaultNameWSTETH, vaultSymbolWSTETH);
+        vaultWSTETH = _proxyDeploy(
+            beacon, amphorLabs, WSTETH, vaultNameWSTETH, vaultSymbolWSTETH
+        );
         vm.label(address(vaultWSTETH), "vaultWSTETH");
         vm.label(address(vaultWSTETH.pendingSilo()), "vaultWSTETH.pendingSilo");
         vm.label(
             address(vaultWSTETH.claimableSilo()), "vaultWSTETH.claimableSilo"
         );
 
-        vaultWBTC =
-            _proxyDeploy(amphorLabs, WBTC, vaultNameWBTC, vaultSymbolWBTC);
+        vaultWBTC = _proxyDeploy(
+            beacon, amphorLabs, WBTC, vaultNameWBTC, vaultSymbolWBTC
+        );
         vm.label(address(vaultWBTC), "vaultWBTC");
         vm.label(address(vaultWBTC.pendingSilo()), "vaultWBTC.pendingSilo");
         vm.label(address(vaultWBTC.claimableSilo()), "vaultWBTC.claimableSilo");
     }
 
     function _proxyDeploy(
+        UpgradeableBeacon beacon,
         address owner,
         ERC20 underlying,
         string memory vaultName,
@@ -134,13 +145,6 @@ abstract contract Constants is Test {
         internal
         returns (AsyncSynthVault)
     {
-        Options memory deploy;
-        deploy.constructorData = abi.encode(permit2);
-
-        UpgradeableBeacon beacon = UpgradeableBeacon(
-            Upgrades.deployBeacon("AsyncSynthVault.sol", owner, deploy)
-        );
-
         BeaconProxy proxy = BeaconProxy(
             payable(
                 Upgrades.deployBeaconProxy(

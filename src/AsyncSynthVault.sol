@@ -182,10 +182,8 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
     {
         super.initialize(fees, owner, underlying, name, symbol);
         epochId = 1;
-        pendingSilo = new Silo(_asset);
-        _approve(address(pendingSilo), address(this), type(uint256).max);
-        claimableSilo = new Silo(_asset);
-        _approve(address(claimableSilo), address(this), type(uint256).max);
+        pendingSilo = new Silo(underlying);
+        claimableSilo = new Silo(underlying);
     }
 
     function isCurrentEpoch(uint256 requestId) internal view returns (bool) {
@@ -373,9 +371,9 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         whenNotPaused
         whenClosed
     {
-        // if (_msgSender() != owner) {
-        //     _decreaseAllowance(owner, _msgSender(), shares);
-        // }
+        if (_msgSender() != owner) {
+            _spendAllowance(owner, _msgSender(), shares);
+        }
         if (shares > maxRedeemRequest(receiver)) {
             revert ExceededMaxRedeemRequest(
                 receiver, shares, maxRedeemRequest(receiver)

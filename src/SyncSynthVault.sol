@@ -113,7 +113,7 @@ abstract contract SyncSynthVault is
     uint8 public immutable decimalsOffset; // offset for the decimals
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     IAllowanceTransfer public immutable PERMIT2; // The canonical permit2
-        // contract.
+        // contract. We can make it immutable because it is common to all proxy
 
     /*
      * ##########

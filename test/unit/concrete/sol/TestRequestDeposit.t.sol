@@ -44,15 +44,18 @@ contract TestRequestDeposit is TestBase {
         usersDealApproveAndDeposit(1);
 
         assertClose(vaultUSDC);
+        vm.prank(user1.addr);
+        vaultUSDC.requestDeposit(1, user1.addr, user1.addr, "");
         assertOpen(vaultUSDC, 0);
         assertClose(vaultUSDC);
         usersDealApprove(1);
         vm.startPrank(user1.addr);
+
         vm.expectRevert(
             abi.encodeWithSelector(
                 AsyncSynthVault.ExceededMaxDepositRequest.selector,
                 user1.addr,
-                user1.addr,
+                1,
                 0
             )
         );
