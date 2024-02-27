@@ -111,7 +111,7 @@ abstract contract SyncSynthVault is
     bool public vaultIsOpen; // vault is open or closed
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     IAllowanceTransfer public immutable PERMIT2; // The canonical permit2
-        // contract.
+        // contract. We can make it immutable because it is common to all proxy
 
     /*
      * ##########
@@ -163,7 +163,7 @@ abstract contract SyncSynthVault is
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(IAllowanceTransfer _permit2) {
         _disableInitializers();
-        PERMIT2 = _permit2;
+        PERMIT2 = _permit2; // we can do this because it's immutable
     }
 
     function initialize(
