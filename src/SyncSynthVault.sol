@@ -17,7 +17,7 @@ import { Initializable } from
     "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import { ERC20Permit } from
     "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
-import { IERC4626 } from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
+import { IERC4626 } from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import { IAllowanceTransfer } from
     "permit2/src/interfaces/IAllowanceTransfer.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
