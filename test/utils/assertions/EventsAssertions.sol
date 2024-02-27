@@ -8,6 +8,8 @@ import { Events } from "../Events.sol";
 import { Constants } from "../Constants.sol";
 import { IERC7540 } from "../../../src/interfaces/IERC7540.sol";
 
+import "forge-std/console.sol"; //todo remove
+
 abstract contract EventsAssertions is Test, Constants, Events {
     // ERC20 EVENTS
 

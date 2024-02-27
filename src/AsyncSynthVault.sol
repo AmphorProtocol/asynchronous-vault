@@ -604,12 +604,12 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
     function close() external override onlyOwner {
         if (!vaultIsOpen) revert VaultIsLocked();
 
-        uint256 _totalAssets = totalAssets;
-        if (_totalAssets == 0) revert VaultIsEmpty();
+        if (totalAssets() == 0) revert VaultIsEmpty();
 
-        _asset.safeTransfer(owner(), _totalAssets);
+        lastSavedBalance = totalAssets();
+        _asset.safeTransfer(owner(), lastSavedBalance);
         vaultIsOpen = false;
-        emit EpochStart(block.timestamp, _totalAssets, totalSupply());
+        emit EpochStart(block.timestamp, lastSavedBalance, totalSupply());
     }
 
     /**
@@ -645,32 +645,36 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
      */
     function _open(uint256 returnedAssets) internal {
         // check for maxf drawdown
+        uint256 _lastSavedBalance = lastSavedBalance;
         if (
             returnedAssets
-                < totalAssets.mulDiv(
+                < _lastSavedBalance.mulDiv(
                     BPS_DIVIDER - _maxDrawdown, BPS_DIVIDER, Math.Rounding.Ceil
                 )
         ) revert MaxDrawdownReached();
 
         // taking fees if positive yield
         uint256 fees;
-        uint256 _totalAssets = totalAssets;
-        if (returnedAssets > _totalAssets && feesInBps > 0) {
+        if (returnedAssets > _lastSavedBalance && feesInBps > 0) {
             uint256 profits;
             unchecked {
-                profits = returnedAssets - _totalAssets;
+                profits = returnedAssets - _lastSavedBalance;
             }
             fees = (profits).mulDiv(feesInBps, BPS_DIVIDER, Math.Rounding.Ceil);
         }
-        _totalAssets = returnedAssets - fees;
-        totalAssets = _totalAssets;
 
-        _asset.safeTransferFrom(_msgSender(), address(this), _totalAssets);
-
-        emit EpochEnd(
-            block.timestamp, _totalAssets, returnedAssets, fees, totalSupply()
+        _asset.safeTransferFrom(
+            _msgSender(), address(this), returnedAssets - fees
         );
 
+        emit EpochEnd(
+            block.timestamp,
+            _lastSavedBalance,
+            returnedAssets,
+            fees,
+            totalSupply()
+        );
+        // lastSavedBalance = 0;
         vaultIsOpen = true;
     }
 
@@ -705,7 +709,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         emit AsyncWithdraw(epochId, _pendingRedeem, _pendingRedeem);
 
         epochs[epochId].totalSupplySnapshot = totalSupply();
-        epochs[epochId].totalAssetsSnapshot = totalAssets;
+        epochs[epochId].totalAssetsSnapshot = totalAssets();
     }
 
     /*

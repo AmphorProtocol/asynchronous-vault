@@ -23,6 +23,8 @@ abstract contract Constants is Test {
     ERC20 immutable STETH = ERC20(vm.envAddress("STETH_MAINNET"));
     ERC20 immutable WBTC = ERC20(vm.envAddress("WBTC_MAINNET"));
 
+    uint8 decimalsOffset = 12;
+
     //ERC20 whales
     address immutable USDC_WHALE = vm.envAddress("USDC_WHALE");
     // Future Owner
