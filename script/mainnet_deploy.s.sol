@@ -39,7 +39,6 @@ contract GOERLI_DeployAmphorSynthetic is Script {
                         (
                             fees,
                             owner,
-                            IERC20(underlying),
                             vaultName,
                             vaultSymbol
                         )

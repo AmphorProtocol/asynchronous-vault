@@ -164,14 +164,13 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
      */
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(IAllowanceTransfer _permit2) SyncSynthVault(_permit2) {
+    constructor(IAllowanceTransfer _permit2, IERC20 underlying) SyncSynthVault(_permit2, underlying) {
         _disableInitializers();
     }
 
     function initialize(
         uint16 fees,
         address owner,
-        IERC20 underlying,
         string memory name,
         string memory symbol
     )
@@ -180,11 +179,11 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         override
         initializer
     {
-        super.initialize(fees, owner, underlying, name, symbol);
+        super.initialize(fees, owner, name, symbol);
         epochId = 1;
-        pendingSilo = new Silo(underlying);
+        pendingSilo = new Silo(_asset);
         _approve(address(pendingSilo), address(this), type(uint256).max);
-        claimableSilo = new Silo(underlying);
+        claimableSilo = new Silo(_asset);
         _approve(address(claimableSilo), address(this), type(uint256).max);
     }
 
@@ -610,12 +609,12 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
     function close() external override onlyOwner {
         if (!vaultIsOpen) revert VaultIsLocked();
 
-        uint256 _totalAssets = totalAssets;
-        if (_totalAssets == 0) revert VaultIsEmpty();
+        lastSavedBalance = totalAssets();
+        if (totalAssets() == 0) revert VaultIsEmpty();
 
-        _asset.safeTransfer(owner(), _totalAssets);
+        _asset.safeTransfer(owner(), totalAssets());
         vaultIsOpen = false;
-        emit EpochStart(block.timestamp, _totalAssets, totalSupply());
+        emit EpochStart(block.timestamp, totalAssets(), totalSupply());
     }
 
     /**
@@ -651,30 +650,28 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
      */
     function _open(uint256 returnedAssets) internal {
         // check for maxf drawdown
+        uint256 _lastSavedBalance = lastSavedBalance;
         if (
             returnedAssets
-                < totalAssets.mulDiv(
+                < _lastSavedBalance.mulDiv(
                     BPS_DIVIDER - _maxDrawdown, BPS_DIVIDER, Math.Rounding.Ceil
                 )
         ) revert MaxDrawdownReached();
 
         // taking fees if positive yield
         uint256 fees;
-        uint256 _totalAssets = totalAssets;
-        if (returnedAssets > _totalAssets && feesInBps > 0) {
+        if (returnedAssets > _lastSavedBalance && feesInBps > 0) {
             uint256 profits;
             unchecked {
-                profits = returnedAssets - _totalAssets;
+                profits = returnedAssets - _lastSavedBalance;
             }
             fees = (profits).mulDiv(feesInBps, BPS_DIVIDER, Math.Rounding.Ceil);
         }
-        _totalAssets = returnedAssets - fees;
-        totalAssets = _totalAssets;
 
-        _asset.safeTransferFrom(_msgSender(), address(this), _totalAssets);
+        _asset.safeTransferFrom(_msgSender(), address(this), returnedAssets - fees);
 
         emit EpochEnd(
-            block.timestamp, _totalAssets, returnedAssets, fees, totalSupply()
+            block.timestamp, _lastSavedBalance, returnedAssets, fees, totalSupply()
         );
 
         vaultIsOpen = true;
@@ -711,7 +708,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         emit AsyncWithdraw(epochId, _pendingRedeem, _pendingRedeem);
 
         epochs[epochId].totalSupplySnapshot = totalSupply();
-        epochs[epochId].totalAssetsSnapshot = totalAssets;
+        epochs[epochId].totalAssetsSnapshot = totalAssets();
     }
 
     /*

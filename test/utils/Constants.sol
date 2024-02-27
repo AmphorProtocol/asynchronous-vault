@@ -145,7 +145,7 @@ abstract contract Constants is Test {
                     address(beacon),
                     abi.encodeCall(
                         AsyncSynthVault.initialize,
-                        (fees, owner, underlying, vaultName, vaultSymbol)
+                        (fees, owner, vaultName, vaultSymbol)
                     )
                 )
             )

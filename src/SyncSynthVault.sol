@@ -107,8 +107,9 @@ abstract contract SyncSynthVault is
     uint16 public feesInBps;
     uint16 internal _maxDrawdown; // guardrail
     IERC20 internal _asset; // underlying todo make small cap
-    uint256 public totalAssets; // total underlying assets
     bool public vaultIsOpen; // vault is open or closed
+    uint256 public lastSavedBalance; // last saved balance
+    uint8 public immutable decimalsOffset; // offset for the decimals
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     IAllowanceTransfer public immutable PERMIT2; // The canonical permit2
         // contract.
@@ -161,15 +162,16 @@ abstract contract SyncSynthVault is
     }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(IAllowanceTransfer _permit2) {
+    constructor(IAllowanceTransfer _permit2, IERC20 underlying) {
         _disableInitializers();
         PERMIT2 = _permit2;
+        decimalsOffset = 12;
+        _asset = underlying;
     }
 
     function initialize(
         uint16 fees,
         address owner,
-        IERC20 underlying,
         string memory name,
         string memory symbol
     )
@@ -180,12 +182,11 @@ abstract contract SyncSynthVault is
         if (fees > MAX_FEES) revert FeesTooHigh();
         feesInBps = fees;
         vaultIsOpen = true;
+        _maxDrawdown = 3000; // 30%
         __ERC20_init(name, symbol);
         __Ownable_init(owner);
         __ERC20Permit_init(name);
         __ERC20Pausable_init(); // will audit
-        _asset = IERC20(underlying);
-        _maxDrawdown = 3000; // 30%
     }
 
     /*
@@ -287,6 +288,11 @@ abstract contract SyncSynthVault is
      */
     function previewRedeem(uint256 shares) public view returns (uint256) {
         return _convertToAssets(shares, Math.Rounding.Floor);
+    }
+
+    function totalAssets() public view returns (uint256) {
+        if (vaultIsOpen) return _asset.balanceOf(address(this));
+        return _asset.balanceOf(address(this)) + lastSavedBalance;
     }
 
     /**
@@ -425,10 +431,9 @@ abstract contract SyncSynthVault is
         view
         returns (uint256)
     {
-        uint256 _totalAssets = totalAssets;
-        return _totalAssets == 0
-            ? assets
-            : assets.mulDiv(totalSupply(), _totalAssets, rounding);
+        return assets.mulDiv(
+            totalSupply() + 10 ** decimalsOffset, totalAssets() + 1, rounding
+        );
     }
 
     /**
@@ -447,10 +452,9 @@ abstract contract SyncSynthVault is
         view
         returns (uint256)
     {
-        uint256 totalSupply = totalSupply();
-        return totalSupply == 0
-            ? shares
-            : shares.mulDiv(totalAssets, totalSupply, rounding);
+        return shares.mulDiv(
+            totalAssets() + 1, totalSupply() + 10 ** decimalsOffset, rounding
+        );
     }
 
     /**
@@ -479,7 +483,6 @@ abstract contract SyncSynthVault is
         // the shares are minted, which is a valid state.
         // slither-disable-next-line reentrancy-no-eth
         _asset.safeTransferFrom(caller, address(this), assets);
-        totalAssets += assets;
         _mint(receiver, shares);
         emit Deposit(caller, receiver, assets, shares);
     }
@@ -508,7 +511,6 @@ abstract contract SyncSynthVault is
         if (caller != owner) _spendAllowance(owner, caller, shares);
 
         _burn(owner, shares);
-        totalAssets -= assets;
         _asset.safeTransfer(receiver, assets);
 
         emit Withdraw(caller, receiver, owner, assets, shares);
@@ -521,7 +523,7 @@ abstract contract SyncSynthVault is
     */
     // todo
     function restruct(uint256 virtualReturnedAsset) external onlyOwner {
-        uint256 _totalAssets = totalAssets;
+        uint256 _totalAssets = totalAssets();
         emit EpochEnd(
             block.timestamp,
             _totalAssets,
@@ -655,7 +657,6 @@ abstract contract SyncSynthVault is
             _msgSender(), address(this), uint160(assets), address(_asset)
         );
 
-        totalAssets += assets;
         uint256 shares = _convertToShares(assets, Math.Rounding.Floor);
         _mint(receiver, shares);
         emit Deposit(_msgSender(), receiver, assets, shares);
