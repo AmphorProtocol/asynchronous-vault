@@ -544,7 +544,7 @@ abstract contract Assertions is EventsAssertions {
             assetsBeforeExecReq
         );
 
-        // ending the epoch
+        // // // ending the epoch
         assertEpochEndEvent(
             vault,
             block.timestamp,
@@ -635,7 +635,7 @@ abstract contract Assertions is EventsAssertions {
         uint256 assets
     )
         public
-        pure
+        view
         returns (uint256)
     {
         return _convertToShares(
@@ -650,12 +650,12 @@ abstract contract Assertions is EventsAssertions {
         Math.Rounding rounding
     )
         internal
-        pure
+        view
         returns (uint256)
     {
-        return totalAssets == 0
-            ? assets
-            : assets.mulDiv(totalSupply, totalAssets, rounding);
+        return assets.mulDiv(
+            totalSupply + 10 ** decimalsOffset, totalAssets + 1, rounding
+        );
     }
 
     function previewRedeem(
@@ -664,7 +664,7 @@ abstract contract Assertions is EventsAssertions {
         uint256 shares
     )
         public
-        pure
+        view
         returns (uint256)
     {
         return _convertToAssets(
@@ -679,12 +679,12 @@ abstract contract Assertions is EventsAssertions {
         Math.Rounding rounding
     )
         internal
-        pure
+        view
         returns (uint256)
     {
-        return totalSupply == 0
-            ? shares
-            : shares.mulDiv(totalAssets, totalSupply, rounding);
+        return shares.mulDiv(
+            totalAssets + 1, totalSupply + 10 ** decimalsOffset, rounding
+        );
     }
 
     function performanceToAssets(

@@ -109,6 +109,7 @@ abstract contract SyncSynthVault is
     IERC20 internal _asset; // underlying todo make small cap
     bool public vaultIsOpen; // vault is open or closed
     uint256 public lastSavedBalance; // last saved balance
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     uint8 public immutable decimalsOffset; // offset for the decimals
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     IAllowanceTransfer public immutable PERMIT2; // The canonical permit2

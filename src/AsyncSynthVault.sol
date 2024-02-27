@@ -610,12 +610,12 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
     function close() external override onlyOwner {
         if (!vaultIsOpen) revert VaultIsLocked();
 
-        lastSavedBalance = totalAssets();
         if (totalAssets() == 0) revert VaultIsEmpty();
 
         _asset.safeTransfer(owner(), totalAssets());
         vaultIsOpen = false;
         emit EpochStart(block.timestamp, totalAssets(), totalSupply());
+        lastSavedBalance = totalAssets();
     }
 
     /**
