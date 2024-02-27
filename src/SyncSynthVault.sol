@@ -17,7 +17,7 @@ import { Initializable } from
     "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import { ERC20Permit } from
     "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
-import { IERC4626 } from "@openzeppelin/contracts/interfaces/IERC4626.sol";
+import { IERC4626 } from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import { IAllowanceTransfer } from
     "permit2/src/interfaces/IAllowanceTransfer.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -644,7 +644,7 @@ abstract contract SyncSynthVault is
     */
 
     function depositWithPermit2(
-        uint256 assets,
+        uint160 assets,
         address receiver,
         IAllowanceTransfer.PermitSingle calldata permitSingle,
         bytes calldata signature
@@ -656,7 +656,7 @@ abstract contract SyncSynthVault is
     {
         execPermit2(permitSingle, signature);
         PERMIT2.transferFrom(
-            _msgSender(), address(this), uint160(assets), address(_asset)
+            _msgSender(), address(this), assets, address(_asset)
         );
 
         uint256 shares = _convertToShares(assets, Math.Rounding.Floor);
