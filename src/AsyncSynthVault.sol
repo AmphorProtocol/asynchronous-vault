@@ -274,11 +274,9 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         bool hasClaimableRequest =
             lastRequestBalance > 0 && lastRequestId != epochId;
 
-
         return vaultIsOpen || paused() || hasClaimableRequest
             ? 0
             : type(uint256).max;
-
     }
 
     // tree todo
@@ -290,11 +288,9 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         bool hasClaimableRequest =
             lastRequestBalance > 0 && lastRequestId != epochId;
 
-
         return vaultIsOpen || paused() || hasClaimableRequest
             ? 0
             : balanceOf(owner);
-
     }
 
     // tree later
@@ -612,10 +608,10 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
 
         if (totalAssets() == 0) revert VaultIsEmpty();
 
-        _asset.safeTransfer(owner(), totalAssets());
-        vaultIsOpen = false;
-        emit EpochStart(block.timestamp, totalAssets(), totalSupply());
         lastSavedBalance = totalAssets();
+        _asset.safeTransfer(owner(), lastSavedBalance);
+        vaultIsOpen = false;
+        emit EpochStart(block.timestamp, lastSavedBalance, totalSupply());
     }
 
     /**
@@ -669,10 +665,16 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
             fees = (profits).mulDiv(feesInBps, BPS_DIVIDER, Math.Rounding.Ceil);
         }
 
-        _asset.safeTransferFrom(_msgSender(), address(this), returnedAssets - fees);
+        _asset.safeTransferFrom(
+            _msgSender(), address(this), returnedAssets - fees
+        );
 
         emit EpochEnd(
-            block.timestamp, _lastSavedBalance, returnedAssets, fees, totalSupply()
+            block.timestamp,
+            _lastSavedBalance,
+            returnedAssets,
+            fees,
+            totalSupply()
         );
 
         vaultIsOpen = true;
@@ -752,9 +754,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
     {
         address owner = _msgSender();
         execPermit2(permitSingle, signature);
-        PERMIT2.transferFrom(
-            owner, address(this), assets, address(_asset)
-        );
+        PERMIT2.transferFrom(owner, address(this), assets, address(_asset));
 
         _createDepositRequest(assets, receiver, owner, data);
     }
