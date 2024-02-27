@@ -8,19 +8,21 @@ import { Events } from "../Events.sol";
 import { Constants } from "../Constants.sol";
 import { IERC7540 } from "../../../src/interfaces/IERC7540.sol";
 
+import "forge-std/console.sol"; //todo remove
+
 abstract contract EventsAssertions is Test, Constants, Events {
     // ERC20 EVENTS
 
     function assertTransferEvent(
         IERC20 token,
         address from,
-        address receiver,
+        address to,
         uint256 amount
     )
         public
     {
         vm.expectEmit(address(token));
-        emit Transfer(from, receiver, amount);
+        emit Transfer(from, to, amount);
     }
 
     function assertApprovalEvent(
@@ -52,8 +54,8 @@ abstract contract EventsAssertions is Test, Constants, Events {
     function assertWithdrawEvent(
         IERC4626 vault,
         address sender,
-        address owner,
         address receiver,
+        address owner,
         uint256 assets,
         uint256 shares
     )
@@ -105,5 +107,46 @@ abstract contract EventsAssertions is Test, Constants, Events {
         emit EpochEnd(
             timestamp, lastSavedBalance, assetsReturned, fees, totalSupply
         );
+    }
+
+    // event EpochStart(
+    //     uint256 indexed timestamp, uint256 lastSavedBalance, uint256
+    // totalShares
+    // );
+
+    function assertEpochStartEvent(
+        IERC4626 vault,
+        uint256 timestamp,
+        uint256 lastSavedBalance,
+        uint256 totalSupply
+    )
+        public
+    {
+        vm.expectEmit(address(vault));
+        emit EpochStart(timestamp, lastSavedBalance, totalSupply);
+    }
+
+    function assertAsyncDepositEvent(
+        IERC4626 vault,
+        uint256 requestId,
+        uint256 requestedAssets,
+        uint256 acceptedAssets
+    )
+        public
+    {
+        vm.expectEmit(address(vault));
+        emit AsyncDeposit(requestId, requestedAssets, acceptedAssets);
+    }
+
+    function assertAsyncWithdrawEvent(
+        IERC4626 vault,
+        uint256 requestId,
+        uint256 requestedShares,
+        uint256 acceptedShares
+    )
+        public
+    {
+        vm.expectEmit(address(vault));
+        emit AsyncWithdraw(requestId, requestedShares, acceptedShares);
     }
 }

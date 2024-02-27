@@ -9,13 +9,13 @@ import {
     IAllowanceTransfer,
     ERC20Upgradeable,
     Math,
-    PermitParams
+    PermitParams,
+    IERC4626
 } from "./SyncSynthVault.sol";
-// import { console } from "forge-std/console.sol";
 
 import { SyncSynthVault } from "./SyncSynthVault.sol";
 
-// import "forge-std/console.sol"; //todo remove
+import "forge-std/console.sol"; //todo remove
 
 /**
  *         @@@@@@@@@@@@@@@@@@@@%=::::::=%@@@@@@@@@@@@@@@@@@@@
@@ -75,7 +75,7 @@ uint16 constant MAX_FEES = 3000; // 30%
 
 contract Silo {
     constructor(IERC20 underlying) {
-        underlying.approve(msg.sender, type(uint256).max);
+        underlying.forceApprove(msg.sender, type(uint256).max);
     }
 }
 
@@ -106,7 +106,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         uint256 acceptedAssets
     );
 
-    event AsyncRedeem(
+    event AsyncWithdraw(
         uint256 indexed requestId,
         uint256 requestedShares,
         uint256 acceptedShares
@@ -182,9 +182,9 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
     {
         super.initialize(fees, owner, underlying, name, symbol);
         epochId = 1;
-        pendingSilo = new Silo(underlying);
+        pendingSilo = new Silo(_asset);
         _approve(address(pendingSilo), address(this), type(uint256).max);
-        claimableSilo = new Silo(underlying);
+        claimableSilo = new Silo(_asset);
         _approve(address(claimableSilo), address(this), type(uint256).max);
     }
 
@@ -245,19 +245,19 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
 
     // tree todo
     function totalPendingDeposits() public view returns (uint256) {
-        return isOpen ? 0 : _asset.balanceOf(address(pendingSilo));
+        return vaultIsOpen ? 0 : _asset.balanceOf(address(pendingSilo));
     }
 
     // tree todo
     function totalPendingRedeems() public view returns (uint256) {
-        return isOpen ? 0 : balanceOf(address(pendingSilo));
+        return vaultIsOpen ? 0 : balanceOf(address(pendingSilo));
     }
 
-    function totalClaimableDeposits() public view returns (uint256) {
+    function totalClaimableShares() public view returns (uint256) {
         return balanceOf(address(claimableSilo));
     }
 
-    function totalClaimableRedeems() public view returns (uint256) {
+    function totalClaimableAssets() public view returns (uint256) {
         return _asset.balanceOf(address(claimableSilo));
     }
 
@@ -274,7 +274,11 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         bool hasClaimableRequest =
             lastRequestBalance > 0 && lastRequestId != epochId;
 
-        return isOpen || paused() || hasClaimableRequest ? 0 : type(uint256).max;
+
+        return vaultIsOpen || paused() || hasClaimableRequest
+            ? 0
+            : type(uint256).max;
+
     }
 
     // tree todo
@@ -286,7 +290,11 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         bool hasClaimableRequest =
             lastRequestBalance > 0 && lastRequestId != epochId;
 
-        return isOpen || paused() || hasClaimableRequest ? 0 : balanceOf(owner);
+
+        return vaultIsOpen || paused() || hasClaimableRequest
+            ? 0
+            : balanceOf(owner);
+
     }
 
     // tree later
@@ -327,7 +335,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         address owner = _msgSender();
         uint256 oldBalance = epochs[epochId].depositRequestBalance[owner];
         epochs[epochId].depositRequestBalance[owner] -= assets;
-        _asset.safeTransfer(receiver, assets);
+        _asset.safeTransferFrom(address(pendingSilo), receiver, assets);
 
         emit DecreaseDepositRequest(
             epochId,
@@ -369,6 +377,9 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         whenNotPaused
         whenClosed
     {
+        // if (_msgSender() != owner) {
+        //     _decreaseAllowance(owner, _msgSender(), shares);
+        // }
         if (shares > maxRedeemRequest(receiver)) {
             revert ExceededMaxRedeemRequest(
                 receiver, shares, maxRedeemRequest(receiver)
@@ -483,9 +494,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
 
         uint256 assets = epochs[lastRequestId].depositRequestBalance[owner];
         epochs[lastRequestId].depositRequestBalance[owner] = 0;
-
-        transfer(receiver, shares);
-
+        _update(address(claimableSilo), receiver, shares);
         emit ClaimDeposit(lastRequestId, owner, receiver, assets, shares);
     }
 
@@ -599,14 +608,14 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
      * of the contract (`onlyOwner` modifier).
      */
     function close() external override onlyOwner {
-        if (!isOpen) revert VaultIsLocked();
+        if (!vaultIsOpen) revert VaultIsLocked();
 
-        uint256 _totalAssets = totalAssets;
-        if (_totalAssets == 0) revert VaultIsEmpty();
+        if (totalAssets() == 0) revert VaultIsEmpty();
 
-        _asset.safeTransfer(owner(), _totalAssets);
-        isOpen = false;
-        emit EpochStart(block.timestamp, _totalAssets, totalSupply());
+        _asset.safeTransfer(owner(), totalAssets());
+        vaultIsOpen = false;
+        emit EpochStart(block.timestamp, totalAssets(), totalSupply());
+        lastSavedBalance = totalAssets();
     }
 
     /**
@@ -625,9 +634,8 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         onlyOwner
         whenClosed
     {
-        uint256 pendingDeposit = _asset.balanceOf(address(pendingSilo));
         _open(assetReturned);
-        _execRequests(pendingDeposit);
+        _execRequests();
         epochId++;
     }
 
@@ -638,69 +646,70 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
      * and only when the vault is locked.
      * If there are profits, the performance fees are taken and sent to the
      * owner of the contract.
-     * @param assetReturned The underlying assets amount to be deposited into
+     * @param returnedAssets The underlying assets amount to be deposited into
      * the vault.
      */
-    function _open(uint256 assetReturned) internal {
+    function _open(uint256 returnedAssets) internal {
+        // check for maxf drawdown
+        uint256 _lastSavedBalance = lastSavedBalance;
         if (
-            assetReturned
-                < totalAssets.mulDiv(
+            returnedAssets
+                < _lastSavedBalance.mulDiv(
                     BPS_DIVIDER - _maxDrawdown, BPS_DIVIDER, Math.Rounding.Ceil
                 )
         ) revert MaxDrawdownReached();
 
+        // taking fees if positive yield
         uint256 fees;
-
-        uint256 _totalAssets = totalAssets;
-        if (assetReturned > _totalAssets && feeInBps > 0) {
+        if (returnedAssets > _lastSavedBalance && feesInBps > 0) {
             uint256 profits;
             unchecked {
-                profits = assetReturned - _totalAssets;
+                profits = returnedAssets - _lastSavedBalance;
             }
-            fees = (profits).mulDiv(feeInBps, BPS_DIVIDER, Math.Rounding.Ceil);
+            fees = (profits).mulDiv(feesInBps, BPS_DIVIDER, Math.Rounding.Ceil);
         }
 
-        _totalAssets = assetReturned - fees;
-        totalAssets = _totalAssets;
-
-        _asset.safeTransferFrom(_msgSender(), address(this), _totalAssets);
+        _asset.safeTransferFrom(_msgSender(), address(this), returnedAssets - fees);
 
         emit EpochEnd(
-            block.timestamp, _totalAssets, assetReturned, fees, totalSupply()
+            block.timestamp, _lastSavedBalance, returnedAssets, fees, totalSupply()
         );
-        isOpen = true;
+
+        vaultIsOpen = true;
     }
 
-    function _execRequests(uint256 pendingDeposit) internal {
+    function _execRequests() internal {
         ////////////////////////////////
         // Pending deposits treatment //
         ////////////////////////////////
 
-        uint256 sharesToMint = previewDeposit(pendingDeposit);
+        uint256 _pendingDeposit = _asset.balanceOf(address(pendingSilo));
+        uint256 sharesToMint = previewDeposit(_pendingDeposit);
         _deposit(
             address(pendingSilo),
             address(claimableSilo),
-            pendingDeposit,
+            _pendingDeposit,
             sharesToMint
         );
+        emit AsyncDeposit(epochId, _pendingDeposit, _pendingDeposit);
 
         //////////////////////////////
         // Pending redeem treatment //
         //////////////////////////////
-        uint256 pendingRedeem = balanceOf(address(pendingSilo));
-        uint256 assetsToRedeem = previewRedeem(pendingRedeem);
+        uint256 _pendingRedeem = balanceOf(address(pendingSilo));
+        uint256 assetsToWithdraw = previewRedeem(_pendingRedeem);
+        console.log("assetsToWithdraw", assetsToWithdraw);
         _withdraw(
-            address(pendingSilo), // we are lying hehe
+            address(pendingSilo), // to avoid a spending allowance
             address(claimableSilo),
             address(pendingSilo),
-            assetsToRedeem,
-            pendingRedeem
+            assetsToWithdraw,
+            _pendingRedeem
         );
+        emit AsyncWithdraw(epochId, _pendingRedeem, _pendingRedeem);
 
         epochs[epochId].totalSupplySnapshot = totalSupply();
-        epochs[epochId].totalAssetsSnapshot = totalAssets;
-        emit AsyncDeposit(epochId, pendingDeposit, pendingDeposit);
-        emit AsyncRedeem(epochId, pendingRedeem, pendingRedeem);
+        epochs[epochId].totalAssetsSnapshot = totalAssets();
     }
 
     /*
@@ -731,7 +740,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
     */
 
     function requestDepositWithPermit2(
-        uint256 assets,
+        uint160 assets,
         address receiver,
         bytes memory data,
         IAllowanceTransfer.PermitSingle calldata permitSingle,
@@ -744,7 +753,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         address owner = _msgSender();
         execPermit2(permitSingle, signature);
         PERMIT2.transferFrom(
-            owner, address(this), uint160(assets), address(_asset)
+            owner, address(this), assets, address(_asset)
         );
 
         _createDepositRequest(assets, receiver, owner, data);

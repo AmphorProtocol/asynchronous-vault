@@ -3,7 +3,7 @@ pragma solidity 0.8.21;
 
 import { Test } from "forge-std/Test.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import { TestVault, AsyncSynthVault } from "./TestVault.sol";
+import { AsyncSynthVault } from "@src/AsyncSynthVault.sol";
 import { IPermit2 } from "permit2/src/interfaces/IPermit2.sol";
 import { VmSafe } from "forge-std/Vm.sol";
 import { Upgrades, Options } from "openzeppelin-foundry-upgrades/Upgrades.sol";
@@ -23,6 +23,8 @@ abstract contract Constants is Test {
     ERC20 immutable STETH = ERC20(vm.envAddress("STETH_MAINNET"));
     ERC20 immutable WBTC = ERC20(vm.envAddress("WBTC_MAINNET"));
 
+    uint8 decimalsOffset = 12;
+
     //ERC20 whales
     address immutable USDC_WHALE = vm.envAddress("USDC_WHALE");
     // Future Owner
@@ -37,17 +39,17 @@ abstract contract Constants is Test {
     // USDC vault
     string vaultNameUSDC = vm.envString("SYNTHETIC_USDC_V1_NAME");
     string vaultSymbolUSDC = vm.envString("SYNTHETIC_USDC_V1_SYMBOL");
-    TestVault vaultUSDC;
+    AsyncSynthVault vaultUSDC;
 
     // WSTETH vault
     string vaultNameWSTETH = vm.envString("SYNTHETIC_WSTETH_V1_NAME");
     string vaultSymbolWSTETH = vm.envString("SYNTHETIC_WSTETH_V1_SYMBOL");
-    TestVault vaultWSTETH;
+    AsyncSynthVault vaultWSTETH;
 
     // WBTC vault
     string vaultNameWBTC = vm.envString("SYNTHETIC_WBTC_V1_NAME");
     string vaultSymbolWBTC = vm.envString("SYNTHETIC_WBTC_V1_SYMBOL");
-    TestVault vaultWBTC;
+    AsyncSynthVault vaultWBTC;
 
     // Zapper
     //AsyncVaultZapper immutable zapper = new AsyncVaultZapper(permit2);
@@ -105,14 +107,22 @@ abstract contract Constants is Test {
         vaultUSDC =
             _proxyDeploy(amphorLabs, USDC, vaultNameUSDC, vaultSymbolUSDC);
         vm.label(address(vaultUSDC), "vaultUSDC");
+        vm.label(address(vaultUSDC.pendingSilo()), "vaultUSDC.pendingSilo");
+        vm.label(address(vaultUSDC.claimableSilo()), "vaultUSDC.claimableSilo");
 
         vaultWSTETH =
             _proxyDeploy(amphorLabs, WSTETH, vaultNameWSTETH, vaultSymbolWSTETH);
         vm.label(address(vaultWSTETH), "vaultWSTETH");
+        vm.label(address(vaultWSTETH.pendingSilo()), "vaultWSTETH.pendingSilo");
+        vm.label(
+            address(vaultWSTETH.claimableSilo()), "vaultWSTETH.claimableSilo"
+        );
 
         vaultWBTC =
             _proxyDeploy(amphorLabs, WBTC, vaultNameWBTC, vaultSymbolWBTC);
         vm.label(address(vaultWBTC), "vaultWBTC");
+        vm.label(address(vaultWBTC.pendingSilo()), "vaultWBTC.pendingSilo");
+        vm.label(address(vaultWBTC.claimableSilo()), "vaultWBTC.claimableSilo");
     }
 
     function _proxyDeploy(
@@ -122,7 +132,7 @@ abstract contract Constants is Test {
         string memory vaultSymbol
     )
         internal
-        returns (TestVault)
+        returns (AsyncSynthVault)
     {
         Options memory deploy;
         deploy.constructorData = abi.encode(permit2);
@@ -143,6 +153,6 @@ abstract contract Constants is Test {
             )
         );
 
-        return TestVault(address(proxy));
+        return AsyncSynthVault(address(proxy));
     }
 }
