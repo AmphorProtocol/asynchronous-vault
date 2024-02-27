@@ -674,7 +674,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
             fees,
             totalSupply()
         );
-
+        // lastSavedBalance = 0;
         vaultIsOpen = true;
     }
 

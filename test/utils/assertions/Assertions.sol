@@ -407,7 +407,7 @@ abstract contract Assertions is EventsAssertions {
         view
         returns (VaultState memory)
     {
-        uint256 lastSavedBalance = vault.totalAssets();
+        uint256 lastSavedBalance = vault.lastSavedBalance();
         uint256 feeInBps = vault.feesInBps();
 
         uint256 vaultBalance = IERC20(vault.asset()).balanceOf(address(vault));
@@ -548,16 +548,26 @@ abstract contract Assertions is EventsAssertions {
             assetsBeforeExecReq
         );
 
-        // // // ending the epoch
+        // // // // ending the epoch
         assertEpochEndEvent(
             vault,
             block.timestamp,
-            assetsBeforeExecReq,
+            stateBefore.lastSavedBalance,
             assetReturned,
             expectedFees,
             stateBefore.totalSupply
         );
-
+        // console.log(
+        //     "stateBefore.lastSavedBalance", stateBefore.lastSavedBalance
+        // );
+        // console.log("aasetsBeforeExecReq", assetsBeforeExecReq);
+        // console.log("Expected fees", expectedFees);
+        // console.log("Total supply", stateBefore.totalSupply);
+        //        Epoch end event emitted 500120000
+        //   Asset returned 500150000
+        //   Expected fees 30000
+        //   Total supply 500000000000000000000
+        //   assetsToWithdraw 0
         assertDepositEvent(
             vault,
             address(vault.pendingSilo()),
