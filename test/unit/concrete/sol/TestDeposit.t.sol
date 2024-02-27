@@ -11,7 +11,7 @@ contract TestDeposit is TestBase {
         usersDealApproveAndDeposit(1); // vault should not be empty
         closeVaults();
         // todo
-        //depositRevert(vaultUSDC, user1, SyncSynthVault.ERC4626ExceededMaxDeposit.selector);
+        depositRevert(vaultUSDC, user1, SyncSynthVault.ERC4626ExceededMaxDeposit.selector);
     }
 
     function test_GivenAmountHigherThanOwnerAllowanceToTheVaultWhenDeposit() external {

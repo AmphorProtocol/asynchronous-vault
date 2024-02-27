@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
+import { TestBase, SyncSynthVault, IERC20 } from "../../../Base.t.sol";
 import { TestBase } from "../../../Base.t.sol";
 
-contract TestWithdraw {
+contract TestWithdraw is TestBase {
     function test_GivenVaultClosedWhenWithdraw() external {
         // it should revert with ERC4626ExceededMaxWithdraw
+        usersDealApproveAndDeposit(1); // vault should not be empty
+        closeVaults();
     }
 
     function test_RevertGiven_VaultIsEmptyAndAssetsIsHigherThan0WhenWithdraw() external {
