@@ -82,7 +82,9 @@ contract TestBase is Assertions {
         AsyncSynthVault vault,
         VmSafe.Wallet memory user,
         bytes memory revertData
-    ) public {
+    )
+        public
+    {
         depositRevert(vault, user, USDC.balanceOf(user.addr), revertData);
     }
 
@@ -138,7 +140,9 @@ contract TestBase is Assertions {
         AsyncSynthVault vault,
         VmSafe.Wallet memory user,
         uint256 amount
-    ) public {
+    )
+        public
+    {
         vm.startPrank(user.addr);
         vm.expectRevert();
         vault.deposit(amount, user.addr);
@@ -149,7 +153,9 @@ contract TestBase is Assertions {
         VmSafe.Wallet memory user,
         uint256 amount,
         bytes memory revertData
-    ) public {
+    )
+        public
+    {
         vm.startPrank(user.addr);
         vm.expectRevert(revertData);
         vault.deposit(amount, user.addr);
