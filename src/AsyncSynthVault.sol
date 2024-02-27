@@ -128,7 +128,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
 
     event ClaimDeposit(
         uint256 indexed requestId,
-        address indexed caller,
+        address indexed owner,
         address indexed receiver,
         uint256 assets,
         uint256 shares
@@ -136,7 +136,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
 
     event ClaimRedeem(
         uint256 indexed requestId,
-        address indexed caller,
+        address indexed owner,
         address indexed receiver,
         uint256 assets,
         uint256 shares
