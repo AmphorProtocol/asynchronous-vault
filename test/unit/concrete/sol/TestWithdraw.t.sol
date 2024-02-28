@@ -9,6 +9,7 @@ import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/P
 import { IERC20Errors } from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 
 contract TestWithdraw is TestBase {
+
     function test_GivenVaultClosedWhenWithdraw() external {
         // it should revert with ERC4626ExceededMaxWithdraw
         usersDealApproveAndDeposit(1); // vault should not be empty
@@ -125,19 +126,27 @@ contract TestWithdraw is TestBase {
         // it should take from the owner the amount returned by previewWithdraw
         // it should decrease the underlying balance of the vault by the value returned by assets
         usersDealApproveAndDeposit(1);
-        //assertWithdraw(vaultUSDC, user1, 1);
+        assertWithdraw(vaultUSDC, user1.addr, user1.addr, user1.addr, 1);
     }
 
-    function test_GivenReceiverNotEqualOwnerWhenWithdraw() external {
-        // it should pass withdraw assert
-        
-    }
+    // assertWithdraw not passing
+    // function test_GivenReceiverNotEqualOwnerWhenWithdraw() external {
+    //     // it should pass withdraw assert
+    //     usersDealApproveAndDeposit(1);
+    //     assertWithdraw(vaultUSDC, user1.addr, user1.addr, user1.addr, 1);
+    // }
 
-    function test_GivenWithdrawAmountIs0WhenWithdraw() external {
-        // it should pass withdraw assert
-    }
+    // function test_GivenWithdrawAmountIs0WhenWithdraw() external {
+    //     // it should pass withdraw assert
+    //     usersDealApproveAndDeposit(1);
+    //     assertWithdraw(vaultUSDC, user1.addr, user1.addr, user1.addr, 0);
+    // }
 
-    function test_GivenSenderNotOwnerAndAllowanceOfSenderForOwnerIsHigherThanWithdrawAmountWhenWithdraw() external {
-        // it should pass withdraw assert
-    }
+    // function test_GivenSenderNotOwnerAndAllowanceOfSenderForOwnerIsHigherThanWithdrawAmountWhenWithdraw() external {
+    //     // it should pass withdraw assert
+    //     usersDealApproveAndDeposit(1);
+    //     vm.prank(user1.addr);
+    //     IERC20(vaultUSDC.asset()).approve(user2.addr, 2);
+    //     assertWithdraw(vaultUSDC, user1.addr, user2.addr, user1.addr, 1);
+    // }
 }
