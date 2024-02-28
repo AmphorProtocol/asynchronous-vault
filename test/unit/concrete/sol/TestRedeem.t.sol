@@ -4,7 +4,10 @@ pragma solidity 0.8.21;
 import { TestBase } from "../../../Base.t.sol";
 
 contract TestRedeem {
-    function test_RevertGiven_SharesProvidedIsHigherThanOwnerSharesBalanceWhenRedeem() external {
+    function test_RevertGiven_SharesProvidedIsHigherThanOwnerSharesBalanceWhenRedeem(
+    )
+        external
+    {
         // it should revert
     }
 
@@ -25,15 +28,18 @@ contract TestRedeem {
     }
 
     function test_WhenRedeemPass() external {
-        // it should increase the underlying balance of the receiver by convertToAsset(shares)
+        // it should increase the underlying balance of the receiver by
+        // convertToAsset(shares)
         // it should emit a Withdraw event
-        // it should decrease the underlying balance of the vault by convertToAsset() of the shares
+        // it should decrease the underlying balance of the vault by
+        // convertToAsset() of the shares
         // it should decrease the balance of shares of the owner by shares
         // it should return the same value as the one returned by previewRedeem
         // it should return the same value as the assets taken from the owner
         // it should decrease the total supply of shares by shares
         // it should take from the owner the amount returned by previewWithdraw
-        // it should decrease the underlying balance of the vault by convertToAsset(shares)
+        // it should decrease the underlying balance of the vault by
+        // convertToAsset(shares)
     }
 
     function test_GivenReceiverNotEqualOwnerWhenRedeem() external {

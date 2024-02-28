@@ -205,16 +205,13 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         if (_msgSender() != owner) {
             revert NotOwner();
         }
-        if (assets == 0) {
-            revert NullRequest();
-        }
         if (previewClaimDeposit(receiver) > 0) {
             revert MustClaimFirst(receiver);
         }
 
-        if (assets > maxDepositRequest(receiver)) {
+        if (assets > maxDepositRequest(owner)) {
             revert ExceededMaxDepositRequest(
-                receiver, assets, maxDepositRequest(receiver)
+                receiver, assets, maxDepositRequest(owner)
             );
         }
 
@@ -639,7 +636,9 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
                 < _lastSavedBalance.mulDiv(
                     BPS_DIVIDER - _maxDrawdown, BPS_DIVIDER, Math.Rounding.Ceil
                 )
-        ) revert MaxDrawdownReached();
+        ) {
+            revert MaxDrawdownReached();
+        }
 
         // taking fees if positive yield
         uint256 fees;

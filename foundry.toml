@@ -36,6 +36,7 @@ goerli = "https://ethereum-goerli.publicnode.com"
 
 [fmt]
 line_length = 80
+# line_length = 250
 bracket_spacing = true
 int_types = "long"
 multiline_func_header = "all"

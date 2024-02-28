@@ -8,11 +8,16 @@ contract TestMintWithPermit {
         // it should revert with ERC4626ExceededMaxMint
     }
 
-    function test_GivenRequiredAssetsHigherThanOwnerAllowanceToTheVaultWhenDeposit() external {
+    function test_GivenRequiredAssetsHigherThanOwnerAllowanceToTheVaultWhenDeposit(
+    )
+        external
+    {
         // it should revert with ERC20InsufficientAllowance
     }
 
-    function test_GivenRequiredAssetsHigherThanOwnerBalanceWhenDeposit() external {
+    function test_GivenRequiredAssetsHigherThanOwnerBalanceWhenDeposit()
+        external
+    {
         // it should revert with ERC20InsufficientBalance
     }
 
@@ -32,11 +37,17 @@ contract TestMintWithPermit {
         // it should revert with ERC20ZeroAmount (maybe)
     }
 
-    function test_GivenPreviewMintIsHigherThanTheAllowanceOfTheOwnerToTheVaultWhenMint() external {
+    function test_GivenPreviewMintIsHigherThanTheAllowanceOfTheOwnerToTheVaultWhenMint(
+    )
+        external
+    {
         // it should revert with ERC20InsufficientAllowance
     }
 
-    function test_GivenRequestedAmountOfSharesConvertedInAssetIsHigherThanTheBalanceOfTheOwnerWhenMint() external {
+    function test_GivenRequestedAmountOfSharesConvertedInAssetIsHigherThanTheBalanceOfTheOwnerWhenMint(
+    )
+        external
+    {
         // it should revert with ERC20InsufficientBalance
     }
 
@@ -46,11 +57,13 @@ contract TestMintWithPermit {
         // it should emit TransferEvent of asset from the owner to the vault
         // it should emit TransferEvent of shares from the vault to the receiver
         // it should increase the underlying balance of the vault by previewMint
-        // it should increase the balance of shares of the receiver by previewMint
+        // it should increase the balance of shares of the receiver by
+        // previewMint
         // it should return the same value as the one returned by previewMint
         // it should return the same value as the assets taken from the owner
         // it should increase the totalsupply by the specified shares
-        // it should decrease the underlying balance of the owner by the amount returned by previewMint to the owner
+        // it should decrease the underlying balance of the owner by the amount
+        // returned by previewMint to the owner
     }
 
     function test_GivenReceiverNotEqualOwnerWhenMint() external {

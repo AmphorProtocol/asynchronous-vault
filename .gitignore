@@ -17,3 +17,8 @@ docs/
 # Node modules
 node_modules/
 node_modules
+
+
+# Coverage
+report/
+lcov.info
