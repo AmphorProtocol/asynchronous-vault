@@ -62,24 +62,18 @@ contract TestRequestDeposit is TestBase {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                AsyncSynthVault.ExceededMaxDepositRequest.selector,
-                user1.addr,
-                1,
-                0
+                AsyncSynthVault.MustClaimFirst.selector, user1.addr
             )
         );
         vaultUSDC.requestDeposit(1, user1.addr, user1.addr, "");
     }
 
     function test_WhenRequestDepositSucceed() external {
-        // it should decrease the owner underlying balance by the specified
-        // value
-        // it should increase the vault underlying balance by the specified
-        // value
-        // it should increase pendingDepositRequest balance of receiver by the
-        // specified value
-        // it should not modify the owner pendingDepositRequest balance
-        // it should emit DepositRequest event
+        usersDealApproveAndDeposit(1);
+        assertClose(vaultUSDC);
+        assertRequestDeposit(
+            vaultUSDC, user1.addr, user1.addr, user1.addr, 56, ""
+        );
     }
 
     function test_GivenOwnerHasClaimableBalanceButNotReceiverWhenRequestDeposit(
@@ -87,18 +81,40 @@ contract TestRequestDeposit is TestBase {
         external
     {
         // it should succeed
+        usersDealApproveAndDeposit(1);
+        assertClose(vaultUSDC);
+        assertRequestDeposit(
+            vaultUSDC, user1.addr, user1.addr, user1.addr, 56, ""
+        );
+        assertOpen(vaultUSDC, 0);
+        assertClose(vaultUSDC);
+        usersDealApprove(4);
+        assertRequestDeposit(
+            vaultUSDC, user1.addr, user1.addr, user4.addr, 56, ""
+        );
     }
 
     function test_GivenOwnerHaveNotEnoughApprovalBalanceWhenRequestDeposit()
         external
     {
         // it should revert with ERC20InsufficientAllowance
+        usersDealApproveAndDeposit(1);
+        assertClose(vaultUSDC);
+        vm.startPrank(user2.addr);
+        vm.expectRevert();
+        vaultUSDC.requestDeposit(1, user1.addr, user2.addr, "");
+        vm.stopPrank();
     }
 
     function test_GivenOwnerHaveNotEnoughAssetsBalanceWhenRequestDeposit()
         external
     {
         // it should revert with ERC20InsufficientBalance
+        usersDealApproveAndDeposit(1);
+        assertClose(vaultUSDC);
+        vm.startPrank(user2.addr);
+        vm.expectRevert();
+        vaultUSDC.requestDeposit(100, user2.addr, user2.addr, "");
     }
 
     function test_GivenDataParamSubmittedAndInvalidSelectorWhenRequestDeposit()
@@ -106,5 +122,10 @@ contract TestRequestDeposit is TestBase {
     {
         // it should revert with ReceiverFailed
         // it todo check ERC7540Receiver (and ReceiverFailed)
+        usersDealApproveAndDeposit(1);
+        assertClose(vaultUSDC);
+        vm.startPrank(user1.addr);
+        vm.expectRevert();
+        vaultUSDC.requestDeposit(1, user1.addr, user1.addr, "0x1234");
     }
 }
