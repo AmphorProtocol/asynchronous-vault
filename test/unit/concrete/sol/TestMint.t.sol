@@ -3,7 +3,8 @@ pragma solidity 0.8.21;
 
 import { TestBase, SyncSynthVault, IERC20 } from "../../../Base.t.sol";
 import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
-import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import { IERC20Metadata } from
+    "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 contract TestMintPure is TestBase {
     function test_GivenVaultClosedWhenMint() external {
@@ -15,18 +16,34 @@ contract TestMintPure is TestBase {
             user1,
             1,
             // SyncSynthVault.ERC4626ExceededMaxDeposit.selector
-            abi.encodeWithSelector(SyncSynthVault.ERC4626ExceededMaxMint.selector, user1.addr, 1, 0)
+            abi.encodeWithSelector(
+                SyncSynthVault.ERC4626ExceededMaxMint.selector, user1.addr, 1, 0
+            )
         );
     }
 
-    function test_GivenRequiredAssetsHigherThanOwnerAllowanceToTheVaultWhenDeposit() external {
+    function test_GivenRequiredAssetsHigherThanOwnerAllowanceToTheVaultWhenDeposit(
+    )
+        external
+    {
         // it should revert with ERC20InsufficientAllowance
-        mintRevert(vaultUSDC, user1, IERC20(vaultUSDC.asset()).allowance(user1.addr, address(vaultUSDC)) + 1);
+        mintRevert(
+            vaultUSDC,
+            user1,
+            IERC20(vaultUSDC.asset()).allowance(user1.addr, address(vaultUSDC))
+                + 1
+        );
     }
 
-    function test_GivenRequiredAssetsHigherThanOwnerBalanceWhenDeposit() external {
+    function test_GivenRequiredAssetsHigherThanOwnerBalanceWhenDeposit()
+        external
+    {
         // it should revert with ERC20InsufficientBalance
-        mintRevert(vaultUSDC, user1, IERC20(vaultUSDC.asset()).balanceOf(user1.addr) + 1);
+        mintRevert(
+            vaultUSDC,
+            user1,
+            IERC20(vaultUSDC.asset()).balanceOf(user1.addr) + 1
+        );
     }
 
     function test_GivenVaultPausedWhenMint() external {
@@ -41,14 +58,29 @@ contract TestMintPure is TestBase {
         mintRevert(vaultUSDC, address0, 1);
     }
 
-    function test_GivenPreviewMintIsHigherThanTheAllowanceOfTheOwnerToTheVaultWhenMint() external {
+    function test_GivenPreviewMintIsHigherThanTheAllowanceOfTheOwnerToTheVaultWhenMint(
+    )
+        external
+    {
         // it should revert with ERC20InsufficientAllowance
-        mintRevert(vaultUSDC, user1, IERC20(vaultUSDC.asset()).allowance(user1.addr, address(vaultUSDC)) + 1);
+        mintRevert(
+            vaultUSDC,
+            user1,
+            IERC20(vaultUSDC.asset()).allowance(user1.addr, address(vaultUSDC))
+                + 1
+        );
     }
 
-    function test_GivenRequestedAmountOfSharesConvertedInAssetIsHigherThanTheBalanceOfTheOwnerWhenMint() external {
+    function test_GivenRequestedAmountOfSharesConvertedInAssetIsHigherThanTheBalanceOfTheOwnerWhenMint(
+    )
+        external
+    {
         // it should revert with ERC20InsufficientBalance
-        mintRevert(vaultUSDC, user1, IERC20(vaultUSDC.asset()).balanceOf(user1.addr) + 1);
+        mintRevert(
+            vaultUSDC,
+            user1,
+            IERC20(vaultUSDC.asset()).balanceOf(user1.addr) + 1
+        );
     }
 
     function test_GivenVaultOpenWhenMint() external {

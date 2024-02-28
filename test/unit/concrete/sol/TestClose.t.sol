@@ -19,7 +19,11 @@ contract TestClose is TestBase {
 
     function test_GivenMsgSenderIsNotOwnerWhenClose() external {
         usersDealApproveAndDeposit(1);
-        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", address(this)));
+        vm.expectRevert(
+            abi.encodeWithSignature(
+                "OwnableUnauthorizedAccount(address)", address(this)
+            )
+        );
         vaultUSDC.close();
     }
 

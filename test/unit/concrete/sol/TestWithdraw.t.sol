@@ -8,7 +8,9 @@ contract TestWithdraw {
         // it should revert with ERC4626ExceededMaxWithdraw
     }
 
-    function test_RevertGiven_VaultIsEmptyAndAssetsIsHigherThan0WhenWithdraw() external {
+    function test_RevertGiven_VaultIsEmptyAndAssetsIsHigherThan0WhenWithdraw()
+        external
+    {
         // it should revert
     }
 
@@ -24,11 +26,17 @@ contract TestWithdraw {
         // it should revert with ERC20InvalidReceiver
     }
 
-    function test_GivenAssetsIsHigherThanOwnerSharesBalanceConvertedToAssetsWhenWithdraw() external {
+    function test_GivenAssetsIsHigherThanOwnerSharesBalanceConvertedToAssetsWhenWithdraw(
+    )
+        external
+    {
         // it should revert with ERC4626ExceededMaxWithdraw
     }
 
-    function test_GivenSenderNotOwnerAndAllowanceOfSenderForOwnerIsLowerThanWithdrawAmountWhenWithdraw() external {
+    function test_GivenSenderNotOwnerAndAllowanceOfSenderForOwnerIsLowerThanWithdrawAmountWhenWithdraw(
+    )
+        external
+    {
         // it should revert with ERC20InsufficientAllowance
     }
 
@@ -56,7 +64,10 @@ contract TestWithdraw {
         // it should pass withdraw assert
     }
 
-    function test_GivenSenderNotOwnerAndAllowanceOfSenderForOwnerIsHigherThanWithdrawAmountWhenWithdraw() external {
+    function test_GivenSenderNotOwnerAndAllowanceOfSenderForOwnerIsHigherThanWithdrawAmountWhenWithdraw(
+    )
+        external
+    {
         // it should pass withdraw assert
     }
 }
