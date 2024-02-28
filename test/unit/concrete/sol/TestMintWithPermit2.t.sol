@@ -46,11 +46,13 @@ contract TestMintWithPermit2 {
         // it should emit TransferEvent of asset from the owner to the vault
         // it should emit TransferEvent of shares from the vault to the receiver
         // it should increase the underlying balance of the vault by previewMint
-        // it should increase the balance of shares of the receiver by previewMint
+        // it should increase the balance of shares of the receiver by
+        // previewMint
         // it should return the same value as the one returned by previewMint
         // it should return the same value as the assets taken from the owner
         // it should increase the totalSupply by the specified shares
-        // it should decrease the underlying balance of the owner by the amount returned by previewMint to the owner
+        // it should decrease the underlying balance of the owner by the amount
+        // returned by previewMint to the owner
     }
 
     function test_GivenReceiverNotEqualOwnerWhenMint() external {

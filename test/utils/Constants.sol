@@ -7,10 +7,8 @@ import { AsyncSynthVault } from "@src/AsyncSynthVault.sol";
 import { IPermit2 } from "permit2/src/interfaces/IPermit2.sol";
 import { VmSafe } from "forge-std/Vm.sol";
 import { Upgrades, Options } from "openzeppelin-foundry-upgrades/Upgrades.sol";
-import { UpgradeableBeacon } from
-    "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
-import { BeaconProxy } from
-    "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
+import { UpgradeableBeacon } from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
+import { BeaconProxy } from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
 abstract contract Constants is Test {
     // ERC20 tokens
@@ -68,12 +66,7 @@ abstract contract Constants is Test {
     VmSafe.Wallet[] users;
 
     // Wallet
-    VmSafe.Wallet address0 = VmSafe.Wallet({
-        addr: address(0),
-        publicKeyX: 0,
-        publicKeyY: 0,
-        privateKey: 0
-    });
+    VmSafe.Wallet address0 = VmSafe.Wallet({ addr: address(0), publicKeyX: 0, publicKeyY: 0, privateKey: 0 });
 
     // Else
     int256 immutable bipsDivider = 10_000;
@@ -116,9 +109,7 @@ abstract contract Constants is Test {
         // );
         vm.startPrank(amphorLabs);
         vaultUSDC = new AsyncSynthVault(permit2);
-        vaultUSDC.initialize(
-            fees, amphorLabs, USDC, vaultNameUSDC, vaultSymbolUSDC
-        );
+        vaultUSDC.initialize(fees, amphorLabs, USDC, vaultNameUSDC, vaultSymbolUSDC);
 
         vm.label(address(vaultUSDC), "vaultUSDC");
         vm.label(address(vaultUSDC.pendingSilo()), "vaultUSDC.pendingSilo");
@@ -128,22 +119,16 @@ abstract contract Constants is Test {
         //     beacon, amphorLabs, WSTETH, vaultNameWSTETH, vaultSymbolWSTETH
         // );
         vaultWSTETH = new AsyncSynthVault(permit2);
-        vaultWSTETH.initialize(
-            fees, amphorLabs, WSTETH, vaultNameWSTETH, vaultSymbolWSTETH
-        );
+        vaultWSTETH.initialize(fees, amphorLabs, WSTETH, vaultNameWSTETH, vaultSymbolWSTETH);
         vm.label(address(vaultWSTETH), "vaultWSTETH");
         vm.label(address(vaultWSTETH.pendingSilo()), "vaultWSTETH.pendingSilo");
-        vm.label(
-            address(vaultWSTETH.claimableSilo()), "vaultWSTETH.claimableSilo"
-        );
+        vm.label(address(vaultWSTETH.claimableSilo()), "vaultWSTETH.claimableSilo");
 
         // vaultWBTC = _proxyDeploy(
         //     beacon, amphorLabs, WBTC, vaultNameWBTC, vaultSymbolWBTC
         // );
         vaultWBTC = new AsyncSynthVault(permit2);
-        vaultWBTC.initialize(
-            fees, amphorLabs, WBTC, vaultNameWBTC, vaultSymbolWBTC
-        );
+        vaultWBTC.initialize(fees, amphorLabs, WBTC, vaultNameWBTC, vaultSymbolWBTC);
         vm.label(address(vaultWBTC), "vaultWBTC");
         vm.label(address(vaultWBTC.pendingSilo()), "vaultWBTC.pendingSilo");
         vm.label(address(vaultWBTC.claimableSilo()), "vaultWBTC.claimableSilo");

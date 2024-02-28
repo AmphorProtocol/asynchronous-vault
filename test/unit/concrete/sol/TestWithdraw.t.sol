@@ -36,12 +36,16 @@ contract TestWithdraw {
         // it should increase the underlying balance of the receiver
         // it should emit a Withdraw event
         // it should decrease the underlying balance of the vault by assets
-        // it should decrease the balance of shares of the owner by the withdraw amount converted in shares
-        // it should return the same value as the one returned by previewWithdraw
+        // it should decrease the balance of shares of the owner by the withdraw
+        // amount converted in shares
+        // it should return the same value as the one returned by
+        // previewWithdraw
         // it should return the same value as the shares taken from the owner
-        // it should decrease the total supply of shares by the value returned by previewWithdraw
+        // it should decrease the total supply of shares by the value returned
+        // by previewWithdraw
         // it should take from the owner the amount returned by previewWithdraw
-        // it should decrease the underlying balance of the vault by the value returned by assets
+        // it should decrease the underlying balance of the vault by the value
+        // returned by assets
     }
 
     function test_GivenReceiverNotEqualOwnerWhenWithdraw() external {

@@ -2,8 +2,7 @@
 pragma solidity 0.8.21;
 
 import { TestBase, SyncSynthVault, IERC20 } from "../../../Base.t.sol";
-import { PausableUpgradeable } from
-    "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 
 contract TestDecreaseDepositRequest is TestBase {
     function test_GivenVaultOpenWhenDecreaseDepositRequest() external {
@@ -23,7 +22,8 @@ contract TestDecreaseDepositRequest is TestBase {
     }
 
     function test_GivenVaultStateOkAndAssetsTooHighWhenDecreaseDepositRequest() external {
-        // it should revert if assets is higher than the owner deposit request balance
+        // it should revert if assets is higher than the owner deposit request
+        // balance
         usersDealApproveAndDeposit(1);
         close(vaultUSDC);
         uint256 userBalance = IERC20(vaultUSDC.asset()).balanceOf(user1.addr);

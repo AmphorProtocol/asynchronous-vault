@@ -8,24 +8,16 @@ contract TestTotalPendingRedeems is TestBase {
         // it should return 0
         usersDealApproveAndDeposit(1);
         assertClose(vaultUSDC);
-        assertRequestRedeem(
-            vaultUSDC, user1.addr, user1.addr, user1.addr, 100, ""
-        );
+        assertRequestRedeem(vaultUSDC, user1.addr, user1.addr, user1.addr, 100, "");
         assertOpen(vaultUSDC, 0);
-        assertEq(
-            vaultUSDC.totalPendingRedeems(), 0, "Invalid total pending redeem"
-        );
+        assertEq(vaultUSDC.totalPendingRedeems(), 0, "Invalid total pending redeem");
     }
 
     function test_GivenVaultClosedWhenTotalPendingRedeems() external {
         // it should return underlying balance of the silo contract
         usersDealApproveAndDeposit(1);
         assertClose(vaultUSDC);
-        assertRequestRedeem(
-            vaultUSDC, user1.addr, user1.addr, user1.addr, 100, ""
-        );
-        assertEq(
-            vaultUSDC.totalPendingRedeems(), 100, "Invalid total pending redeem"
-        );
+        assertRequestRedeem(vaultUSDC, user1.addr, user1.addr, user1.addr, 100, "");
+        assertEq(vaultUSDC.totalPendingRedeems(), 100, "Invalid total pending redeem");
     }
 }
