@@ -4,6 +4,7 @@ pragma solidity 0.8.21;
 import { TestBase, SyncSynthVault, AsyncSynthVault } from "../../../Base.t.sol";
 import { PausableUpgradeable } from
     "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract TestRequestDeposit is TestBase {
     function test_GivenVaultOpenWhenRequestDeposit() external {
@@ -33,8 +34,16 @@ contract TestRequestDeposit is TestBase {
     }
 
     function test_GivenMsgSenderNotEqualOwnerWhenRequestDeposit() external {
-        vaultUSDC;
-        revert("Test not implemented");
+        usersDealApproveAndDeposit(2);
+        vm.startPrank(user2.addr);
+        IERC20(vaultUSDC.asset()).approve(user1.addr, type(uint256).max);
+        vm.stopPrank();
+        assertClose(vaultUSDC);
+        vm.prank(user1.addr);
+        vaultUSDC.requestDeposit(1, user1.addr, user2.addr, "");
+        assertOpen(vaultUSDC, 0);
+        assertClose(vaultUSDC);
+        usersDealApprove(1);
     }
 
     function test_GivenReceiverHasClaimableBalanceWhenRequestDeposit()
@@ -44,15 +53,18 @@ contract TestRequestDeposit is TestBase {
         usersDealApproveAndDeposit(1);
 
         assertClose(vaultUSDC);
+        vm.prank(user1.addr);
+        vaultUSDC.requestDeposit(1, user1.addr, user1.addr, "");
         assertOpen(vaultUSDC, 0);
         assertClose(vaultUSDC);
         usersDealApprove(1);
         vm.startPrank(user1.addr);
+
         vm.expectRevert(
             abi.encodeWithSelector(
                 AsyncSynthVault.ExceededMaxDepositRequest.selector,
                 user1.addr,
-                user1.addr,
+                1,
                 0
             )
         );
