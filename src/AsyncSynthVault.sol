@@ -515,7 +515,8 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         uint256 shares = epochs[lastRequestId].redeemRequestBalance[owner];
         epochs[lastRequestId].redeemRequestBalance[owner] = 0;
 
-        _asset.safeTransfer(receiver, assets);
+        _asset.safeTransferFrom(address(claimableSilo), address(this), assets);
+        _asset.transfer(receiver, assets);
         emit ClaimRedeem(lastRequestId, owner, receiver, assets, shares);
     }
 
