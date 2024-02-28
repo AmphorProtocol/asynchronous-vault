@@ -164,7 +164,7 @@ abstract contract SyncSynthVault is
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(IAllowanceTransfer _permit2) {
-        _disableInitializers();
+        // _disableInitializers(); // TODO uncomment
         PERMIT2 = _permit2;
         decimalsOffset = 12;
     }

@@ -59,7 +59,7 @@ abstract contract AssertionsRequest is Assertions {
 
         // assertions on events
         assertTransferEvent(
-            IERC20(vault.asset()), owner, address(vault), assets
+            IERC20(vault.asset()), owner, address(vault.pendingSilo()), assets
         ); // transfer from owner to vault of its assets
         assertDepositRequestEvent(
             vault, receiver, owner, epochId, sender, assets
@@ -76,7 +76,7 @@ abstract contract AssertionsRequest is Assertions {
         assertTotalAssets(vault, assetsBefore.totalAssets);
 
         // assertion on vault asset balance, should increase
-        assertVaultAssetBalance(vault, assetsBefore.vault + assets);
+        assertVaultAssetBalance(vault, assetsBefore.vault);
 
         // assertion on shares, should not change
         assertSharesBalance(vault, owner, sharesBefore.owner);
@@ -93,8 +93,6 @@ abstract contract AssertionsRequest is Assertions {
 
         // assertion on pending deposits, only total and receiver should
         // increase
-        assertPendingDepositRequest(vault, owner, pendingDepositsBefore.owner);
-        assertPendingDepositRequest(vault, sender, pendingDepositsBefore.sender);
         assertPendingDepositRequest(
             vault, receiver, pendingDepositsBefore.receiver + assets
         );
@@ -127,7 +125,7 @@ abstract contract AssertionsRequest is Assertions {
         );
 
         // assertions on events
-        assertTransferEvent(vault, owner, address(vault), shares); // transfer
+        assertTransferEvent(vault, owner, address(vault.pendingSilo()), shares); // transfer
             // from owner to vault of its assets
         assertRedeemRequestEvent(
             vault, receiver, owner, epochId, sender, shares
@@ -149,9 +147,13 @@ abstract contract AssertionsRequest is Assertions {
         // assertion on shares, owner should decrease, receiver should not,
         // vault should increase
         assertSharesBalance(vault, owner, sharesBefore.owner - shares);
-        assertSharesBalance(vault, sender, sharesBefore.sender);
-        assertSharesBalance(vault, receiver, sharesBefore.receiver);
-        assertSharesBalance(vault, address(vault), sharesBefore.vault + shares);
+        if (owner != receiver) {
+            assertSharesBalance(vault, receiver, sharesBefore.receiver);
+        }
+        if (owner != sender) {
+            assertSharesBalance(vault, sender, sharesBefore.sender);
+        }
+        assertSharesBalance(vault, address(vault), sharesBefore.vault);
 
         // assertion on assets, should not change
         assertAssetBalance(vault, owner, assetsBefore.owner);
@@ -161,12 +163,11 @@ abstract contract AssertionsRequest is Assertions {
 
         // assertion on pending deposits redeems, only total and receiver should
         // increase
-        assertPendingRedeemRequest(vault, owner, pendingRedeemsBefore.owner);
-        assertPendingRedeemRequest(vault, sender, pendingRedeemsBefore.sender);
+
         assertPendingRedeemRequest(
             vault, receiver, pendingRedeemsBefore.receiver + shares
         );
-        assertTotalPendingDeposits(vault, pendingRedeemsBefore.vault + shares);
+        assertTotalPendingRedeems(vault, pendingRedeemsBefore.vault + shares);
     }
 
     function assertPendingDepositRequest(
@@ -203,6 +204,21 @@ abstract contract AssertionsRequest is Assertions {
             vault.totalPendingDeposits(),
             expected,
             string.concat("Total pending deposits in ", vaultLabel, explanation)
+        );
+    }
+
+    function assertTotalPendingRedeems(
+        AsyncSynthVault vault,
+        uint256 expected
+    )
+        public
+    {
+        string memory vaultLabel = vm.getLabel(address(vault));
+        string memory explanation = " | Current (left) != Expected (right)";
+        assertEq(
+            vault.totalPendingRedeems(),
+            expected,
+            string.concat("Total pending redeems in ", vaultLabel, explanation)
         );
     }
 

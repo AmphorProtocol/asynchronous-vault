@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { Assertions } from "./utils/assertions/Assertions.sol";
+import { AssertionsRequest } from "./utils/assertions/AssertionsRequest.sol";
 import { console } from "forge-std/console.sol";
 import { AsyncSynthVault, SyncSynthVault } from "../src/AsyncSynthVault.sol";
 import { VmSafe } from "forge-std/Vm.sol";
@@ -9,7 +9,7 @@ import { IERC4626 } from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
-contract TestBase is Assertions {
+contract TestBase is AssertionsRequest {
     // OWNER ACTIONS //
 
     function close(AsyncSynthVault vault) public {
