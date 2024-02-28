@@ -633,6 +633,48 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         epochId++;
     }
 
+    function settle(uint256 newSavedBalance) external onlyOwner {
+        // calculate the fees between lastSevedBalance and newSavedBalance
+        // check for maxf drawdown
+        uint256 _lastSavedBalance = lastSavedBalance;
+        if (
+            newSavedBalance
+                < _lastSavedBalance.mulDiv(
+                    BPS_DIVIDER - _maxDrawdown, BPS_DIVIDER, Math.Rounding.Ceil
+                )
+        ) revert MaxDrawdownReached();
+
+        // taking fees if positive yield
+        uint256 fees;
+        if (newSavedBalance > _lastSavedBalance && feesInBps > 0) {
+            uint256 profits;
+            unchecked {
+                profits = newSavedBalance - _lastSavedBalance;
+            }
+            fees = (profits).mulDiv(feesInBps, BPS_DIVIDER, Math.Rounding.Ceil);
+        }
+
+        _asset.safeTransferFrom(
+            _msgSender(), address(this), newSavedBalance - fees
+        );
+
+        emit EpochEnd(
+            block.timestamp,
+            _lastSavedBalance,
+            newSavedBalance,
+            fees,
+            totalSupply()
+        );
+
+        // if deposit is higher than withdraw -> transfer to owner the diff && update lastSavedBalance = newSavedBalance + diff
+        // IERC20()
+
+        // if withdraw is higher than deposit -> transfer from owner the diff && update lastSavedBalance = newSavedBalance - diff
+        // do the settlement of the requests
+        lastSavedBalance = newSavedBalance;
+        epochId++;
+    }
+
     /**
      * @dev The `open` function is used to open the vault.
      * @notice The `end` function is used to end the lock period of the vault.
