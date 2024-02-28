@@ -146,26 +146,25 @@ contract TestWithdraw is TestBase {
         assertWithdraw(vaultUSDC, user1.addr, user1.addr, user1.addr, 1);
     }
 
-    // assertWithdraw not passing
-    // function test_GivenReceiverNotEqualOwnerWhenWithdraw() external {
-    //     // it should pass withdraw assert
-    //     usersDealApproveAndDeposit(1);
-    //     assertWithdraw(vaultUSDC, user1.addr, user1.addr, user1.addr, 1);
-    // }
+    function test_GivenReceiverNotEqualOwnerWhenWithdraw() external {
+        // it should pass withdraw assert
+        usersDealApproveAndDeposit(1);
+        assertWithdraw(vaultUSDC, user1.addr, user1.addr, user1.addr, 1);
+    }
 
-    // function test_GivenWithdrawAmountIs0WhenWithdraw() external {
-    //     // it should pass withdraw assert
-    //     usersDealApproveAndDeposit(1);
-    //     assertWithdraw(vaultUSDC, user1.addr, user1.addr, user1.addr, 0);
-    // }
+    function test_GivenWithdrawAmountIs0WhenWithdraw() external {
+        // it should pass withdraw assert
+        usersDealApproveAndDeposit(1);
+        assertWithdraw(vaultUSDC, user1.addr, user1.addr, user1.addr, 0);
+    }
 
-    // function
-    // test_GivenSenderNotOwnerAndAllowanceOfSenderForOwnerIsHigherThanWithdrawAmountWhenWithdraw()
-    // external {
-    //     // it should pass withdraw assert
-    //     usersDealApproveAndDeposit(1);
-    //     vm.prank(user1.addr);
-    //     IERC20(vaultUSDC.asset()).approve(user2.addr, 2);
-    //     assertWithdraw(vaultUSDC, user1.addr, user2.addr, user1.addr, 1);
-    // }
+    function
+    test_GivenSenderNotOwnerAndAllowanceOfSenderForOwnerIsHigherThanWithdrawAmountWhenWithdraw()
+    external {
+        // it should pass withdraw assert
+        usersDealApproveAndDeposit(1);
+        vm.prank(user1.addr);
+        IERC20(vaultUSDC.asset()).approve(user2.addr, 2);
+        assertWithdraw(vaultUSDC, user1.addr, user2.addr, user1.addr, 1);
+    }
 }
