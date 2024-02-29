@@ -173,6 +173,35 @@ contract TestBase is AssertionsRequest {
         withdraw(vault, user, USDC.balanceOf(user.addr));
     }
 
+    function withdrawRevert(
+        AsyncSynthVault vault,
+        VmSafe.Wallet memory user,
+        bytes4 selector
+    )
+        public
+    {
+        withdrawRevert(vault, user, USDC.balanceOf(user.addr), selector);
+    }
+
+    function withdrawRevert(
+        AsyncSynthVault vault,
+        VmSafe.Wallet memory user
+    )
+        public
+    {
+        withdrawRevert(vault, user, USDC.balanceOf(user.addr));
+    }
+
+    function withdrawRevert(
+        AsyncSynthVault vault,
+        VmSafe.Wallet memory user,
+        bytes memory revertData
+    )
+        public
+    {
+        withdrawRevert(vault, user, USDC.balanceOf(user.addr), revertData);
+    }
+
     function redeem(AsyncSynthVault vault, VmSafe.Wallet memory user) public {
         redeem(vault, user, vault.balanceOf(user.addr));
     }
@@ -207,6 +236,72 @@ contract TestBase is AssertionsRequest {
         public
     {
         vm.startPrank(user.addr);
+        vault.withdraw(amount, user.addr, user.addr);
+    }
+
+    function withdrawRevert(
+        AsyncSynthVault vault,
+        VmSafe.Wallet memory owner,
+        VmSafe.Wallet memory sender,
+        uint256 amount,
+        bytes4 selector
+    )
+        public
+    {
+        vm.startPrank(sender.addr);
+        vm.expectRevert(selector);
+        vault.withdraw(amount, owner.addr, owner.addr);
+    }
+
+    function withdrawRevert(
+        AsyncSynthVault vault,
+        VmSafe.Wallet memory owner,
+        VmSafe.Wallet memory sender,
+        uint256 amount,
+        bytes memory revertData
+    )
+        public
+    {
+        vm.startPrank(sender.addr);
+        vm.expectRevert(revertData);
+        vault.withdraw(amount, owner.addr, owner.addr);
+    }
+
+    function withdrawRevert(
+        AsyncSynthVault vault,
+        VmSafe.Wallet memory user,
+        uint256 amount,
+        bytes4 selector
+    )
+        public
+    {
+        vm.startPrank(user.addr);
+        vm.expectRevert(selector);
+        vault.withdraw(amount, user.addr, user.addr);
+    }
+
+    function withdrawRevert(
+        AsyncSynthVault vault,
+        VmSafe.Wallet memory user,
+        uint256 amount,
+        bytes memory revertData
+    )
+        public
+    {
+        vm.startPrank(user.addr);
+        vm.expectRevert(revertData);
+        vault.withdraw(amount, user.addr, user.addr);
+    }
+
+    function withdrawRevert(
+        AsyncSynthVault vault,
+        VmSafe.Wallet memory user,
+        uint256 amount
+    )
+        public
+    {
+        vm.startPrank(user.addr);
+        vm.expectRevert();
         vault.withdraw(amount, user.addr, user.addr);
     }
 

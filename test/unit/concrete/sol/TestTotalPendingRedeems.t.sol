@@ -4,9 +4,13 @@ pragma solidity 0.8.21;
 import { TestBase } from "../../../Base.t.sol";
 
 contract TestTotalPendingRedeems is TestBase {
+
+    function setUp() external {
+        usersDealApproveAndDeposit(1);
+    }
+
     function test_GivenVaultOpenWhenTotalPendingRedeems() external {
         // it should return 0
-        usersDealApproveAndDeposit(1);
         assertClose(vaultUSDC);
         assertRequestRedeem(
             vaultUSDC, user1.addr, user1.addr, user1.addr, 100, ""
@@ -19,7 +23,6 @@ contract TestTotalPendingRedeems is TestBase {
 
     function test_GivenVaultClosedWhenTotalPendingRedeems() external {
         // it should return underlying balance of the silo contract
-        usersDealApproveAndDeposit(1);
         assertClose(vaultUSDC);
         assertRequestRedeem(
             vaultUSDC, user1.addr, user1.addr, user1.addr, 100, ""
