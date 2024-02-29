@@ -154,11 +154,16 @@ contract TestWithdraw is TestBase {
         assertWithdraw(vaultUSDC, user1.addr, user1.addr, user1.addr, 0);
     }
 
-    function test_GivenSenderNotOwnerAndAllowanceOfSenderForOwnerIsHigherThanWithdrawAmountWhenWithdraw() external {
+    function test_GivenSenderNotOwnerAndAllowanceOfSenderForOwnerIsHigherThanWithdrawAmountWhenWithdraw(
+    )
+        external
+    {
         // it should pass withdraw assert
-        usersDealApproveAndDeposit(1);
-        vm.prank(user1.addr);
-        IERC20(vaultUSDC.asset()).approve(user2.addr, 2);
+        usersDealApproveAndDeposit(2);
+        uint256 shares = vaultUSDC.previewWithdraw(1);
+        vm.startPrank(user2.addr);
+        vaultUSDC.approve(user1.addr, shares);
+        vm.stopPrank();
         assertWithdraw(vaultUSDC, user1.addr, user2.addr, user1.addr, 1);
     }
 }

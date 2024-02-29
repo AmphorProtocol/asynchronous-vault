@@ -246,7 +246,7 @@ abstract contract Assertions is EventsAssertions {
         ); // transfer from owner to vault of its assets
             // from vault to receiver of its shares
         assertWithdrawEvent(
-            vault, sender, owner, receiver, assets, previewedShares
+            vault, sender, receiver, owner, assets, previewedShares
         );
 
         // mint //
@@ -282,14 +282,11 @@ abstract contract Assertions is EventsAssertions {
         if (owner != receiver) {
             assertAssetBalance(vault, owner, assetsBefore.owner);
         }
-        if (sender != owner) {
+        if (sender != receiver) {
             assertAssetBalance(vault, sender, assetsBefore.sender);
         }
 
         // assertion on shares value in assets
-        console.log(
-            sharesValueBefore.receiver, sharesValueBefore.receiver + assets
-        );
         assertSharesValueInAssets(
             vault, owner, sharesValueBefore.owner - assets
         );
@@ -806,17 +803,11 @@ abstract contract Assertions is EventsAssertions {
         public
     {
         string memory userLabel = vm.getLabel(owner);
-        string memory vaultLabel = vm.getLabel(address(vault));
         string memory explanation = " | Current (left) != Expected (right)";
         assertEq(
             IERC20(vault.asset()).balanceOf(owner),
             expected,
-            string.concat(
-                userLabel,
-                " has wrong asset balance in ",
-                vaultLabel,
-                explanation
-            )
+            string.concat(userLabel, " has wrong asset balance", explanation)
         );
     }
 
