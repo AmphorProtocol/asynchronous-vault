@@ -166,7 +166,7 @@ abstract contract SyncSynthVault is
     constructor(IAllowanceTransfer _permit2) {
         // _disableInitializers(); // TODO uncomment
         PERMIT2 = _permit2;
-        decimalsOffset = 12;
+        decimalsOffset = 0;
     }
 
     function initialize(
