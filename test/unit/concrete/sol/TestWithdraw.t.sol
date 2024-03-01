@@ -123,7 +123,7 @@ contract TestWithdraw is TestBase {
                 IERC20Errors.ERC20InsufficientAllowance.selector,
                 user2.addr,
                 0,
-                1_000_000_000_000 // todo understand why this number
+                1
             )
         );
     }
