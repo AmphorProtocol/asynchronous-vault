@@ -705,13 +705,26 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
      * #################################
     */
 
-    function requestDepositWithPermit(
+    function claimAndRequestDepositWithPermit(
         uint256 assets,
         address receiver,
         bytes memory data,
         PermitParams calldata permitParams
     )
         external
+    {
+        _claimDeposit(receiver, receiver);
+
+        requestDepositWithPermit(assets, receiver, data, permitParams);
+    }
+
+    function requestDepositWithPermit(
+        uint256 assets,
+        address receiver,
+        bytes memory data,
+        PermitParams calldata permitParams
+    )
+        public
     {
         address owner = _msgSender();
         if (_asset.allowance(owner, address(this)) < assets) {
