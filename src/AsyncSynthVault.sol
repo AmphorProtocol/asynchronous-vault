@@ -618,20 +618,16 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         epochId++;
     }
 
-    function settle(uint256 newSavedBalance) external onlyOwner whenNotPaused whenClosed {
-        address _owner = owner();
-        // calculate the fees between lastSavedBalance and newSavedBalance
-        // check for max drawdown
-        uint256 _lastSavedBalance = lastSavedBalance;
+    function _checkMaxDrawdown(uint256 _lastSavedBalance, uint256 newSavedBalance) internal view {
         if (
             newSavedBalance
                 < _lastSavedBalance.mulDiv(
                     BPS_DIVIDER - _maxDrawdown, BPS_DIVIDER, Math.Rounding.Ceil
                 )
         ) revert MaxDrawdownReached();
+    }
 
-        // taking fees if positive yield
-        uint256 fees;
+    function _computeFees(uint256 _lastSavedBalance, uint256 newSavedBalance) internal view returns (uint256 fees) {
         if (newSavedBalance > _lastSavedBalance && feesInBps > 0) {
             uint256 profits;
             unchecked {
@@ -639,6 +635,16 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
             }
             fees = (profits).mulDiv(feesInBps, BPS_DIVIDER, Math.Rounding.Ceil);
         }
+    }
+
+    function settle(uint256 newSavedBalance) external onlyOwner whenNotPaused whenClosed {
+        address _owner = owner();
+        // calculate the fees between lastSavedBalance and newSavedBalance
+        uint256 _lastSavedBalance = lastSavedBalance;
+        _checkMaxDrawdown(_lastSavedBalance, newSavedBalance);
+
+        // taking fees if positive yield
+        uint256 fees = _computeFees(_lastSavedBalance, newSavedBalance);
 
         emit EpochEnd(
             block.timestamp,
@@ -715,24 +721,10 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
     function _open(uint256 returnedAssets) internal {
         // check for maxf drawdown
         uint256 _lastSavedBalance = lastSavedBalance;
-        if (
-            returnedAssets
-                < _lastSavedBalance.mulDiv(
-                    BPS_DIVIDER - _maxDrawdown, BPS_DIVIDER, Math.Rounding.Ceil
-                )
-        ) {
-            revert MaxDrawdownReached();
-        }
+        _checkMaxDrawdown(_lastSavedBalance, returnedAssets);
 
         // taking fees if positive yield
-        uint256 fees;
-        if (returnedAssets > _lastSavedBalance && feesInBps > 0) {
-            uint256 profits;
-            unchecked {
-                profits = returnedAssets - _lastSavedBalance;
-            }
-            fees = (profits).mulDiv(feesInBps, BPS_DIVIDER, Math.Rounding.Ceil);
-        }
+        uint256 fees = _computeFees(_lastSavedBalance, returnedAssets);
 
         _asset.safeTransferFrom(
             _msgSender(), address(this), returnedAssets - fees
