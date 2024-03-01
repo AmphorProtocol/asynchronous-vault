@@ -704,7 +704,6 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         
         // if withdraw is higher than deposit -> transfer from owner the diff && update lastSavedBalance = newSavedBalance - diff
         // do the settlement of the requests
-        lastSavedBalance = 0;
         epochId++;
     }
 
