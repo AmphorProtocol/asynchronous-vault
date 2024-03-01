@@ -18,10 +18,10 @@ import { IERC20Errors } from
 contract TestWithdraw is TestBase {
     function test_GivenVaultClosedWhenWithdraw() external {
         // it should revert with ERC4626ExceededMaxWithdraw
-        usersDealApproveAndDeposit(1); // vault should not be empty
-        closeVaults();
+        usersDealApproveAndDeposit(vaultTested, 1); // vault should not be empty
+        close(vaultTested);
         withdrawRevert(
-            vaultUSDC,
+            vaultTested,
             user1,
             1,
             abi.encodeWithSelector(
@@ -37,8 +37,9 @@ contract TestWithdraw is TestBase {
         external
     {
         // it should revert
+        console.log(address(vaultTested));
         withdrawRevert(
-            vaultUSDC,
+            vaultTested,
             user1,
             1,
             abi.encodeWithSelector(
@@ -52,18 +53,18 @@ contract TestWithdraw is TestBase {
 
     function test_GivenVaultPausedWhenWithdraw() external {
         // it should revert with EnforcedPause
-        pause(vaultUSDC);
+        pause(vaultTested);
         withdrawRevert(
-            vaultUSDC, user1, 1, PausableUpgradeable.EnforcedPause.selector
+            vaultTested, user1, 1, PausableUpgradeable.EnforcedPause.selector
         );
     }
 
     function test_GivenVaultClosedGivenVaultNotPausedWhenWithdraw() external {
         // it should revert with ERC4626ExceededMaxWithdraw
-        usersDealApproveAndDeposit(1); // vault should not be empty
-        closeVaults();
+        usersDealApproveAndDeposit(vaultTested, 1); // vault should not be empty
+        close(vaultTested);
         withdrawRevert(
-            vaultUSDC,
+            vaultTested,
             user1,
             1,
             abi.encodeWithSelector(
@@ -77,9 +78,9 @@ contract TestWithdraw is TestBase {
 
     function test_GivenReceiverIsAddress0WhenWithdraw() external {
         // it should revert with ERC20InvalidReceiver
-        usersDealApproveAndDeposit(1);
+        usersDealApproveAndDeposit(vaultTested, 1);
         withdrawRevert(
-            vaultUSDC,
+            vaultTested,
             address0,
             1,
             abi.encodeWithSelector(
@@ -93,16 +94,17 @@ contract TestWithdraw is TestBase {
         external
     {
         // it should revert with ERC4626ExceededMaxWithdraw
-        usersDealApproveAndDeposit(1);
+        usersDealApproveAndDeposit(vaultTested, 1);
         withdrawRevert(
-            vaultUSDC,
+            vaultTested,
             user1,
-            vaultUSDC.convertToAssets(vaultUSDC.balanceOf(user1.addr)) + 1,
+            vaultTested.convertToAssets(vaultTested.balanceOf(user1.addr)) + 1,
             abi.encodeWithSelector(
                 SyncSynthVault.ERC4626ExceededMaxWithdraw.selector,
                 user1.addr,
-                vaultUSDC.convertToAssets(vaultUSDC.balanceOf(user1.addr)) + 1,
-                vaultUSDC.convertToAssets(vaultUSDC.balanceOf(user1.addr))
+                vaultTested.convertToAssets(vaultTested.balanceOf(user1.addr))
+                    + 1,
+                vaultTested.convertToAssets(vaultTested.balanceOf(user1.addr))
             )
         );
     }
@@ -112,10 +114,10 @@ contract TestWithdraw is TestBase {
         external
     {
         // it should revert with ERC20InsufficientAllowance
-        usersDealApproveAndDeposit(1);
+        usersDealApproveAndDeposit(vaultTested, 1);
 
         withdrawRevert(
-            vaultUSDC,
+            vaultTested,
             user1,
             user2,
             1,
@@ -129,20 +131,20 @@ contract TestWithdraw is TestBase {
     }
 
     function test_WhenWithdrawPass() external {
-        usersDealApproveAndDeposit(1);
-        assertWithdraw(vaultUSDC, user1.addr, user1.addr, user1.addr, 1);
+        usersDealApproveAndDeposit(vaultTested, 1);
+        assertWithdraw(vaultTested, user1.addr, user1.addr, user1.addr, 1);
     }
 
     function test_GivenReceiverNotEqualOwnerWhenWithdraw() external {
         // it should pass withdraw assert
-        usersDealApproveAndDeposit(1);
-        assertWithdraw(vaultUSDC, user1.addr, user1.addr, user1.addr, 1);
+        usersDealApproveAndDeposit(vaultTested, 1);
+        assertWithdraw(vaultTested, user1.addr, user1.addr, user1.addr, 1);
     }
 
     function test_GivenWithdrawAmountIs0WhenWithdraw() external {
         // it should pass withdraw assert
-        usersDealApproveAndDeposit(1);
-        assertWithdraw(vaultUSDC, user1.addr, user1.addr, user1.addr, 0);
+        usersDealApproveAndDeposit(vaultTested, 1);
+        assertWithdraw(vaultTested, user1.addr, user1.addr, user1.addr, 0);
     }
 
     function test_GivenSenderNotOwnerAndAllowanceOfSenderForOwnerIsHigherThanWithdrawAmountWhenWithdraw(
@@ -150,11 +152,11 @@ contract TestWithdraw is TestBase {
         external
     {
         // it should pass withdraw assert
-        usersDealApproveAndDeposit(2);
-        uint256 shares = vaultUSDC.previewWithdraw(1);
+        usersDealApproveAndDeposit(vaultTested, 2);
+        uint256 shares = vaultTested.previewWithdraw(1);
         vm.startPrank(user2.addr);
-        vaultUSDC.approve(user1.addr, shares);
+        vaultTested.approve(user1.addr, shares);
         vm.stopPrank();
-        assertWithdraw(vaultUSDC, user1.addr, user2.addr, user1.addr, 1);
+        assertWithdraw(vaultTested, user1.addr, user2.addr, user1.addr, 1);
     }
 }

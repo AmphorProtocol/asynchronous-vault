@@ -15,13 +15,13 @@ import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 contract TestBase is AssertionsRequest {
     // OWNER ACTIONS //
 
-    function close(AsyncSynthVault vault) public {
+    function close(AsyncSynthVault vault) internal {
         address owner = vault.owner();
         vm.prank(owner);
         vault.close();
     }
 
-    function closeRevertUnauthorized(AsyncSynthVault vault) public {
+    function closeRevertUnauthorized(AsyncSynthVault vault) internal {
         address user = users[0].addr;
         vm.startPrank(user);
         vm.expectRevert(
@@ -31,43 +31,30 @@ contract TestBase is AssertionsRequest {
         vm.stopPrank();
     }
 
-    function closeVaults() public {
-        close(vaultUSDC);
-        close(vaultWSTETH);
-        close(vaultWBTC);
-    }
-
-    function pause(AsyncSynthVault vault) public {
+    function pause(AsyncSynthVault vault) internal {
         address owner = vault.owner();
         vm.prank(owner);
         vault.pause();
     }
 
-    function unpause(AsyncSynthVault vault) public {
+    function unpause(AsyncSynthVault vault) internal {
         address owner = vault.owner();
         vm.prank(owner);
         vault.unpause();
     }
 
-    // USER INFO //
-    function vaultAssetBalanceOf(
-        IERC4626 vault,
-        address user
-    )
-        public
-        view
-        returns (uint256)
-    {
-        return IERC20(vault.asset()).balanceOf(user);
-    }
-
     // USERS ACTIONS //
 
-    function mint(AsyncSynthVault vault, VmSafe.Wallet memory user) public {
+    function mint(AsyncSynthVault vault, VmSafe.Wallet memory user) internal {
         mint(vault, user, USDC.balanceOf(user.addr));
     }
 
-    function deposit(AsyncSynthVault vault, VmSafe.Wallet memory user) public {
+    function deposit(
+        AsyncSynthVault vault,
+        VmSafe.Wallet memory user
+    )
+        internal
+    {
         deposit(vault, user, USDC.balanceOf(user.addr));
     }
 
@@ -76,7 +63,7 @@ contract TestBase is AssertionsRequest {
         VmSafe.Wallet memory user,
         bytes4 selector
     )
-        public
+        internal
     {
         depositRevert(vault, user, USDC.balanceOf(user.addr), selector);
     }
@@ -86,7 +73,7 @@ contract TestBase is AssertionsRequest {
         VmSafe.Wallet memory user,
         bytes memory revertData
     )
-        public
+        internal
     {
         depositRevert(vault, user, USDC.balanceOf(user.addr), revertData);
     }
@@ -97,7 +84,7 @@ contract TestBase is AssertionsRequest {
         uint256 amount,
         bytes4 selector
     )
-        public
+        internal
     {
         vm.startPrank(user.addr);
         vm.expectRevert(selector);
@@ -109,7 +96,7 @@ contract TestBase is AssertionsRequest {
         VmSafe.Wallet memory user,
         uint256 amount
     )
-        public
+        internal
     {
         vm.startPrank(user.addr);
         vm.expectRevert();
@@ -122,7 +109,7 @@ contract TestBase is AssertionsRequest {
         uint256 amount,
         bytes memory revertData
     )
-        public
+        internal
     {
         vm.startPrank(user.addr);
         vm.expectRevert(revertData);
@@ -135,7 +122,7 @@ contract TestBase is AssertionsRequest {
         uint256 amount,
         bytes4 selector
     )
-        public
+        internal
     {
         vm.startPrank(user.addr);
         vm.expectRevert(selector);
@@ -147,7 +134,7 @@ contract TestBase is AssertionsRequest {
         VmSafe.Wallet memory user,
         uint256 amount
     )
-        public
+        internal
     {
         vm.startPrank(user.addr);
         vm.expectRevert();
@@ -160,14 +147,19 @@ contract TestBase is AssertionsRequest {
         uint256 amount,
         bytes memory revertData
     )
-        public
+        internal
     {
         vm.startPrank(user.addr);
         vm.expectRevert(revertData);
         vault.mint(amount, user.addr);
     }
 
-    function redeem(AsyncSynthVault vault, VmSafe.Wallet memory user) public {
+    function redeem(
+        AsyncSynthVault vault,
+        VmSafe.Wallet memory user
+    )
+        internal
+    {
         redeem(vault, user, vault.balanceOf(user.addr));
     }
 
@@ -176,7 +168,7 @@ contract TestBase is AssertionsRequest {
         VmSafe.Wallet memory user,
         uint256 amount
     )
-        public
+        internal
     {
         vm.startPrank(user.addr);
         vault.mint(amount, user.addr);
@@ -198,7 +190,7 @@ contract TestBase is AssertionsRequest {
         VmSafe.Wallet memory user,
         uint256 amount
     )
-        public
+        internal
     {
         vm.startPrank(user.addr);
         vault.withdraw(amount, user.addr, user.addr);
@@ -208,7 +200,7 @@ contract TestBase is AssertionsRequest {
         AsyncSynthVault vault,
         VmSafe.Wallet memory user
     )
-        public
+        internal
     {
         withdraw(vault, user, USDC.balanceOf(user.addr));
     }
@@ -218,7 +210,7 @@ contract TestBase is AssertionsRequest {
         VmSafe.Wallet memory user,
         bytes4 selector
     )
-        public
+        internal
     {
         withdrawRevert(vault, user, USDC.balanceOf(user.addr), selector);
     }
@@ -227,7 +219,7 @@ contract TestBase is AssertionsRequest {
         AsyncSynthVault vault,
         VmSafe.Wallet memory user
     )
-        public
+        internal
     {
         withdrawRevert(vault, user, USDC.balanceOf(user.addr));
     }
@@ -237,7 +229,7 @@ contract TestBase is AssertionsRequest {
         VmSafe.Wallet memory user,
         bytes memory revertData
     )
-        public
+        internal
     {
         withdrawRevert(vault, user, USDC.balanceOf(user.addr), revertData);
     }
@@ -249,7 +241,7 @@ contract TestBase is AssertionsRequest {
         uint256 amount,
         bytes4 selector
     )
-        public
+        internal
     {
         vm.startPrank(sender.addr);
         vm.expectRevert(selector);
@@ -263,7 +255,7 @@ contract TestBase is AssertionsRequest {
         uint256 amount,
         bytes memory revertData
     )
-        public
+        internal
     {
         vm.startPrank(sender.addr);
         vm.expectRevert(revertData);
@@ -276,7 +268,7 @@ contract TestBase is AssertionsRequest {
         uint256 amount,
         bytes4 selector
     )
-        public
+        internal
     {
         vm.startPrank(user.addr);
         vm.expectRevert(selector);
@@ -289,7 +281,7 @@ contract TestBase is AssertionsRequest {
         uint256 amount,
         bytes memory revertData
     )
-        public
+        internal
     {
         vm.startPrank(user.addr);
         vm.expectRevert(revertData);
@@ -301,7 +293,7 @@ contract TestBase is AssertionsRequest {
         VmSafe.Wallet memory user,
         uint256 amount
     )
-        public
+        internal
     {
         vm.startPrank(user.addr);
         vm.expectRevert();
@@ -314,7 +306,7 @@ contract TestBase is AssertionsRequest {
         uint256 shares,
         bytes memory revertData
     )
-        public
+        internal
     {
         vm.startPrank(user.addr);
         vm.expectRevert(revertData);
@@ -328,7 +320,7 @@ contract TestBase is AssertionsRequest {
         uint256 shares,
         bytes memory revertData
     )
-        public
+        internal
     {
         vm.startPrank(owner.addr);
         vm.expectRevert(revertData);
@@ -341,7 +333,7 @@ contract TestBase is AssertionsRequest {
         uint256 amount,
         bytes4 selector
     )
-        public
+        internal
     {
         vm.startPrank(user.addr);
         vm.expectRevert(selector);
@@ -353,7 +345,7 @@ contract TestBase is AssertionsRequest {
         VmSafe.Wallet memory user,
         uint256 shares
     )
-        public
+        internal
     {
         vm.startPrank(user.addr);
         vault.redeem(shares, user.addr, user.addr);
@@ -365,7 +357,7 @@ contract TestBase is AssertionsRequest {
         uint256 amount,
         bytes memory data
     )
-        public
+        internal
     {
         vm.startPrank(user.addr);
         vault.requestDeposit(amount, user.addr, user.addr, data);
@@ -377,7 +369,7 @@ contract TestBase is AssertionsRequest {
         uint256 amount,
         bytes memory data
     )
-        public
+        internal
     {
         vm.startPrank(user.addr);
         vault.requestRedeem(amount, user.addr, user.addr, data);
@@ -388,7 +380,7 @@ contract TestBase is AssertionsRequest {
         VmSafe.Wallet memory user,
         uint256 amount
     )
-        public
+        internal
     {
         vm.startPrank(user.addr);
         vault.decreaseDepositRequest(amount, user.addr);
@@ -399,7 +391,7 @@ contract TestBase is AssertionsRequest {
         VmSafe.Wallet memory user,
         uint256 amount
     )
-        public
+        internal
     {
         decreaseRedeemRequest(vault, user, user, amount);
     }
@@ -410,7 +402,7 @@ contract TestBase is AssertionsRequest {
         VmSafe.Wallet memory receiver,
         uint256 amount
     )
-        public
+        internal
     {
         vm.startPrank(user.addr);
         vault.decreaseRedeemRequest(amount, receiver.addr);
@@ -418,16 +410,26 @@ contract TestBase is AssertionsRequest {
 
     // USERS CONFIGURATION //
 
-    function usersDealApproveAndDeposit(uint256 userMax) public {
+    function usersDealApproveAndDeposit(
+        IERC4626 vault,
+        uint256 userMax
+    )
+        internal
+    {
         userMax = userMax > users.length ? users.length : userMax;
-        usersDealApprove(userMax);
-        usersDeposit(userMax);
+        usersDealApprove(vault, userMax);
+        usersDeposit(vault, userMax);
     }
 
-    function usersDealApproveAndRequestDeposit(uint256 userMax) public {
+    function usersDealApproveAndRequestDeposit(
+        AsyncSynthVault vault,
+        uint256 userMax
+    )
+        internal
+    {
         userMax = userMax > users.length ? users.length : userMax;
-        usersDealApprove(userMax);
-        usersRequestDeposit(userMax);
+        usersDealApprove(vault, userMax);
+        usersRequestDeposit(vault, userMax, "");
     }
 
     function usersDealApproveAndRequestDeposit(
@@ -435,17 +437,22 @@ contract TestBase is AssertionsRequest {
         uint256 userMax,
         bytes memory data
     )
-        public
+        internal
     {
         userMax = userMax > users.length ? users.length : userMax;
-        usersDealApprove(userMax);
+        usersDealApprove(vault, userMax);
         usersRequestDeposit(vault, userMax, data);
     }
 
-    function usersDealApproveAndRequestRedeem(uint256 userMax) public {
+    function usersDealApproveAndRequestRedeem(
+        AsyncSynthVault vault,
+        uint256 userMax
+    )
+        internal
+    {
         userMax = userMax > users.length ? users.length : userMax;
-        usersDealApprove(userMax);
-        usersRequestRedeem(userMax);
+        usersDealApprove(vault, userMax);
+        usersRequestRedeem(vault, userMax);
     }
 
     function usersDealApproveAndRequestRedeem(
@@ -453,24 +460,17 @@ contract TestBase is AssertionsRequest {
         uint256 userMax,
         bytes memory data
     )
-        public
+        internal
     {
         userMax = userMax > users.length ? users.length : userMax;
         // usersDealApprove(userMax);
         usersRequestRedeem(vault, userMax, data);
     }
 
-    function usersDeposit(uint256 userMax) public {
+    function usersDeposit(IERC4626 vault, uint256 userMax) internal {
         userMax = userMax > users.length ? users.length : userMax;
         for (uint256 i = 0; i < userMax; i++) {
-            _depositInVaults(users[i].addr);
-        }
-    }
-
-    function usersRequestDeposit(uint256 userMax) public {
-        userMax = userMax > users.length ? users.length : userMax;
-        for (uint256 i = 0; i < userMax; i++) {
-            _requestDepositInVaults(users[i].addr);
+            _depositInVault(vault, users[i].addr);
         }
     }
 
@@ -479,7 +479,7 @@ contract TestBase is AssertionsRequest {
         uint256 userMax,
         bytes memory data
     )
-        public
+        internal
     {
         userMax = userMax > users.length ? users.length : userMax;
         for (uint256 i = 0; i < userMax; i++) {
@@ -492,7 +492,7 @@ contract TestBase is AssertionsRequest {
         uint256 userMax,
         bytes memory data
     )
-        public
+        internal
     {
         userMax = userMax > users.length ? users.length : userMax;
         for (uint256 i = 0; i < userMax; i++) {
@@ -500,10 +500,15 @@ contract TestBase is AssertionsRequest {
         }
     }
 
-    function usersRequestRedeem(uint256 userMax) public {
+    function usersRequestRedeem(
+        AsyncSynthVault vault,
+        uint256 userMax
+    )
+        internal
+    {
         userMax = userMax > users.length ? users.length : userMax;
         for (uint256 i = 0; i < userMax; i++) {
-            _requestRedeemInVaults(users[i].addr);
+            _requestRedeemInVault(vault, users[i].addr);
         }
     }
 
@@ -512,7 +517,7 @@ contract TestBase is AssertionsRequest {
         uint256 userMax,
         bytes memory data
     )
-        public
+        internal
     {
         userMax = userMax > users.length ? users.length : userMax;
         for (uint256 i = 0; i < userMax; i++) {
@@ -520,65 +525,49 @@ contract TestBase is AssertionsRequest {
         }
     }
 
-    // function _requestRedeemInVaults(
-    //     AsyncSynthVault vault,
-    //     address owner,
-    //     bytes memory data
-    // )
-    //     internal
-    // {
-    //     vm.startPrank(owner);
-    //     vault.requestRedeem(vaultUSDC.balanceOf(owner) / 2, owner, owner,
-    // data);
-    //     vm.stopPrank();
-    // }
-
-    function usersDealApprove(uint256 userMax) public {
+    function usersDealApprove(IERC4626 vault, uint256 userMax) internal {
         userMax = userMax > users.length ? users.length : userMax;
+        uint256 amount = 0;
+        address underlying = address(vault.asset());
+        if (underlying == address(WSTETH)) {
+            amount = 100 * 10 ** WSTETH.decimals();
+        } else if (underlying == address(WBTC)) {
+            amount = 10 * 10 ** WBTC.decimals();
+        } else if (underlying == address(USDC)) {
+            amount = 10_000 * 10 ** USDC.decimals();
+        }
         for (uint256 i = 0; i < userMax; i++) {
             deal(users[i].addr, type(uint256).max);
-            _approveVaults(users[i].addr);
-            _dealAssets(users[i].addr);
+            approveVault(vault, users[i]);
+            _dealAsset(address(vault.asset()), users[i].addr, amount);
         }
     }
 
-    function _approveVaults(address owner) internal {
-        vm.startPrank(owner);
-        USDC.approve(address(vaultUSDC), type(uint256).max);
-        WSTETH.approve(address(vaultWSTETH), type(uint256).max);
-        WBTC.approve(address(vaultWBTC), type(uint256).max);
+    function approveVault(IERC4626 vault, VmSafe.Wallet memory user) internal {
+        vm.startPrank(user.addr);
+        IERC20 asset = IERC20(vault.asset());
+        asset.approve(address(vault), type(uint256).max);
         vm.stopPrank();
     }
 
-    function _dealAssets(address owner) internal {
-        _dealAsset(address(WSTETH), owner, 100 * 10 ** WSTETH.decimals());
-        _dealAsset(address(WBTC), owner, 10 * 10 ** WBTC.decimals());
-        _dealAsset(address(USDC), owner, 1000 * 10 ** USDC.decimals());
-    }
-
-    function _depositInVaults(address owner) internal {
+    function _depositInVault(IERC4626 vault, address owner) internal {
         vm.startPrank(owner);
-        uint256 usdcDeposit = USDC.balanceOf(owner) / 4;
-        vaultUSDC.deposit(usdcDeposit, owner);
-        uint256 wstethDeposit = WSTETH.balanceOf(owner) / 4;
-        vaultWSTETH.deposit(wstethDeposit, owner);
-        uint256 wbtcDeposit = WBTC.balanceOf(owner) / 4;
-        vaultWBTC.deposit(wbtcDeposit, owner);
+        IERC20 underlying = IERC20(vault.asset());
+        uint256 depositAmount = underlying.balanceOf(owner) / 4;
+        vault.deposit(depositAmount, owner);
         vm.stopPrank();
     }
 
-    function _requestDepositInVaults(address owner) internal {
+    function _requestDepositInVaults(
+        AsyncSynthVault vault,
+        address owner
+    )
+        internal
+    {
         vm.startPrank(owner);
-        console.log("USDC deposit request amount:", USDC.balanceOf(owner) / 4);
-        vaultUSDC.requestDeposit(USDC.balanceOf(owner) / 4, owner, owner, "");
-        console.log(
-            "WSTETH deposit request amount", WSTETH.balanceOf(owner) / 4
-        );
-        vaultWSTETH.requestDeposit(
-            WSTETH.balanceOf(owner) / 4, owner, owner, ""
-        );
-        console.log("WBTC deposit request amount", WBTC.balanceOf(owner) / 4);
-        vaultWBTC.requestDeposit(WBTC.balanceOf(owner) / 4, owner, owner, "");
+        IERC20 asset = IERC20(vault.asset());
+        console.log("Deposit request amount:", asset.balanceOf(owner) / 4);
+        vaultTested.requestDeposit(asset.balanceOf(owner) / 4, owner, owner, "");
         vm.stopPrank();
     }
 
@@ -607,18 +596,15 @@ contract TestBase is AssertionsRequest {
         vm.stopPrank();
     }
 
-    function _requestRedeemInVaults(address owner) internal {
+    function _requestRedeemInVault(
+        AsyncSynthVault vault,
+        address owner
+    )
+        internal
+    {
         vm.startPrank(owner);
-        console.log("USDC redeem request amount", vaultUSDC.balanceOf(owner));
-        vaultUSDC.requestRedeem(vaultUSDC.balanceOf(owner), owner, owner, "");
-        console.log(
-            "WSTETH redeem request amount", vaultWSTETH.balanceOf(owner)
-        );
-        vaultWSTETH.requestRedeem(
-            vaultWSTETH.balanceOf(owner), owner, owner, ""
-        );
-        console.log("WBTC redeem request amount", vaultWBTC.balanceOf(owner));
-        vaultWBTC.requestRedeem(vaultWBTC.balanceOf(owner), owner, owner, "");
+        console.log("Redeem request amount", vault.balanceOf(owner));
+        vault.requestRedeem(vault.balanceOf(owner), owner, owner, "");
         vm.stopPrank();
     }
 }

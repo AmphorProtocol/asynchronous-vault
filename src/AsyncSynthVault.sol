@@ -793,7 +793,6 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         external
     {
         _claimDeposit(receiver, receiver);
-
         requestDepositWithPermit(assets, receiver, data, permitParams);
     }
 
