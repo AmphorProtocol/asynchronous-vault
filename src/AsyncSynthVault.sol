@@ -245,20 +245,20 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
     }
 
     // tree todo
-    function totalPendingDeposits() public view returns (uint256) {
+    function totalPendingDeposits() external view returns (uint256) {
         return vaultIsOpen ? 0 : _asset.balanceOf(address(pendingSilo));
     }
 
     // tree todo
-    function totalPendingRedeems() public view returns (uint256) {
+    function totalPendingRedeems() external view returns (uint256) {
         return vaultIsOpen ? 0 : balanceOf(address(pendingSilo));
     }
 
-    function totalClaimableShares() public view returns (uint256) {
+    function totalClaimableShares() external view returns (uint256) {
         return balanceOf(address(claimableSilo));
     }
 
-    function totalClaimableAssets() public view returns (uint256) {
+    function totalClaimableAssets() external view returns (uint256) {
         return _asset.balanceOf(address(claimableSilo));
     }
 
@@ -722,7 +722,6 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         external
     {
         _claimDeposit(receiver, receiver);
-
         requestDepositWithPermit(assets, receiver, data, permitParams);
     }
 

@@ -7,55 +7,55 @@ contract TestClaimDeposit is TestBase {
     // claim with nothing to claim
     function test_whenClaimDepWithNothingToClaim() external {
         // it should revert with ERC4626ExceededMaxClaim
-        usersDealApproveAndDeposit(1);
-        usersDealApprove(2);
-        assertClaimDeposit(vaultUSDC, user2.addr, user2.addr, 0);
+        usersDealApproveAndDeposit(vaultTested, 1);
+        usersDealApprove(vaultTested, 2);
+        assertClaimDeposit(vaultTested, user2.addr, user2.addr, 0);
     }
 
     // claim with something to claim
     function test_whenClaimDepWithSomethingToClaim() external {
         // it should revert with ERC4626ExceededMaxClaim
-        usersDealApproveAndDeposit(4);
-        usersDealApprove(10);
-        assertClose(vaultUSDC);
+        usersDealApproveAndDeposit(vaultTested, 4);
+        usersDealApprove(vaultTested, 10);
+        assertClose(vaultTested);
         uint256 assets =
-            100 * 10 ** IERC20Metadata(vaultUSDC.asset()).decimals();
+            IERC20Metadata(vaultTested.asset()).balanceOf(user5.addr);
         assertRequestDeposit(
-            vaultUSDC, user5.addr, user5.addr, user5.addr, assets, ""
+            vaultTested, user5.addr, user5.addr, user5.addr, assets, ""
         );
-        assertOpen(vaultUSDC, 3);
-        assertClaimDeposit(vaultUSDC, user5.addr, user5.addr, assets);
+        assertOpen(vaultTested, 3);
+        assertClaimDeposit(vaultTested, user5.addr, user5.addr, assets);
     }
 
     function test_whenClaimDepWithSomethingToClaimAndVaultIsClosed() external {
         // it should revert with ERC4626ExceededMaxClaim
-        usersDealApproveAndDeposit(4);
-        usersDealApprove(5);
-        assertClose(vaultUSDC);
+        usersDealApproveAndDeposit(vaultTested, 4);
+        usersDealApprove(vaultTested, 5);
+        assertClose(vaultTested);
         uint256 assets =
-            100 * 10 ** IERC20Metadata(vaultUSDC.asset()).decimals();
+            IERC20Metadata(vaultTested.asset()).balanceOf(user5.addr);
         assertRequestDeposit(
-            vaultUSDC, user5.addr, user5.addr, user5.addr, assets, ""
+            vaultTested, user5.addr, user5.addr, user5.addr, assets, ""
         );
-        assertOpen(vaultUSDC, 3);
-        assertClose(vaultUSDC);
-        assertClaimDeposit(vaultUSDC, user5.addr, user5.addr, assets);
+        assertOpen(vaultTested, 3);
+        assertClose(vaultTested);
+        assertClaimDeposit(vaultTested, user5.addr, user5.addr, assets);
     }
 
     // claim with something to claim and vault is paused
     function test_whenClaimDepWithSomethingToClaimAndVaultIsPaused() external {
         // it should revert with EnforcedPause
-        usersDealApproveAndDeposit(4);
-        assertClose(vaultUSDC);
+        usersDealApproveAndDeposit(vaultTested, 4);
+        assertClose(vaultTested);
         uint256 assets =
-            100 * 10 ** IERC20Metadata(vaultUSDC.asset()).decimals();
+            IERC20Metadata(vaultTested.asset()).balanceOf(user1.addr);
         assertRequestDeposit(
-            vaultUSDC, user1.addr, user1.addr, user1.addr, assets, ""
+            vaultTested, user1.addr, user1.addr, user1.addr, assets, ""
         );
-        assertOpen(vaultUSDC, 3);
-        pause(vaultUSDC);
+        assertOpen(vaultTested, 3);
+        pause(vaultTested);
         vm.startPrank(user1.addr);
         vm.expectRevert();
-        vaultUSDC.claimDeposit(user1.addr);
+        vaultTested.claimDeposit(user1.addr);
     }
 }

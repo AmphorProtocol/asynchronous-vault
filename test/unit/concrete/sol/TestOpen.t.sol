@@ -9,24 +9,24 @@ contract TestOpen is TestBase {
     function test_GivenVaultIsOpenWhenOpen() external {
         // it should revert with VaultIsOpen
 
-        address owner = vaultUSDC.owner();
+        address owner = vaultTested.owner();
         vm.prank(owner);
         vm.expectRevert(SyncSynthVault.VaultIsOpen.selector);
-        vaultUSDC.open(uint256(0));
+        vaultTested.open(uint256(0));
     }
 
     function test_GivenMsgSenderIsNotOwnerWhenOpen() external {
         // it should revert with OwnableUnauthorizedAccount(msg.sender)
-        usersDealApproveAndDeposit(1);
-        address owner = vaultUSDC.owner();
+        usersDealApproveAndDeposit(vaultTested, 1);
+        address owner = vaultTested.owner();
         vm.prank(owner);
-        vaultUSDC.close();
+        vaultTested.close();
         vm.expectRevert(
             abi.encodeWithSignature(
                 "OwnableUnauthorizedAccount(address)", address(this)
             )
         );
-        vaultUSDC.open(uint256(0));
+        vaultTested.open(uint256(0));
     }
 
     function test_GivenAssetReturnedIs0AndTotalsAssetsIsNot0AndMaxDrawdownIsNot0WhenOpen(
@@ -34,12 +34,12 @@ contract TestOpen is TestBase {
         external
     {
         // it should revert with MaxDrawdownReached
-        usersDealApproveAndDeposit(1);
-        address owner = vaultUSDC.owner();
+        usersDealApproveAndDeposit(vaultTested, 1);
+        address owner = vaultTested.owner();
         vm.startPrank(owner);
-        vaultUSDC.close();
+        vaultTested.close();
         vm.expectRevert(SyncSynthVault.MaxDrawdownReached.selector);
-        vaultUSDC.open(uint256(0));
+        vaultTested.open(uint256(0));
     }
 
     function test_GivenAssetReturnedIs1AndTotalsAssetsIsOverAssetsReturnedAndMaxDrawdownIsNot0WhenOpen(
@@ -47,56 +47,56 @@ contract TestOpen is TestBase {
         external
     {
         // it should revert with MaxDrawdownReached
-        usersDealApproveAndDeposit(1);
-        address owner = vaultUSDC.owner();
+        usersDealApproveAndDeposit(vaultTested, 1);
+        address owner = vaultTested.owner();
         vm.startPrank(owner);
-        vaultUSDC.close();
+        vaultTested.close();
         vm.expectRevert(SyncSynthVault.MaxDrawdownReached.selector);
-        vaultUSDC.open(uint256(1));
+        vaultTested.open(uint256(1));
     }
 
     function test_WhenOpenSucceed() external {
-        usersDealApproveAndDeposit(1);
-        address owner = vaultUSDC.owner();
+        usersDealApproveAndDeposit(vaultTested, 1);
+        address owner = vaultTested.owner();
         vm.prank(owner);
-        vaultUSDC.close();
-        assertOpen(vaultUSDC, 0);
+        vaultTested.close();
+        assertOpen(vaultTested, 0);
     }
 
     function test_GivenPeriodIsInProfitWhenOpen() external {
-        usersDealApproveAndDeposit(3);
-        address owner = vaultUSDC.owner();
+        usersDealApproveAndDeposit(vaultTested, 3);
+        address owner = vaultTested.owner();
         vm.prank(owner);
-        vaultUSDC.close();
-        assertOpen(vaultUSDC, 4);
+        vaultTested.close();
+        assertOpen(vaultTested, 4);
     }
 
     function test_GivenPeriodIsInLossWhenOpen() external {
-        usersDealApproveAndDeposit(2);
-        address owner = vaultUSDC.owner();
+        usersDealApproveAndDeposit(vaultTested, 2);
+        address owner = vaultTested.owner();
         vm.prank(owner);
-        vaultUSDC.close();
-        assertOpen(vaultUSDC, -3);
+        vaultTested.close();
+        assertOpen(vaultTested, -3);
     }
 
     function test_GivenPeriodIsInProfitAndRequestDepWhenOpen() external {
-        usersDealApproveAndDeposit(2);
-        address owner = vaultUSDC.owner();
+        usersDealApproveAndDeposit(vaultTested, 2);
+        address owner = vaultTested.owner();
         vm.prank(owner);
-        vaultUSDC.close();
+        vaultTested.close();
 
-        usersDealApproveAndRequestDeposit(vaultUSDC, 2, "");
-        assertOpen(vaultUSDC, 3);
+        usersDealApproveAndRequestDeposit(vaultTested, 2, "");
+        assertOpen(vaultTested, 3);
     }
 
     function test_GivenPeriodIsInProfitAndRequestsWhenOpen() external {
-        usersDealApproveAndDeposit(2);
-        address owner = vaultUSDC.owner();
+        usersDealApproveAndDeposit(vaultTested, 2);
+        address owner = vaultTested.owner();
         vm.prank(owner);
-        vaultUSDC.close();
+        vaultTested.close();
 
-        usersDealApproveAndRequestDeposit(vaultUSDC, 2, "");
-        usersDealApproveAndRequestRedeem(vaultUSDC, 2, "");
-        assertOpen(vaultUSDC, 3);
+        usersDealApproveAndRequestDeposit(vaultTested, 2, "");
+        usersDealApproveAndRequestRedeem(vaultTested, 2, "");
+        assertOpen(vaultTested, 3);
     }
 }

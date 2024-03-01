@@ -5,18 +5,18 @@ import { TestBase } from "../../../Base.t.sol";
 
 contract TestTotalPendingDeposits is TestBase {
     function setUp() external {
-        usersDealApproveAndDeposit(1);
+        usersDealApproveAndDeposit(vaultTested, 1);
     }
 
     function test_GivenVaultOpenWhenTotalPendingDeposits() external {
         // it should return 0
-        assertClose(vaultUSDC);
+        assertClose(vaultTested);
         assertRequestDeposit(
-            vaultUSDC, user1.addr, user1.addr, user1.addr, 100, ""
+            vaultTested, user1.addr, user1.addr, user1.addr, 100, ""
         );
-        assertOpen(vaultUSDC, 0);
+        assertOpen(vaultTested, 0);
         assertEq(
-            vaultUSDC.totalPendingDeposits(),
+            vaultTested.totalPendingDeposits(),
             0,
             "Invalid total pending deposits"
         );
@@ -24,12 +24,12 @@ contract TestTotalPendingDeposits is TestBase {
 
     function test_GivenVaultClosedWhenTotalPendingDeposits() external {
         // it should return underlying balance of the silo contract
-        assertClose(vaultUSDC);
+        assertClose(vaultTested);
         assertRequestDeposit(
-            vaultUSDC, user1.addr, user1.addr, user1.addr, 100, ""
+            vaultTested, user1.addr, user1.addr, user1.addr, 100, ""
         );
         assertEq(
-            vaultUSDC.totalPendingDeposits(),
+            vaultTested.totalPendingDeposits(),
             100,
             "Invalid total pending deposits"
         );

@@ -10,17 +10,19 @@ contract TestClaimableDepositRequest is TestBase {
         external
     {
         // it should return 0
-        assertEq(vaultUSDC.claimableDepositRequest(user1.addr), 0);
+        assertEq(vaultTested.claimableDepositRequest(user1.addr), 0);
     }
 
     function test_GivenAnOwnerWithAPendingRequestWhenClaimableDepositRequest()
         external
     {
         // it should return 0
-        usersDealApproveAndDeposit(1); // vault should not be empty
-        closeVaults();
-        usersDealApproveAndRequestDeposit(1);
-        assertEq(vaultUSDC.claimableDepositRequest(user1.addr), 0);
+        // it should not revert
+        usersDealApproveAndDeposit(vaultTested, 1); // vault should not be empty
+
+        close(vaultTested);
+        usersDealApproveAndRequestDeposit(vaultTested, 1);
+        assertEq(vaultTested.claimableDepositRequest(user1.addr), 0);
     }
 
     function test_GivenAnOwnerWithAClaimableRequestWhenClaimableDepositRequest()
@@ -28,27 +30,13 @@ contract TestClaimableDepositRequest is TestBase {
     {
         // it should return the amount of the claimable request
         // it should not revert
-        usersDealApproveAndDeposit(1); // vault should not be empty
-        closeVaults();
-        usersDealApproveAndRequestDeposit(vaultUSDC, 1, "");
-        assertOpen(vaultUSDC, 10);
-        // console.log(vaultUSDC.claimableDepositRequest(user1.addr));
-        // //assertEq(vaultUSDC.claimableDepositRequest(user1.addr),
-        // /*vaultUSDC.getClaimableAssets()*/); // TODO: fix this
-        // assertEq(vaultUSDC.claimableDepositRequest(user1.addr), 437500000);
+        usersDealApproveAndDeposit(vaultTested, 1); // vault should not be empty
+        close(vaultTested);
+        usersDealApproveAndRequestDeposit(vaultTested, 1, "");
+        assertOpen(vaultTested, 10);
+        // console.log(vaultTested.claimableDepositRequest(user1.addr));
+        // //assertEq(vaultTested.claimableDepositRequest(user1.addr),
+        // /*vaultTested.getClaimableAssets()*/); // TODO: fix this
+        // assertEq(vaultTested.claimableDepositRequest(user1.addr), 437500000);
     }
 }
-
-// TestIsCurrentEpoch.t
-// TestMaxDepositRequest.t
-// TestMaxRedeemRequest.t
-// TestMint.t
-// TestMintWithPermit.t
-// TestMintWithPermit2.t
-// TestPendingDepositRequest.t
-// TestRedeem.t
-// TestRequestRedeem.t
-// TestSharesBalanceInAsset.t
-// TestTotalPendingDeposits.t
-// TestTotalPendingRedeems.t
-// TestWithdraw.t
