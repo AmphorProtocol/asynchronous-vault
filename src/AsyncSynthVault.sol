@@ -659,7 +659,8 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
             totalSupply()
         );
 
-        lastSavedBalance = newSavedBalance - fees;
+        _lastSavedBalance = newSavedBalance - fees; 
+        lastSavedBalance = _lastSavedBalance;
         // if deposit is higher than withdraw -> transfer to owner the diff && update lastSavedBalance = newSavedBalance + diff
         // IERC20()
         uint256 _pendingRedeem = balanceOf(address(pendingSilo));
@@ -703,9 +704,12 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         emit Withdraw(_owner, _owner, _owner, assetsToWithdraw, _pendingRedeem);
         emit AsyncWithdraw(epochId, _pendingRedeem, _pendingRedeem);
 
-        epochs[epochId].totalSupplySnapshot = totalSupply();
+        uint256 _totalSupply = totalSupply();
+        epochs[epochId].totalSupplySnapshot = _totalSupply;
         epochs[epochId].totalAssetsSnapshot = 
-            lastSavedBalance + _pendingDeposit - assetsToWithdraw;
+            _lastSavedBalance + _pendingDeposit - assetsToWithdraw;
+
+        emit EpochStart(block.timestamp, _lastSavedBalance, _totalSupply);
     }
 
     /**
