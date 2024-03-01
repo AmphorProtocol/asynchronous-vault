@@ -4,7 +4,6 @@ pragma solidity 0.8.21;
 import { TestBase } from "../../../Base.t.sol";
 
 contract TestTotalPendingRedeems is TestBase {
-
     function setUp() external {
         usersDealApproveAndDeposit(1);
     }
