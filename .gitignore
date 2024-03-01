@@ -17,3 +17,11 @@ docs/
 # Node modules
 node_modules/
 node_modules
+
+<<<<<<< HEAD
+=======
+
+# Coverage
+>>>>>>> tests
+report/
+lcov.info

@@ -153,6 +153,8 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
     error ExceededMaxDepositRequest(
         address receiver, uint256 assets, uint256 maxDeposit
     );
+    error MustClaimFirst(address owner);
+
     error ReceiverFailed();
     error NotOwner();
     error NullRequest();
@@ -165,7 +167,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(IAllowanceTransfer _permit2) SyncSynthVault(_permit2) {
-        _disableInitializers();
+        // _disableInitializers(); // TODO uncomment after
     }
 
     function initialize(
@@ -203,12 +205,13 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         if (_msgSender() != owner) {
             revert NotOwner();
         }
-        if (assets == 0) {
-            revert NullRequest();
+        if (previewClaimDeposit(receiver) > 0) {
+            revert MustClaimFirst(receiver);
         }
-        if (assets > maxDepositRequest(receiver)) {
+
+        if (assets > maxDepositRequest(owner)) {
             revert ExceededMaxDepositRequest(
-                receiver, assets, maxDepositRequest(receiver)
+                receiver, assets, maxDepositRequest(owner)
             );
         }
 
@@ -260,35 +263,16 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
     }
 
     // tree todo
-    function maxDepositRequest(address receiver)
-        public
-        view
-        returns (uint256)
-    {
+    function maxDepositRequest(address) public view returns (uint256) {
         // todo maybe use previewClaimDeposit instead or claimableDepositRequest
-        uint256 lastRequestId = lastDepositRequestId[receiver];
-        uint256 lastRequestBalance =
-            epochs[lastRequestId].depositRequestBalance[receiver];
-        bool hasClaimableRequest =
-            lastRequestBalance > 0 && lastRequestId != epochId;
 
-        return vaultIsOpen || paused() || hasClaimableRequest
-            ? 0
-            : type(uint256).max;
+        return vaultIsOpen || paused() ? 0 : type(uint256).max;
     }
 
     // tree todo
     function maxRedeemRequest(address owner) public view returns (uint256) {
         // todo maybe use previewClaimRedeem instead or claimableRedeemRequest
-        uint256 lastRequestId = lastRedeemRequestId[owner];
-        uint256 lastRequestBalance =
-            epochs[lastRequestId].redeemRequestBalance[owner];
-        bool hasClaimableRequest =
-            lastRequestBalance > 0 && lastRequestId != epochId;
-
-        return vaultIsOpen || paused() || hasClaimableRequest
-            ? 0
-            : balanceOf(owner);
+        return vaultIsOpen || paused() ? 0 : balanceOf(owner);
     }
 
     // tree later
@@ -374,13 +358,13 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         if (_msgSender() != owner) {
             _spendAllowance(owner, _msgSender(), shares);
         }
-        if (shares > maxRedeemRequest(receiver)) {
-            revert ExceededMaxRedeemRequest(
-                receiver, shares, maxRedeemRequest(receiver)
-            );
+        if (previewClaimRedeem(receiver) > 0) {
+            revert MustClaimFirst(receiver);
         }
-        if (shares == 0) {
-            revert NullRequest();
+        if (shares > maxRedeemRequest(owner)) {
+            revert ExceededMaxRedeemRequest(
+                receiver, shares, maxRedeemRequest(owner)
+            );
         }
 
         _update(owner, address(pendingSilo), shares);
@@ -462,7 +446,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
     }
 
     function previewClaimRedeem(address owner) public view returns (uint256) {
-        uint256 lastRequestId = lastDepositRequestId[owner];
+        uint256 lastRequestId = lastRedeemRequestId[owner];
         uint256 shares = epochs[lastRequestId].redeemRequestBalance[owner];
         return _convertToAssets(shares, lastRequestId, Math.Rounding.Floor);
     }
@@ -515,7 +499,8 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         uint256 shares = epochs[lastRequestId].redeemRequestBalance[owner];
         epochs[lastRequestId].redeemRequestBalance[owner] = 0;
 
-        _asset.safeTransfer(receiver, assets);
+        _asset.safeTransferFrom(address(claimableSilo), address(this), assets);
+        _asset.transfer(receiver, assets);
         emit ClaimRedeem(lastRequestId, owner, receiver, assets, shares);
     }
 
@@ -693,7 +678,9 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
                 < _lastSavedBalance.mulDiv(
                     BPS_DIVIDER - _maxDrawdown, BPS_DIVIDER, Math.Rounding.Ceil
                 )
-        ) revert MaxDrawdownReached();
+        ) {
+            revert MaxDrawdownReached();
+        }
 
         // taking fees if positive yield
         uint256 fees;

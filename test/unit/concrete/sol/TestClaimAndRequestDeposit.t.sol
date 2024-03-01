@@ -12,7 +12,9 @@ contract TestDecreaseDepositRequest is TestBase {
         decreaseDepositRequest(vaultUSDC, user1, 1);
     }
 
-    function test_GivenVaultClosedAndPausedWhenDecreaseDepositRequest() external {
+    function test_GivenVaultClosedAndPausedWhenDecreaseDepositRequest()
+        external
+    {
         // it should revert with `EnforcedPause`
         usersDealApproveAndDeposit(1);
         close(vaultUSDC);
@@ -22,8 +24,11 @@ contract TestDecreaseDepositRequest is TestBase {
         decreaseDepositRequest(vaultUSDC, user1, 1);
     }
 
-    function test_GivenVaultStateOkAndAssetsTooHighWhenDecreaseDepositRequest() external {
-        // it should revert if assets is higher than the owner deposit request balance
+    function test_GivenVaultStateOkAndAssetsTooHighWhenDecreaseDepositRequest()
+        external
+    {
+        // it should revert if assets is higher than the owner deposit request
+        // balance
         usersDealApproveAndDeposit(1);
         close(vaultUSDC);
         uint256 userBalance = IERC20(vaultUSDC.asset()).balanceOf(user1.addr);
@@ -31,13 +36,19 @@ contract TestDecreaseDepositRequest is TestBase {
         decreaseDepositRequest(vaultUSDC, user1, userBalance + 1);
     }
 
-    function test_GivenVaultStateOkAndReceiverIsNotOwnerWhenDecreaseDepositRequest() external {
+    function test_GivenVaultStateOkAndReceiverIsNotOwnerWhenDecreaseDepositRequest(
+    )
+        external
+    {
         usersDealApproveAndDeposit(1);
         close(vaultUSDC);
         assertDecreaseDeposit(vaultUSDC, user2.addr);
     }
 
-    function test_GivenVaultStateOkAndReceiverIsOwnerWhenDecreaseDepositRequest() external {
+    function test_GivenVaultStateOkAndReceiverIsOwnerWhenDecreaseDepositRequest(
+    )
+        external
+    {
         // it should pass same as above
         usersDealApproveAndDeposit(1);
         close(vaultUSDC);

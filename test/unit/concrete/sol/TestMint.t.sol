@@ -1,67 +1,111 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
-import { TestBase } from "../../../Base.t.sol";
+import { TestBase, SyncSynthVault, IERC20 } from "../../../Base.t.sol";
+import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
+import { IERC20Metadata } from
+    "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
-contract TestMint {
+contract TestMintPure is TestBase {
     function test_GivenVaultClosedWhenMint() external {
         // it should revert with ERC4626ExceededMaxMint
+        usersDealApproveAndDeposit(1); // vault should not be empty
+        closeVaults();
+        mintRevert(
+            vaultUSDC,
+            user1,
+            1,
+            // SyncSynthVault.ERC4626ExceededMaxDeposit.selector
+            abi.encodeWithSelector(
+                SyncSynthVault.ERC4626ExceededMaxMint.selector, user1.addr, 1, 0
+            )
+        );
     }
 
-    function test_GivenRequiredAssetsHigherThanOwnerAllowanceToTheVaultWhenDeposit() external {
+    function test_GivenRequiredAssetsHigherThanOwnerAllowanceToTheVaultWhenDeposit(
+    )
+        external
+    {
         // it should revert with ERC20InsufficientAllowance
+        mintRevert(
+            vaultUSDC,
+            user1,
+            IERC20(vaultUSDC.asset()).allowance(user1.addr, address(vaultUSDC))
+                + 1
+        );
     }
 
-    function test_GivenRequiredAssetsHigherThanOwnerBalanceWhenDeposit() external {
+    function test_GivenRequiredAssetsHigherThanOwnerBalanceWhenDeposit()
+        external
+    {
         // it should revert with ERC20InsufficientBalance
+        mintRevert(
+            vaultUSDC,
+            user1,
+            IERC20(vaultUSDC.asset()).balanceOf(user1.addr) + 1
+        );
     }
 
     function test_GivenVaultPausedWhenMint() external {
         // it should revert with EnforcedPause
-    }
-
-    function test_GivenVaultClosedGivenVaultNotPausedWhenMint() external {
-        // it should revert with ERC4626ExceededMaxDeposit
+        pause(vaultUSDC);
+        mintRevert(vaultUSDC, user1, 1, Pausable.EnforcedPause.selector);
     }
 
     function test_GivenReceiverIsAddress0WhenMint() external {
         // it should revert with ERC20InvalidReceiver
+        usersDealApprove(1);
+        mintRevert(vaultUSDC, address0, 1);
     }
 
-    function test_GivenAmountIs0WhenMint() external {
-        // it should revert with ERC20ZeroAmount (maybe)
-    }
-
-    function test_GivenPreviewMintIsHigherThanTheAllowanceOfTheOwnerToTheVaultWhenMint() external {
+    function test_GivenPreviewMintIsHigherThanTheAllowanceOfTheOwnerToTheVaultWhenMint(
+    )
+        external
+    {
         // it should revert with ERC20InsufficientAllowance
+        mintRevert(
+            vaultUSDC,
+            user1,
+            IERC20(vaultUSDC.asset()).allowance(user1.addr, address(vaultUSDC))
+                + 1
+        );
     }
 
-    function test_GivenRequestedAmountOfSharesConvertedInAssetIsHigherThanTheBalanceOfTheOwnerWhenMint() external {
+    function test_GivenRequestedAmountOfSharesConvertedInAssetIsHigherThanTheBalanceOfTheOwnerWhenMint(
+    )
+        external
+    {
         // it should revert with ERC20InsufficientBalance
+        mintRevert(
+            vaultUSDC,
+            user1,
+            IERC20(vaultUSDC.asset()).balanceOf(user1.addr) + 1
+        );
     }
 
     function test_GivenVaultOpenWhenMint() external {
-        // it should decrease the underlying balance of the owner by convertToAsset(shares)
-        // it should emit a Deposit event
-        // it should emit TransferEvent of asset from the owner to the vault
-        // it should emit TransferEvent of shares from the vault to the receiver
-        // it should increase the underlying balance of the vault by convertToAsset(shares)
-        // it should increase the balance of shares of the receiver by convertToAsset(shares)
-        // it should return the same value as the one returned by previewMint
-        // it should return the same value as the assets taken from the owner
-        // it should increase the totalsupply by the specified shares
-        // it should decrease the underlying balance of the owner by the amount returned by previewMint to the owner
+        usersDealApprove(1);
+        uint256 decimals = IERC20Metadata(vaultUSDC.asset()).decimals();
+        assertMint(vaultUSDC, user1.addr, user1.addr, 1 ** 10 ** decimals);
     }
 
     function test_GivenReceiverNotEqualOwnerWhenMint() external {
         // it should pass like above
+        usersDealApprove(1);
+        uint256 decimals = IERC20Metadata(vaultUSDC.asset()).decimals();
+        assertMint(vaultUSDC, user1.addr, user2.addr, 1 ** 10 ** decimals);
     }
 
     function test_GivenVaultEmptyWhenMint() external {
         // it should pass like above
+        usersDealApprove(1);
+        uint256 decimals = IERC20Metadata(vaultUSDC.asset()).decimals();
+        assertMint(vaultUSDC, user1.addr, user1.addr, 1 ** 10 ** decimals);
     }
 
     function test_GivenDepositAmountIs0WhenMint() external {
         // it should pass like above
+        usersDealApprove(1);
+        assertMint(vaultUSDC, user1.addr, user1.addr, 0);
     }
 }

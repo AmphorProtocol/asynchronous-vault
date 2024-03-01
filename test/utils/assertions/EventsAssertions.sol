@@ -53,9 +53,9 @@ abstract contract EventsAssertions is Test, Constants, Events {
 
     function assertWithdrawEvent(
         IERC4626 vault,
-        address sender,
         address receiver,
         address owner,
+        address sender,
         uint256 assets,
         uint256 shares
     )

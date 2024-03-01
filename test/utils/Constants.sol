@@ -23,7 +23,7 @@ abstract contract Constants is Test {
     ERC20 immutable STETH = ERC20(vm.envAddress("STETH_MAINNET"));
     ERC20 immutable WBTC = ERC20(vm.envAddress("WBTC_MAINNET"));
 
-    uint8 decimalsOffset = 12;
+    uint8 decimalsOffset = 0;
 
     //ERC20 whales
     address immutable USDC_WHALE = vm.envAddress("USDC_WHALE");
@@ -107,19 +107,29 @@ abstract contract Constants is Test {
         Options memory deploy;
         deploy.constructorData = abi.encode(permit2);
 
-        UpgradeableBeacon beacon = UpgradeableBeacon(
-            Upgrades.deployBeacon("AsyncSynthVault.sol", amphorLabs, deploy)
+        // UpgradeableBeacon beacon = UpgradeableBeacon(
+        //     Upgrades.deployBeacon("AsyncSynthVault.sol", amphorLabs, deploy)
+        // );
+
+        // vaultUSDC = _proxyDeploy(
+        //     beacon, amphorLabs, USDC, vaultNameUSDC, vaultSymbolUSDC
+        // );
+        vm.startPrank(amphorLabs);
+        vaultUSDC = new AsyncSynthVault(permit2);
+        vaultUSDC.initialize(
+            fees, amphorLabs, USDC, vaultNameUSDC, vaultSymbolUSDC
         );
 
-        vaultUSDC = _proxyDeploy(
-            beacon, amphorLabs, USDC, vaultNameUSDC, vaultSymbolUSDC
-        );
         vm.label(address(vaultUSDC), "vaultUSDC");
         vm.label(address(vaultUSDC.pendingSilo()), "vaultUSDC.pendingSilo");
         vm.label(address(vaultUSDC.claimableSilo()), "vaultUSDC.claimableSilo");
 
-        vaultWSTETH = _proxyDeploy(
-            beacon, amphorLabs, WSTETH, vaultNameWSTETH, vaultSymbolWSTETH
+        // vaultWSTETH = _proxyDeploy(
+        //     beacon, amphorLabs, WSTETH, vaultNameWSTETH, vaultSymbolWSTETH
+        // );
+        vaultWSTETH = new AsyncSynthVault(permit2);
+        vaultWSTETH.initialize(
+            fees, amphorLabs, WSTETH, vaultNameWSTETH, vaultSymbolWSTETH
         );
         vm.label(address(vaultWSTETH), "vaultWSTETH");
         vm.label(address(vaultWSTETH.pendingSilo()), "vaultWSTETH.pendingSilo");
@@ -127,36 +137,41 @@ abstract contract Constants is Test {
             address(vaultWSTETH.claimableSilo()), "vaultWSTETH.claimableSilo"
         );
 
-        vaultWBTC = _proxyDeploy(
-            beacon, amphorLabs, WBTC, vaultNameWBTC, vaultSymbolWBTC
+        // vaultWBTC = _proxyDeploy(
+        //     beacon, amphorLabs, WBTC, vaultNameWBTC, vaultSymbolWBTC
+        // );
+        vaultWBTC = new AsyncSynthVault(permit2);
+        vaultWBTC.initialize(
+            fees, amphorLabs, WBTC, vaultNameWBTC, vaultSymbolWBTC
         );
         vm.label(address(vaultWBTC), "vaultWBTC");
         vm.label(address(vaultWBTC.pendingSilo()), "vaultWBTC.pendingSilo");
         vm.label(address(vaultWBTC.claimableSilo()), "vaultWBTC.claimableSilo");
+        vm.stopPrank();
     }
 
-    function _proxyDeploy(
-        UpgradeableBeacon beacon,
-        address owner,
-        ERC20 underlying,
-        string memory vaultName,
-        string memory vaultSymbol
-    )
-        internal
-        returns (AsyncSynthVault)
-    {
-        BeaconProxy proxy = BeaconProxy(
-            payable(
-                Upgrades.deployBeaconProxy(
-                    address(beacon),
-                    abi.encodeCall(
-                        AsyncSynthVault.initialize,
-                        (fees, owner, underlying, vaultName, vaultSymbol)
-                    )
-                )
-            )
-        );
+    // function _proxyDeploy(
+    //     UpgradeableBeacon beacon,
+    //     address owner,
+    //     ERC20 underlying,
+    //     string memory vaultName,
+    //     string memory vaultSymbol
+    // )
+    //     internal
+    //     returns (AsyncSynthVault)
+    // {
+    //     BeaconProxy proxy = BeaconProxy(
+    //         payable(
+    //             Upgrades.deployBeaconProxy(
+    //                 address(beacon),
+    //                 abi.encodeCall(
+    //                     AsyncSynthVault.initialize,
+    //                     (fees, owner, underlying, vaultName, vaultSymbol)
+    //                 )
+    //             )
+    //         )
+    //     );
 
-        return AsyncSynthVault(address(proxy));
-    }
+    //     return AsyncSynthVault(address(proxy));
+    // }
 }
