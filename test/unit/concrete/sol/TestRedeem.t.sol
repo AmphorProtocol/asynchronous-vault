@@ -18,10 +18,10 @@ import { IERC20Errors } from
 contract TestRedeem is TestBase {
     function test_GivenVaultClosedWhenRedeem() external {
         // it should revert with ERC4626ExceededMaxRedeem
-        usersDealApproveAndDeposit(1); // vault should not be empty
-        closeVaults();
+        usersDealApproveAndDeposit(vaultTested, 1); // vault should not be empty
+        close(vaultTested);
         redeemRevert(
-            vaultUSDC,
+            vaultTested,
             user1,
             1,
             abi.encodeWithSelector(
@@ -38,7 +38,7 @@ contract TestRedeem is TestBase {
     {
         // it should revert
         redeemRevert(
-            vaultUSDC,
+            vaultTested,
             user1,
             1,
             abi.encodeWithSelector(
@@ -52,18 +52,18 @@ contract TestRedeem is TestBase {
 
     function test_GivenVaultPausedWhenRedeem() external {
         // it should revert with EnforcedPause
-        pause(vaultUSDC);
+        pause(vaultTested);
         redeemRevert(
-            vaultUSDC, user1, 1, PausableUpgradeable.EnforcedPause.selector
+            vaultTested, user1, 1, PausableUpgradeable.EnforcedPause.selector
         );
     }
 
     function test_GivenVaultClosedGivenVaultNotPausedWhenRedeem() external {
         // it should revert with ERC4626ExceededMaxRedeem
-        usersDealApproveAndDeposit(1); // vault should not be empty
-        closeVaults();
+        usersDealApproveAndDeposit(vaultTested, 1); // vault should not be empty
+        close(vaultTested);
         redeemRevert(
-            vaultUSDC,
+            vaultTested,
             user1,
             1,
             abi.encodeWithSelector(
@@ -77,9 +77,9 @@ contract TestRedeem is TestBase {
 
     function test_GivenReceiverIsAddress0WhenRedeem() external {
         // it should revert with ERC20InvalidReceiver
-        usersDealApproveAndDeposit(1);
+        usersDealApproveAndDeposit(vaultTested, 1);
         redeemRevert(
-            vaultUSDC,
+            vaultTested,
             address0,
             1,
             abi.encodeWithSelector(
@@ -93,16 +93,17 @@ contract TestRedeem is TestBase {
         external
     {
         // it should revert with ERC4626ExceededMaxRedeem
-        usersDealApproveAndDeposit(1);
+        usersDealApproveAndDeposit(vaultTested, 1);
         redeemRevert(
-            vaultUSDC,
+            vaultTested,
             user1,
-            vaultUSDC.convertToAssets(vaultUSDC.balanceOf(user1.addr)) + 1,
+            vaultTested.convertToAssets(vaultTested.balanceOf(user1.addr)) + 1,
             abi.encodeWithSelector(
                 SyncSynthVault.ERC4626ExceededMaxRedeem.selector,
                 user1.addr,
-                vaultUSDC.convertToAssets(vaultUSDC.balanceOf(user1.addr)) + 1,
-                vaultUSDC.convertToAssets(vaultUSDC.balanceOf(user1.addr))
+                vaultTested.convertToAssets(vaultTested.balanceOf(user1.addr))
+                    + 1,
+                vaultTested.convertToAssets(vaultTested.balanceOf(user1.addr))
             )
         );
     }
@@ -112,10 +113,10 @@ contract TestRedeem is TestBase {
         external
     {
         // it should revert with ERC20InsufficientAllowance
-        usersDealApproveAndDeposit(1);
+        usersDealApproveAndDeposit(vaultTested, 1);
 
         redeemRevert(
-            vaultUSDC,
+            vaultTested,
             user1,
             user2,
             1,
@@ -129,20 +130,20 @@ contract TestRedeem is TestBase {
     }
 
     function test_WhenRedeemPass() external {
-        usersDealApproveAndDeposit(1);
-        assertRedeem(vaultUSDC, user1.addr, user1.addr, user1.addr, 1);
+        usersDealApproveAndDeposit(vaultTested, 1);
+        assertRedeem(vaultTested, user1.addr, user1.addr, user1.addr, 1);
     }
 
     function test_GivenReceiverNotEqualOwnerWhenRedeem() external {
         // it should pass redeem assert
-        usersDealApproveAndDeposit(1);
-        assertRedeem(vaultUSDC, user1.addr, user1.addr, user1.addr, 1);
+        usersDealApproveAndDeposit(vaultTested, 1);
+        assertRedeem(vaultTested, user1.addr, user1.addr, user1.addr, 1);
     }
 
     function test_GivenRedeemAmountIs0WhenRedeem() external {
         // it should pass redeem assert
-        usersDealApproveAndDeposit(1);
-        assertRedeem(vaultUSDC, user1.addr, user1.addr, user1.addr, 0);
+        usersDealApproveAndDeposit(vaultTested, 1);
+        assertRedeem(vaultTested, user1.addr, user1.addr, user1.addr, 0);
     }
 
     function test_GivenSenderNotOwnerAndAllowanceOfSenderForOwnerIsHigherThanRedeemAmountWhenRedeem(
@@ -150,11 +151,11 @@ contract TestRedeem is TestBase {
         external
     {
         // it should pass redeem assert
-        usersDealApproveAndDeposit(2);
-        uint256 shares = vaultUSDC.previewRedeem(1);
+        usersDealApproveAndDeposit(vaultTested, 2);
+        uint256 shares = vaultTested.previewRedeem(1);
         vm.startPrank(user2.addr);
-        vaultUSDC.approve(user1.addr, shares);
+        vaultTested.approve(user1.addr, shares);
         vm.stopPrank();
-        assertRedeem(vaultUSDC, user1.addr, user2.addr, user1.addr, 1);
+        assertRedeem(vaultTested, user1.addr, user2.addr, user1.addr, 1);
     }
 }

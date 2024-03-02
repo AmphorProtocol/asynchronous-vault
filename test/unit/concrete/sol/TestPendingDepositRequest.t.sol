@@ -10,7 +10,7 @@ contract TestPendingDepositRequest is TestBase {
     {
         // it should return 0
         assertEq(
-            vaultUSDC.pendingDepositRequest(user1.addr),
+            vaultTested.pendingDepositRequest(user1.addr),
             0,
             "Invalid pending deposit request"
         );
@@ -21,11 +21,11 @@ contract TestPendingDepositRequest is TestBase {
     {
         // it should return the amount of pending deposit for his last deposit
         // request when pendingDepositRequest
-        usersDealApproveAndDeposit(1);
-        close(vaultUSDC);
+        usersDealApproveAndDeposit(vaultTested, 1);
+        close(vaultTested);
         uint256 amount = 101;
         assertRequestDeposit(
-            vaultUSDC, user1.addr, user1.addr, user1.addr, amount, ""
+            vaultTested, user1.addr, user1.addr, user1.addr, amount, ""
         );
     }
 }

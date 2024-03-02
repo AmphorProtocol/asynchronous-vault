@@ -10,56 +10,56 @@ contract TestRequestRedeem is TestBase {
     function test_GivenVaultOpenWhenRequestRedeem() external {
         // it should revert VaultIsOpen
         vm.expectRevert(SyncSynthVault.VaultIsOpen.selector);
-        vaultUSDC.requestRedeem(1, address(this), address(this), "");
+        vaultTested.requestRedeem(1, address(this), address(this), "");
     }
 
     function test_GivenVaultClosedAndPausedWhenRequestRedeem() external {
         // it should revert EnforcedPause
-        usersDealApproveAndDeposit(1);
-        assertClose(vaultUSDC);
+        usersDealApproveAndDeposit(vaultTested, 1);
+        assertClose(vaultTested);
 
-        vm.startPrank(vaultUSDC.owner());
-        vaultUSDC.pause();
+        vm.startPrank(vaultTested.owner());
+        vaultTested.pause();
         vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
-        vaultUSDC.requestRedeem(1, address(this), address(this), "");
+        vaultTested.requestRedeem(1, address(this), address(this), "");
     }
 
     function test_GivenVaultOpenAndPausedWhenRequestRedeem() external {
         // it should revert EnforcedPause
-        usersDealApproveAndDeposit(1);
-        vm.prank(vaultUSDC.owner());
-        vaultUSDC.pause();
+        usersDealApproveAndDeposit(vaultTested, 1);
+        vm.prank(vaultTested.owner());
+        vaultTested.pause();
         vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
-        vaultUSDC.requestRedeem(1, address(this), address(this), "");
+        vaultTested.requestRedeem(1, address(this), address(this), "");
     }
 
     function test_GivenMsgSenderNotEqualOwnerWhenRequestRedeem() external {
-        usersDealApproveAndDeposit(2);
+        usersDealApproveAndDeposit(vaultTested, 2);
         vm.startPrank(user2.addr);
-        IERC20(vaultUSDC.asset()).approve(user1.addr, type(uint256).max);
+        IERC20(vaultTested.asset()).approve(user1.addr, type(uint256).max);
         vm.stopPrank();
-        assertClose(vaultUSDC);
+        assertClose(vaultTested);
         vm.prank(user2.addr);
-        vaultUSDC.approve(user1.addr, type(uint256).max);
+        vaultTested.approve(user1.addr, type(uint256).max);
         vm.prank(user1.addr);
-        vaultUSDC.requestRedeem(1, user1.addr, user2.addr, "");
-        assertOpen(vaultUSDC, 0);
-        assertClose(vaultUSDC);
-        usersDealApprove(1);
+        vaultTested.requestRedeem(1, user1.addr, user2.addr, "");
+        assertOpen(vaultTested, 0);
+        assertClose(vaultTested);
+        usersDealApprove(vaultTested, 1);
     }
 
     function test_GivenReceiverHasClaimableBalanceWhenRequestRedeem()
         external
     {
         // it should revert with maxDepositRequest
-        usersDealApproveAndDeposit(1);
+        usersDealApproveAndDeposit(vaultTested, 1);
 
-        assertClose(vaultUSDC);
+        assertClose(vaultTested);
         vm.prank(user1.addr);
-        vaultUSDC.requestRedeem(10, user1.addr, user1.addr, "");
-        assertOpen(vaultUSDC, 0);
-        assertClose(vaultUSDC);
-        usersDealApprove(1);
+        vaultTested.requestRedeem(10, user1.addr, user1.addr, "");
+        assertOpen(vaultTested, 0);
+        assertClose(vaultTested);
+        usersDealApprove(vaultTested, 1);
         vm.startPrank(user1.addr);
 
         vm.expectRevert(
@@ -67,14 +67,14 @@ contract TestRequestRedeem is TestBase {
                 AsyncSynthVault.MustClaimFirst.selector, user1.addr
             )
         );
-        vaultUSDC.requestRedeem(5, user1.addr, user1.addr, "");
+        vaultTested.requestRedeem(5, user1.addr, user1.addr, "");
     }
 
     function test_WhenRequestRedeemSucceed() external {
-        usersDealApproveAndDeposit(1);
-        assertClose(vaultUSDC);
+        usersDealApproveAndDeposit(vaultTested, 1);
+        assertClose(vaultTested);
         assertRequestRedeem(
-            vaultUSDC, user1.addr, user1.addr, user1.addr, 56, ""
+            vaultTested, user1.addr, user1.addr, user1.addr, 56, ""
         );
     }
 
@@ -82,16 +82,16 @@ contract TestRequestRedeem is TestBase {
         external
     {
         // it should succeed
-        usersDealApproveAndDeposit(1);
-        assertClose(vaultUSDC);
+        usersDealApproveAndDeposit(vaultTested, 1);
+        assertClose(vaultTested);
         assertRequestRedeem(
-            vaultUSDC, user1.addr, user1.addr, user1.addr, 1, ""
+            vaultTested, user1.addr, user1.addr, user1.addr, 1, ""
         );
-        assertOpen(vaultUSDC, 0);
-        assertClose(vaultUSDC);
-        usersDealApprove(4);
+        assertOpen(vaultTested, 0);
+        assertClose(vaultTested);
+        usersDealApprove(vaultTested, 4);
         assertRequestRedeem(
-            vaultUSDC, user1.addr, user1.addr, user4.addr, 1, ""
+            vaultTested, user1.addr, user1.addr, user4.addr, 1, ""
         );
     }
 
@@ -99,11 +99,11 @@ contract TestRequestRedeem is TestBase {
         external
     {
         // it should revert with ERC20InsufficientAllowance
-        usersDealApproveAndDeposit(1);
-        assertClose(vaultUSDC);
+        usersDealApproveAndDeposit(vaultTested, 1);
+        assertClose(vaultTested);
         vm.startPrank(user2.addr);
         vm.expectRevert();
-        vaultUSDC.requestRedeem(1, user1.addr, user2.addr, "");
+        vaultTested.requestRedeem(1, user1.addr, user2.addr, "");
         vm.stopPrank();
     }
 
@@ -111,11 +111,11 @@ contract TestRequestRedeem is TestBase {
         external
     {
         // it should revert with ERC20InsufficientBalance
-        usersDealApproveAndDeposit(1);
-        assertClose(vaultUSDC);
+        usersDealApproveAndDeposit(vaultTested, 1);
+        assertClose(vaultTested);
         vm.startPrank(user2.addr);
         vm.expectRevert();
-        vaultUSDC.requestRedeem(100, user2.addr, user2.addr, "");
+        vaultTested.requestRedeem(100, user2.addr, user2.addr, "");
     }
 
     function test_GivenDataParamSubmittedAndInvalidSelectorWhenRequestRedeem()
@@ -123,10 +123,10 @@ contract TestRequestRedeem is TestBase {
     {
         // it should revert with ReceiverFailed
         // it todo check ERC7540Receiver (and ReceiverFailed)
-        usersDealApproveAndDeposit(1);
-        assertClose(vaultUSDC);
+        usersDealApproveAndDeposit(vaultTested, 1);
+        assertClose(vaultTested);
         vm.startPrank(user1.addr);
         vm.expectRevert();
-        vaultUSDC.requestRedeem(1, user1.addr, user1.addr, "0x1234");
+        vaultTested.requestRedeem(1, user1.addr, user1.addr, "0x1234");
     }
 }

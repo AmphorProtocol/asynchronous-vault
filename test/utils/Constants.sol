@@ -11,6 +11,7 @@ import { UpgradeableBeacon } from
     "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 import { BeaconProxy } from
     "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
+import "forge-std/console.sol"; //todo remove
 
 abstract contract Constants is Test {
     // ERC20 tokens
@@ -35,6 +36,10 @@ abstract contract Constants is Test {
 
     // Fees
     uint16 fees = uint16(vm.envUint("INITIAL_FEES_AMOUNT"));
+
+    // Vault tested
+    string vaultTestedName = vm.envString("VAULT_TESTED");
+    AsyncSynthVault vaultTested;
 
     // USDC vault
     string vaultNameUSDC = vm.envString("SYNTHETIC_USDC_V1_NAME");
@@ -148,6 +153,20 @@ abstract contract Constants is Test {
         vm.label(address(vaultWBTC.pendingSilo()), "vaultWBTC.pendingSilo");
         vm.label(address(vaultWBTC.claimableSilo()), "vaultWBTC.claimableSilo");
         vm.stopPrank();
+        if (
+            keccak256(abi.encodePacked(vaultTestedName))
+                == keccak256(abi.encodePacked("WSTETH"))
+        ) {
+            vaultTested = vaultWSTETH;
+        } else if (
+            keccak256(abi.encodePacked(vm.envString("VAULT_TESTED")))
+                == keccak256(abi.encodePacked("WBTC"))
+        ) {
+            vaultTested = vaultWBTC;
+        } else {
+            console.log("vaultTestedName: ", vaultTestedName);
+            vaultTested = vaultUSDC;
+        }
     }
 
     // function _proxyDeploy(

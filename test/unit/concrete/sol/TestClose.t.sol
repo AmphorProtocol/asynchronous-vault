@@ -8,36 +8,36 @@ import "forge-std/console.sol"; //todo remove
 contract TestClose is TestBase {
     function test_GivenVaultIsClosedWhenClose() external {
         // it should revert with VaultIsOpen
-        usersDealApproveAndDeposit(1);
-        address owner = vaultUSDC.owner();
+        usersDealApproveAndDeposit(vaultTested, 1);
+        address owner = vaultTested.owner();
         vm.startPrank(owner);
-        vaultUSDC.close();
+        vaultTested.close();
         vm.expectRevert(SyncSynthVault.VaultIsLocked.selector);
-        vaultUSDC.close();
+        vaultTested.close();
         vm.stopPrank();
     }
 
     function test_GivenMsgSenderIsNotOwnerWhenClose() external {
-        usersDealApproveAndDeposit(1);
+        usersDealApproveAndDeposit(vaultTested, 1);
         vm.expectRevert(
             abi.encodeWithSignature(
                 "OwnableUnauthorizedAccount(address)", address(this)
             )
         );
-        vaultUSDC.close();
+        vaultTested.close();
     }
 
     function test_GivenTotalAssetIs0WhenClose() external {
         // it should revert with MaxDrawdownReached
-        address owner = vaultUSDC.owner();
+        address owner = vaultTested.owner();
         vm.startPrank(owner);
         vm.expectRevert(SyncSynthVault.VaultIsEmpty.selector);
-        vaultUSDC.close();
+        vaultTested.close();
         vm.stopPrank();
     }
 
     function test_WhenCloseSucceed() external {
-        usersDealApproveAndDeposit(1);
-        assertClose(vaultUSDC);
+        usersDealApproveAndDeposit(vaultTested, 1);
+        assertClose(vaultTested);
     }
 }
