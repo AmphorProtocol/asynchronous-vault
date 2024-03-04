@@ -36,6 +36,8 @@ contract TestClaimableDepositBalanceInAsset is TestBase {
         );
     }
 
+
+
     function test_claimableDepositBalanceInAssetEmptyVault() external {
         assertEq(vaultUSDC.claimableDepositBalanceInAsset(user1.addr), 0);
     }

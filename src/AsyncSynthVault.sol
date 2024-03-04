@@ -262,7 +262,6 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
 
     function maxDepositRequest(address) public view returns (uint256) {
         // todo maybe use previewClaimDeposit instead or claimableDepositRequest
-
         return vaultIsOpen || paused() ? 0 : type(uint256).max;
     }
 
