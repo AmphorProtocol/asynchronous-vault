@@ -8,11 +8,11 @@ import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
 contract TestDeposit is TestBase {
     function test_GivenVaultClosedWhenDeposit() external {
         // it should revert with ERC4626ExceededMaxDeposit
-        usersDealApproveAndDeposit(1); // vault should not be empty
-        closeVaults();
+        usersDealApproveAndDeposit(vaultTested, 1); // vault should not be empty
+        close(vaultTested);
         // todo
         depositRevert(
-            vaultUSDC,
+            vaultTested,
             user1,
             1,
             abi.encodeWithSelector(
@@ -29,66 +29,67 @@ contract TestDeposit is TestBase {
     {
         // it should revert with ERC20InsufficientAllowance
         depositRevert(
-            vaultUSDC,
+            vaultTested,
             user1,
-            IERC20(vaultUSDC.asset()).allowance(user1.addr, address(vaultUSDC))
-                + 1
+            IERC20(vaultTested.asset()).allowance(
+                user1.addr, address(vaultTested)
+            ) + 1
         );
     }
 
     function test_GivenAmountHigherThanOwnerBalanceWhenDeposit() external {
-        usersDealApprove(1); // vault should not be empty
+        usersDealApprove(vaultTested, 1); // vault should not be empty
         depositRevert(
-            vaultUSDC,
+            vaultTested,
             user1,
-            IERC20(vaultUSDC.asset()).balanceOf(user1.addr) + 1
+            IERC20(vaultTested.asset()).balanceOf(user1.addr) + 1
         );
     }
 
     function test_GivenVaultOpenGivenVaultPausedWhenDeposit() external {
         // it should revert with EnforcedPause
-        pause(vaultUSDC);
-        depositRevert(vaultUSDC, user1, Pausable.EnforcedPause.selector);
+        pause(vaultTested);
+        depositRevert(vaultTested, user1, Pausable.EnforcedPause.selector);
     }
 
     function test_GivenVaultClosedGivenPausedWhenDeposit() external {
         // it should revert with ERC4626ExceededMaxDeposit
-        usersDealApproveAndDeposit(1); // vault should not be empty
-        closeVaults();
-        pause(vaultUSDC);
-        depositRevert(vaultUSDC, user1, Pausable.EnforcedPause.selector);
+        usersDealApproveAndDeposit(vaultTested, 1); // vault should not be empty
+        close(vaultTested);
+        pause(vaultTested);
+        depositRevert(vaultTested, user1, Pausable.EnforcedPause.selector);
     }
 
     function test_GivenReceiverIsAddress0WhenDeposit() external {
         // it should revert with ERC20InvalidReceiver
-        usersDealApprove(1);
-        depositRevert(vaultUSDC, address0, 1);
+        usersDealApprove(vaultTested, 1);
+        depositRevert(vaultTested, address0, 1);
     }
 
     function test_GivenConditionsAreMetWhenDeposit() external {
-        usersDealApprove(1);
-        assertDeposit(vaultUSDC, user1.addr, user1.addr, 1);
+        usersDealApprove(vaultTested, 1);
+        assertDeposit(vaultTested, user1.addr, user1.addr, 1);
     }
 
     function test_GivenVaultOpenGivenReceiverNotEqualOwnerWhenDeposit()
         external
     {
         // it should pass the like as above
-        usersDealApprove(1);
-        assertDeposit(vaultUSDC, user1.addr, user1.addr, 1);
+        usersDealApprove(vaultTested, 1);
+        assertDeposit(vaultTested, user1.addr, user1.addr, 1);
     }
 
     function test_GivenVaultOpenGivenVaultEmptyWhenDeposit() external {
         // it should pass the like as above
-        usersDealApprove(1);
-        assertDeposit(vaultUSDC, user1.addr, user1.addr, 1);
+        usersDealApprove(vaultTested, 1);
+        assertDeposit(vaultTested, user1.addr, user1.addr, 1);
     }
 
     function test_GivenVaultOpenGivenDepositAmountEqual0WhenDeposit()
         external
     {
         // it should pass the like as above
-        usersDealApprove(1);
-        assertDeposit(vaultUSDC, user1.addr, user1.addr, 1);
+        usersDealApprove(vaultTested, 1);
+        assertDeposit(vaultTested, user1.addr, user1.addr, 1);
     }
 }

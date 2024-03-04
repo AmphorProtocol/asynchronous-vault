@@ -9,12 +9,12 @@ contract TestEpochId is TestBase {
     {
         // it should not revert
         // it should returns true
-        usersDealApproveAndDeposit(1);
+        usersDealApproveAndDeposit(vaultTested, 1);
         for (uint256 i = 1; i < 11; i++) {
-            close(vaultUSDC);
-            uint256 epochId = vaultUSDC.epochId();
+            close(vaultTested);
+            uint256 epochId = vaultTested.epochId();
             assertEq(epochId, i, "isCurrentEpoch");
-            assertOpen(vaultUSDC, 0);
+            assertOpen(vaultTested, 0);
         }
     }
 }

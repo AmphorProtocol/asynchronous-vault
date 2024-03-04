@@ -64,18 +64,6 @@ abstract contract Assertions is EventsAssertions {
     )
         public
     {
-        // it should decrease underlying balance of the owner by n
-        // it should emit a Deposit event
-        // it should increase the balance of shares of the receiver by
-        // previewDeposit(assets) returned value
-        // it should return the same value as the minted shares amount
-        // it should return the same value as the increase of receiver shares
-        // balance
-        // it should increase the total supply of shares by the
-        // previewDeposit(assetsAmount) returned value
-        // it should return the same value as the one returned by
-        // previewDeposit(assets)
-
         // assets data before deposit
         AssetsData memory assetsBefore =
             getAssetsData(vault, owner, owner, receiver);
@@ -155,10 +143,6 @@ abstract contract Assertions is EventsAssertions {
         SharesData memory sharesBefore =
             getSharesData(vault, owner, owner, receiver);
 
-        // shares value in assets before deposit
-        SharesValueData memory sharesValueBefore =
-            getSharesValueData(vault, owner, owner, receiver);
-
         // expected assets after deposit
         uint256 previewedAssets = vault.previewMint(shares);
 
@@ -201,17 +185,6 @@ abstract contract Assertions is EventsAssertions {
         if (owner != receiver) {
             assertAssetBalance(vault, receiver, assetsBefore.receiver);
         }
-
-        uint256 assetsValue = vault.convertToAssets(vault.balanceOf(owner));
-        console.log("vault.balanceOf(owner)", vault.balanceOf(owner));
-        console.log("assetsValue", assetsValue);
-        console.log("assetsBefore.owner", assetsBefore.owner);
-        console.log("mintReturn", mintReturn);
-        console.log("sharesValueBefore.receiver", sharesValueBefore.receiver);
-        // assertion on shares value in assets
-        // assertSharesValueInAssets(
-        //     vault, receiver, sharesValueBefore.receiver + mintReturn
-        // );
     }
 
     function assertWithdraw(
@@ -246,7 +219,7 @@ abstract contract Assertions is EventsAssertions {
         ); // transfer from owner to vault of its assets
             // from vault to receiver of its shares
         assertWithdrawEvent(
-            vault, sender, receiver, owner, assets, previewedShares
+            vault, receiver, owner, sender, assets, previewedShares
         );
 
         // mint //
@@ -577,8 +550,8 @@ abstract contract Assertions is EventsAssertions {
 
         assertWithdrawEvent(
             vault,
-            address(vault.pendingSilo()),
             address(vault.claimableSilo()),
+            address(vault.pendingSilo()),
             address(vault.pendingSilo()),
             expectedAssetsToRedeem,
             stateBefore.pendingRedeem
@@ -632,6 +605,67 @@ abstract contract Assertions is EventsAssertions {
             vault,
             assetsBeforeExecReq + stateBefore.pendingDeposit
                 - expectedAssetsToRedeem
+        );
+    }
+
+    function assertClaimDeposit(
+        AsyncSynthVault vault,
+        address owner,
+        address receiver,
+        uint256 assetsDeposited
+    )
+        public
+    {
+        // it should revert with ERC4626ExceededMaxClaim
+        SharesData memory sharesBefore =
+            getSharesData(vault, owner, owner, receiver);
+        uint256 previewedShares = vault.previewClaimDeposit(owner);
+        vm.prank(owner);
+        vault.claimDeposit(receiver);
+
+        uint256 assetsToGetIfRedeem = vault.previewRedeem(
+            vault.balanceOf(receiver) - sharesBefore.receiver
+        );
+
+        assertSharesBalance(
+            vault, receiver, sharesBefore.receiver + previewedShares
+        );
+        assertApproxEqAbs(
+            assetsToGetIfRedeem,
+            assetsDeposited,
+            1,
+            "Claimed shares in assets is not equal to deposited assets"
+        );
+    }
+
+    function assertClaimRedeem(
+        AsyncSynthVault vault,
+        address owner,
+        address receiver,
+        uint256 sharesRedeemed
+    )
+        public
+    {
+        // it should revert with ERC4626ExceededMaxClaim
+        AssetsData memory assetsBefore =
+            getAssetsData(vault, owner, owner, receiver);
+        uint256 previewedAssets = vault.previewClaimRedeem(owner);
+        console.log("previewedAssets", previewedAssets);
+        vm.prank(owner);
+        vault.claimRedeem(receiver);
+
+        uint256 sharesToGetIfDeposit = vault.previewDeposit(
+            IERC20(vault.asset()).balanceOf(receiver) - assetsBefore.receiver
+        );
+
+        assertAssetBalance(
+            vault, receiver, assetsBefore.receiver + previewedAssets
+        );
+        assertApproxEqAbs(
+            sharesToGetIfDeposit,
+            sharesRedeemed,
+            1,
+            "Claimed assets back in shares are not equal to redeemed shares"
         );
     }
 
@@ -714,8 +748,10 @@ abstract contract Assertions is EventsAssertions {
         );
         address owner = vault.owner();
         deal(owner, type(uint256).max);
+        _dealAsset(vault.asset(), owner, toSendBack);
 
-        vm.prank(owner);
+        vm.startPrank(owner);
+        IERC20(vault.asset()).approve(address(vault), type(uint256).max);
         vault.open(toSendBack);
     }
 

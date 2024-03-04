@@ -9,10 +9,10 @@ import { IERC20Metadata } from
 contract TestMintPure is TestBase {
     function test_GivenVaultClosedWhenMint() external {
         // it should revert with ERC4626ExceededMaxMint
-        usersDealApproveAndDeposit(1); // vault should not be empty
-        closeVaults();
+        usersDealApproveAndDeposit(vaultTested, 1); // vault should not be empty
+        close(vaultTested);
         mintRevert(
-            vaultUSDC,
+            vaultTested,
             user1,
             1,
             // SyncSynthVault.ERC4626ExceededMaxDeposit.selector
@@ -28,10 +28,11 @@ contract TestMintPure is TestBase {
     {
         // it should revert with ERC20InsufficientAllowance
         mintRevert(
-            vaultUSDC,
+            vaultTested,
             user1,
-            IERC20(vaultUSDC.asset()).allowance(user1.addr, address(vaultUSDC))
-                + 1
+            IERC20(vaultTested.asset()).allowance(
+                user1.addr, address(vaultTested)
+            ) + 1
         );
     }
 
@@ -40,22 +41,22 @@ contract TestMintPure is TestBase {
     {
         // it should revert with ERC20InsufficientBalance
         mintRevert(
-            vaultUSDC,
+            vaultTested,
             user1,
-            IERC20(vaultUSDC.asset()).balanceOf(user1.addr) + 1
+            IERC20(vaultTested.asset()).balanceOf(user1.addr) + 1
         );
     }
 
     function test_GivenVaultPausedWhenMint() external {
         // it should revert with EnforcedPause
-        pause(vaultUSDC);
-        mintRevert(vaultUSDC, user1, 1, Pausable.EnforcedPause.selector);
+        pause(vaultTested);
+        mintRevert(vaultTested, user1, 1, Pausable.EnforcedPause.selector);
     }
 
     function test_GivenReceiverIsAddress0WhenMint() external {
         // it should revert with ERC20InvalidReceiver
-        usersDealApprove(1);
-        mintRevert(vaultUSDC, address0, 1);
+        usersDealApprove(vaultTested, 1);
+        mintRevert(vaultTested, address0, 1);
     }
 
     function test_GivenPreviewMintIsHigherThanTheAllowanceOfTheOwnerToTheVaultWhenMint(
@@ -64,10 +65,11 @@ contract TestMintPure is TestBase {
     {
         // it should revert with ERC20InsufficientAllowance
         mintRevert(
-            vaultUSDC,
+            vaultTested,
             user1,
-            IERC20(vaultUSDC.asset()).allowance(user1.addr, address(vaultUSDC))
-                + 1
+            IERC20(vaultTested.asset()).allowance(
+                user1.addr, address(vaultTested)
+            ) + 1
         );
     }
 
@@ -77,35 +79,35 @@ contract TestMintPure is TestBase {
     {
         // it should revert with ERC20InsufficientBalance
         mintRevert(
-            vaultUSDC,
+            vaultTested,
             user1,
-            IERC20(vaultUSDC.asset()).balanceOf(user1.addr) + 1
+            IERC20(vaultTested.asset()).balanceOf(user1.addr) + 1
         );
     }
 
     function test_GivenVaultOpenWhenMint() external {
-        usersDealApprove(1);
-        uint256 decimals = IERC20Metadata(vaultUSDC.asset()).decimals();
-        assertMint(vaultUSDC, user1.addr, user1.addr, 1 ** 10 ** decimals);
+        usersDealApprove(vaultTested, 1);
+        uint256 decimals = IERC20Metadata(vaultTested.asset()).decimals();
+        assertMint(vaultTested, user1.addr, user1.addr, 1 ** 10 ** decimals);
     }
 
     function test_GivenReceiverNotEqualOwnerWhenMint() external {
         // it should pass like above
-        usersDealApprove(1);
-        uint256 decimals = IERC20Metadata(vaultUSDC.asset()).decimals();
-        assertMint(vaultUSDC, user1.addr, user2.addr, 1 ** 10 ** decimals);
+        usersDealApprove(vaultTested, 1);
+        uint256 decimals = IERC20Metadata(vaultTested.asset()).decimals();
+        assertMint(vaultTested, user1.addr, user2.addr, 1 ** 10 ** decimals);
     }
 
     function test_GivenVaultEmptyWhenMint() external {
         // it should pass like above
-        usersDealApprove(1);
-        uint256 decimals = IERC20Metadata(vaultUSDC.asset()).decimals();
-        assertMint(vaultUSDC, user1.addr, user1.addr, 1 ** 10 ** decimals);
+        usersDealApprove(vaultTested, 1);
+        uint256 decimals = IERC20Metadata(vaultTested.asset()).decimals();
+        assertMint(vaultTested, user1.addr, user1.addr, 1 ** 10 ** decimals);
     }
 
     function test_GivenDepositAmountIs0WhenMint() external {
         // it should pass like above
-        usersDealApprove(1);
-        assertMint(vaultUSDC, user1.addr, user1.addr, 0);
+        usersDealApprove(vaultTested, 1);
+        assertMint(vaultTested, user1.addr, user1.addr, 0);
     }
 }
