@@ -20,4 +20,8 @@ contract TestTotalClaimableAssets is TestBase {
         uint256 assets2 = vaultUSDC.previewRedeem(shares2);
         assertApproxEqAbs(vaultUSDC.totalClaimableAssets(), assets1 + assets2, 1);
     }
+
+    function test_TotalClaimableAssetsEmptyVault() external {
+        assertEq(vaultUSDC.totalClaimableAssets(), 0);
+    }
 }
