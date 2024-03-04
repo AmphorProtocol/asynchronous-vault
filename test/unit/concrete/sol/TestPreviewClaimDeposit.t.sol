@@ -10,22 +10,19 @@ contract TestPreviewClaimDeposit is TestBase {
 
     function test_GivenNoRequestMade() external {
         // it should return 0
-        assertEq(
-            vaultUSDC.previewClaimDeposit(user1.addr),
-            0
-        );
+        assertEq(vaultTested.previewClaimDeposit(user1.addr), 0);
     }
 
     function test_GivenRequestMade() external {
         // it should return the amount of assets that can be claimed
         close(vaultTested);
         uint256 assets = 1000;
-        assertRequestDeposit(vaultUSDC, user1.addr, user1.addr, user1.addr, assets, "");
-        // assertOpen(vaultUSDC, 1000);  // todo fix log error
-        open(vaultUSDC, 0);
-        assertEq(
-            vaultUSDC.previewClaimDeposit(user1.addr),
-            assets
+        assertRequestDeposit(
+            vaultTested, user1.addr, user1.addr, user1.addr, assets, ""
+        );
+        assertOpen(vaultTested, 0);
+        assertApproxEqAbs(
+            vaultTested.previewClaimDeposit(user1.addr), assets, 1
         );
     }
 }

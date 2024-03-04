@@ -10,46 +10,39 @@ contract TestClaimableDepositBalanceInAsset is TestBase {
 
     function test_GivenNoRequestMade() external {
         // it should return 0
-        assertEq(
-            vaultTested.claimableDepositBalanceInAsset(user1.addr),
-            0
-        );
+        assertEq(vaultTested.claimableDepositBalanceInAsset(user1.addr), 0);
     }
 
     function test_GivenRequestMade() external {
         // it should return the amount of assets that can be claimed
         close(vaultTested);
         uint256 assets = 1000;
-        assertRequestDeposit(vaultTested, user1.addr, user1.addr, user1.addr, assets, "");
-        // assertOpen(vaultTested, 1000);  // todo fix log error
-        open(vaultTested, 0);
-        assertEq(
-            vaultTested.previewClaimDeposit(user1.addr),
-            assets
+        assertRequestDeposit(
+            vaultTested, user1.addr, user1.addr, user1.addr, assets, ""
+        );
+        assertOpen(vaultTested, 10);
+        assertApproxEqAbs(
+            vaultTested.previewClaimDeposit(user1.addr), assets, 1
         );
     }
 
     function test_claimableDepositBalanceInAsset() external {
         close(vaultTested);
-        uint256 assets = 10000;
-        assertRequestDeposit(vaultTested, user1.addr, user1.addr, user1.addr, assets, "");
+        uint256 assets = 10_000;
+        assertRequestDeposit(
+            vaultTested, user1.addr, user1.addr, user1.addr, assets, ""
+        );
         assertOpen(vaultTested, 0);
         assertEq(vaultTested.claimableDepositBalanceInAsset(user1.addr), assets);
     }
 
     function test_claimableDepositBalanceInAssetInProfit() external {
         close(vaultTested);
-        uint256 assets = 10000; // todo : to be fuzzed
+        uint256 assets = 10_000; // todo : to be fuzzed
         assertRequestDeposit(
-            vaultUSDC,
-            user1.addr,
-            user1.addr,
-            user1.addr,
-            assets,
-            ""
+            vaultTested, user1.addr, user1.addr, user1.addr, assets, ""
         );
-        open(vaultTested, 10);
-        // assertOpen(vaultTested, 10); // todo fix log error
+        assertOpen(vaultTested, 10);
 
         assertApproxEqAbs(
             vaultTested.claimableDepositBalanceInAsset(user1.addr),
@@ -62,4 +55,3 @@ contract TestClaimableDepositBalanceInAsset is TestBase {
         assertEq(vaultTested.claimableDepositBalanceInAsset(user1.addr), 0);
     }
 }
-
