@@ -244,32 +244,27 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         emit DepositRequest(receiver, owner, epochId, _msgSender(), assets);
     }
 
-    // tree todo
-    function totalPendingDeposits() public view returns (uint256) {
+    function totalPendingDeposits() external view returns (uint256) {
         return vaultIsOpen ? 0 : _asset.balanceOf(address(pendingSilo));
     }
 
-    // tree todo
-    function totalPendingRedeems() public view returns (uint256) {
+    function totalPendingRedeems() external view returns (uint256) {
         return vaultIsOpen ? 0 : balanceOf(address(pendingSilo));
     }
 
-    function totalClaimableShares() public view returns (uint256) {
+    function totalClaimableShares() external view returns (uint256) {
         return balanceOf(address(claimableSilo));
     }
 
-    function totalClaimableAssets() public view returns (uint256) {
+    function totalClaimableAssets() external view returns (uint256) {
         return _asset.balanceOf(address(claimableSilo));
     }
 
-    // tree todo
     function maxDepositRequest(address) public view returns (uint256) {
         // todo maybe use previewClaimDeposit instead or claimableDepositRequest
-
         return vaultIsOpen || paused() ? 0 : type(uint256).max;
     }
 
-    // tree todo
     function maxRedeemRequest(address owner) public view returns (uint256) {
         // todo maybe use previewClaimRedeem instead or claimableRedeemRequest
         return vaultIsOpen || paused() ? 0 : balanceOf(owner);
@@ -469,6 +464,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         uint256 lastRequestId = lastDepositRequestId[owner];
 
         shares = previewClaimDeposit(owner);
+        // _convertToShares
 
         uint256 assets = epochs[lastRequestId].depositRequestBalance[owner];
         epochs[lastRequestId].depositRequestBalance[owner] = 0;
@@ -550,8 +546,12 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         view
         returns (uint256)
     {
+        if (requestId == epochId) {
+            return 0;
+        }
         uint256 _totalAssets = epochs[requestId].totalAssetsSnapshot;
-        return _totalAssets == 0 || requestId == epochId
+
+        return _totalAssets == 0
             ? assets
             : assets.mulDiv(
                 epochs[requestId].totalSupplySnapshot, _totalAssets, rounding
@@ -567,8 +567,12 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         view
         returns (uint256)
     {
+        if (requestId == epochId) {
+            return 0;
+        }
         uint256 totalSupply = epochs[requestId].totalSupplySnapshot;
-        return totalSupply == 0 || requestId == epochId
+
+        return totalSupply == 0
             ? shares
             : shares.mulDiv(
                 epochs[requestId].totalAssetsSnapshot, totalSupply, rounding
@@ -618,6 +622,95 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         epochId++;
     }
 
+    function _checkMaxDrawdown(uint256 _lastSavedBalance, uint256 newSavedBalance) internal view {
+        if (
+            newSavedBalance
+                < _lastSavedBalance.mulDiv(
+                    BPS_DIVIDER - _maxDrawdown, BPS_DIVIDER, Math.Rounding.Ceil
+                )
+        ) revert MaxDrawdownReached();
+    }
+
+    function _computeFees(uint256 _lastSavedBalance, uint256 newSavedBalance) internal view returns (uint256 fees) {
+        if (newSavedBalance > _lastSavedBalance && feesInBps > 0) {
+            uint256 profits;
+            unchecked {
+                profits = newSavedBalance - _lastSavedBalance;
+            }
+            fees = (profits).mulDiv(feesInBps, BPS_DIVIDER, Math.Rounding.Ceil);
+        }
+    }
+
+    function settle(uint256 newSavedBalance) external onlyOwner whenNotPaused whenClosed {
+        address _owner = owner();
+        // calculate the fees between lastSavedBalance and newSavedBalance
+        uint256 _lastSavedBalance = lastSavedBalance;
+        _checkMaxDrawdown(_lastSavedBalance, newSavedBalance);
+
+        // taking fees if positive yield
+        uint256 fees = _computeFees(_lastSavedBalance, newSavedBalance);
+
+        emit EpochEnd(
+            block.timestamp,
+            _lastSavedBalance,
+            newSavedBalance,
+            fees,
+            totalSupply()
+        );
+
+        lastSavedBalance = newSavedBalance - fees;
+        // if deposit is higher than withdraw -> transfer to owner the diff && update lastSavedBalance = newSavedBalance + diff
+        // IERC20()
+        uint256 _pendingRedeem = balanceOf(address(pendingSilo));
+        uint256 assetsToWithdraw = previewRedeem(_pendingRedeem);
+        uint256 _pendingDeposit = _asset.balanceOf(address(pendingSilo));
+        uint256 sharesToMint = previewDeposit(_pendingDeposit);
+
+        // Settle the shares balance
+        _burn(address(pendingSilo), _pendingRedeem);
+        _mint(address(claimableSilo), sharesToMint);
+
+        // Settle assets balance
+        // either there are more deposits than withdrawals
+        if (_pendingDeposit > assetsToWithdraw) {
+            _asset.safeTransferFrom(
+                address(pendingSilo),
+                _owner,
+                _pendingDeposit - assetsToWithdraw
+            );
+            _asset.safeTransferFrom(
+                address(pendingSilo),
+                address(claimableSilo),
+                assetsToWithdraw
+            );
+        } else {
+            _asset.safeTransferFrom(
+                _owner,
+                address(claimableSilo),
+                assetsToWithdraw  - _pendingDeposit
+            );
+            _asset.safeTransferFrom(
+                address(pendingSilo),
+                address(claimableSilo),
+                _pendingDeposit
+            );
+        }
+
+        // emit deposit + async deposit + withdraw + async withdraw
+        emit Deposit(_owner, _owner, _pendingDeposit, sharesToMint);
+        emit AsyncDeposit(epochId, _pendingDeposit, _pendingDeposit);
+        emit Withdraw(_owner, _owner, _owner, assetsToWithdraw, _pendingRedeem);
+        emit AsyncWithdraw(epochId, _pendingRedeem, _pendingRedeem);
+
+        epochs[epochId].totalSupplySnapshot = totalSupply();
+        epochs[epochId].totalAssetsSnapshot = 
+            lastSavedBalance + _pendingDeposit - assetsToWithdraw;
+        
+        // if withdraw is higher than deposit -> transfer from owner the diff && update lastSavedBalance = newSavedBalance - diff
+        // do the settlement of the requests
+        epochId++;
+    }
+
     /**
      * @dev The `open` function is used to open the vault.
      * @notice The `end` function is used to end the lock period of the vault.
@@ -631,24 +724,10 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
     function _open(uint256 returnedAssets) internal {
         // check for maxf drawdown
         uint256 _lastSavedBalance = lastSavedBalance;
-        if (
-            returnedAssets
-                < _lastSavedBalance.mulDiv(
-                    BPS_DIVIDER - _maxDrawdown, BPS_DIVIDER, Math.Rounding.Ceil
-                )
-        ) {
-            revert MaxDrawdownReached();
-        }
+        _checkMaxDrawdown(_lastSavedBalance, returnedAssets);
 
         // taking fees if positive yield
-        uint256 fees;
-        if (returnedAssets > _lastSavedBalance && feesInBps > 0) {
-            uint256 profits;
-            unchecked {
-                profits = returnedAssets - _lastSavedBalance;
-            }
-            fees = (profits).mulDiv(feesInBps, BPS_DIVIDER, Math.Rounding.Ceil);
-        }
+        uint256 fees = _computeFees(_lastSavedBalance, returnedAssets);
 
         _asset.safeTransferFrom(
             _msgSender(), address(this), returnedAssets - fees
@@ -704,13 +783,25 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
      * #################################
     */
 
-    function requestDepositWithPermit(
+    function claimAndRequestDepositWithPermit(
         uint256 assets,
         address receiver,
         bytes memory data,
         PermitParams calldata permitParams
     )
         external
+    {
+        _claimDeposit(receiver, receiver);
+        requestDepositWithPermit(assets, receiver, data, permitParams);
+    }
+
+    function requestDepositWithPermit(
+        uint256 assets,
+        address receiver,
+        bytes memory data,
+        PermitParams calldata permitParams
+    )
+        public
     {
         address owner = _msgSender();
         if (_asset.allowance(owner, address(this)) < assets) {

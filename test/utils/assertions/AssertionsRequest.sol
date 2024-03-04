@@ -12,6 +12,7 @@ import { Assertions } from "./Assertions.sol";
 import { Constants } from "../Constants.sol";
 
 import { AsyncSynthVault } from "../../../src/AsyncSynthVault.sol";
+import { console } from "forge-std/console.sol";
 
 abstract contract AssertionsRequest is Assertions {
     // those are the pendingDeposit values of owner, sender, receiver and vault
@@ -58,9 +59,12 @@ abstract contract AssertionsRequest is Assertions {
         );
 
         // assertions on events
+        // assertTransferEvent(
+        //     IERC20(vault.asset()), owner, address(vault), assets
+        // ); // transfer from owner to vault of its assets
         assertTransferEvent(
             IERC20(vault.asset()), owner, address(vault.pendingSilo()), assets
-        ); // transfer from owner to vault of its assets
+        );
         assertDepositRequestEvent(
             vault, receiver, owner, epochId, sender, assets
         );
