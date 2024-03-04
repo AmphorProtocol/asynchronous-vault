@@ -5,7 +5,7 @@ import { TestBase } from "../../../Base.t.sol";
 
 contract TestPreviewClaimRedeem is TestBase {
     function setUp() external {
-        usersDealApproveAndDeposit(1);
+        usersDealApproveAndDeposit(vaultTested, 1);
     }
 
     function test_GivenNoRequestMade() external {
@@ -18,7 +18,7 @@ contract TestPreviewClaimRedeem is TestBase {
 
     function test_GivenRequestMade() external {
         // it should return the amount of assets that can be claimed
-        closeVaults();
+        close(vaultTested);
         uint256 shares = 1000;
         assertRequestRedeem(vaultUSDC, user1.addr, user1.addr, user1.addr, shares, "");
         // assertOpen(vaultUSDC, 1000);  // todo fix log error

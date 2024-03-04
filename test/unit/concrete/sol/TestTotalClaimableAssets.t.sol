@@ -6,8 +6,8 @@ import "forge-std/console.sol";
 
 contract TestTotalClaimableAssets is TestBase {
     function test_TotalClaimableAssets() external {
-        usersDealApproveAndDeposit(2); // vault should not be empty
-        closeVaults();
+        usersDealApproveAndDeposit(vaultTested, 2); // vault should not be empty
+        close(vaultTested);
         // deposit 1
         uint256 shares1 = 10000;
         assertRequestRedeem(vaultUSDC, user1.addr, user1.addr, user1.addr, shares1, "");
