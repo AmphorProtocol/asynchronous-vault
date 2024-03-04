@@ -35,18 +35,9 @@ contract TestClaimableDepositBalanceInAsset is TestBase {
             1
         );
     }
+
+    function test_claimableDepositBalanceInAssetEmptyVault() external {
+        assertEq(vaultUSDC.claimableDepositBalanceInAsset(user1.addr), 0);
+    }
 }
 
-// TestIsCurrentEpoch.t
-// TestMaxDepositRequest.t
-// TestMaxRedeemRequest.t
-// TestMint.t
-// TestMintWithPermit.t
-// TestMintWithPermit2.t
-// TestPendingDepositRequest.t
-// TestRedeem.t
-// TestRequestRedeem.t
-// TestSharesBalanceInAsset.t
-// TestTotalPendingDeposits.t
-// TestTotalPendingRedeems.t
-// TestWithdraw.t
