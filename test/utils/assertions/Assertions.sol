@@ -748,8 +748,10 @@ abstract contract Assertions is EventsAssertions {
         );
         address owner = vault.owner();
         deal(owner, type(uint256).max);
+        _dealAsset(vault.asset(), owner, toSendBack);
 
-        vm.prank(owner);
+        vm.startPrank(owner);
+        IERC20(vault.asset()).approve(address(vault), type(uint256).max);
         vault.open(toSendBack);
     }
 
