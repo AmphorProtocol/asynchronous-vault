@@ -20,4 +20,8 @@ contract TestTotalClaimableShares is TestBase {
         uint256 shares2 = vaultUSDC.previewDeposit(assets2);
         assertEq(vaultUSDC.totalClaimableShares(), shares1 + shares2);
     }
+
+    function test_TotalClaimableSharesEmptyVault() external {
+        assertEq(vaultUSDC.totalClaimableShares(), 0);
+    }
 }
