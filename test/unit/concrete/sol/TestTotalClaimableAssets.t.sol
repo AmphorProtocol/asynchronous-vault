@@ -6,22 +6,27 @@ import "forge-std/console.sol";
 
 contract TestTotalClaimableAssets is TestBase {
     function test_TotalClaimableAssets() external {
-        usersDealApproveAndDeposit(2); // vault should not be empty
-        closeVaults();
+        usersDealApproveAndDeposit(vaultTested, 2); // vault should not be empty
+        assertClose(vaultTested);
         // deposit 1
-        uint256 shares1 = 10000;
-        assertRequestRedeem(vaultUSDC, user1.addr, user1.addr, user1.addr, shares1, "");
+        uint256 shares1 = vaultTested.balanceOf(user2.addr) / 2;
+        assertRequestRedeem(
+            vaultTested, user1.addr, user1.addr, user1.addr, shares1, ""
+        );
         // deposit 2
-        uint256 shares2 = 145768;
-        assertRequestRedeem(vaultUSDC, user2.addr, user2.addr, user2.addr, shares2, "");
-        // assertOpen(vaultUSDC, 1000); // todo fix log error
-        open(vaultUSDC, 1000);
-        uint256 assets1 = vaultUSDC.previewRedeem(shares1);
-        uint256 assets2 = vaultUSDC.previewRedeem(shares2);
-        assertApproxEqAbs(vaultUSDC.totalClaimableAssets(), assets1 + assets2, 1);
+        uint256 shares2 = 145_768;
+        assertRequestRedeem(
+            vaultTested, user2.addr, user2.addr, user2.addr, shares2, ""
+        );
+        assertOpen(vaultTested, 1000);
+        uint256 assets1 = vaultTested.previewRedeem(shares1);
+        uint256 assets2 = vaultTested.previewRedeem(shares2);
+        assertApproxEqAbs(
+            vaultTested.totalClaimableAssets(), assets1 + assets2, 1
+        );
     }
 
     function test_TotalClaimableAssetsEmptyVault() external {
-        assertEq(vaultUSDC.totalClaimableAssets(), 0);
+        assertEq(vaultTested.totalClaimableAssets(), 0);
     }
 }

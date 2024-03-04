@@ -124,7 +124,6 @@ abstract contract Constants is Test {
         vaultUSDC.initialize(
             fees, amphorLabs, USDC, vaultNameUSDC, vaultSymbolUSDC
         );
-
         vm.label(address(vaultUSDC), "vaultUSDC");
         vm.label(address(vaultUSDC.pendingSilo()), "vaultUSDC.pendingSilo");
         vm.label(address(vaultUSDC.claimableSilo()), "vaultUSDC.claimableSilo");

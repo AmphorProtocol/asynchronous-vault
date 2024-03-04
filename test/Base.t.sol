@@ -534,7 +534,7 @@ contract TestBase is AssertionsRequest {
         } else if (underlying == address(WBTC)) {
             amount = 10 * 10 ** WBTC.decimals();
         } else if (underlying == address(USDC)) {
-            amount = 10_000 * 10 ** USDC.decimals();
+            amount = 1_000_000 * 10 ** USDC.decimals();
         }
         for (uint256 i = 0; i < userMax; i++) {
             deal(users[i].addr, type(uint256).max);
