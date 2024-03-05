@@ -202,8 +202,12 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         whenNotPaused
         whenClosed
     {
+        // vault
         if (_msgSender() != owner) {
-            revert NotOwner();
+            uint256 allowance = _asset.allowance(owner, _msgSender());
+            if (allowance != type(uint256).max) {
+                revert("you are not approuve enough");
+            }
         }
         if (previewClaimDeposit(receiver) > 0) {
             revert MustClaimFirst(receiver);
@@ -215,6 +219,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
             );
         }
 
+        // if _msgSender
         _asset.safeTransferFrom(owner, address(pendingSilo), assets);
 
         _createDepositRequest(assets, receiver, owner, data);
@@ -622,7 +627,13 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         epochId++;
     }
 
-    function _checkMaxDrawdown(uint256 _lastSavedBalance, uint256 newSavedBalance) internal view {
+    function _checkMaxDrawdown(
+        uint256 _lastSavedBalance,
+        uint256 newSavedBalance
+    )
+        internal
+        view
+    {
         if (
             newSavedBalance
                 < _lastSavedBalance.mulDiv(
@@ -631,7 +642,14 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         ) revert MaxDrawdownReached();
     }
 
-    function _computeFees(uint256 _lastSavedBalance, uint256 newSavedBalance) internal view returns (uint256 fees) {
+    function _computeFees(
+        uint256 _lastSavedBalance,
+        uint256 newSavedBalance
+    )
+        internal
+        view
+        returns (uint256 fees)
+    {
         if (newSavedBalance > _lastSavedBalance && feesInBps > 0) {
             uint256 profits;
             unchecked {
@@ -641,7 +659,12 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         }
     }
 
-    function settle(uint256 newSavedBalance) external onlyOwner whenNotPaused whenClosed {
+    function settle(uint256 newSavedBalance)
+        external
+        onlyOwner
+        whenNotPaused
+        whenClosed
+    {
         address _owner = owner();
         // calculate the fees between lastSavedBalance and newSavedBalance
         uint256 _lastSavedBalance = lastSavedBalance;
@@ -659,7 +682,8 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         );
 
         lastSavedBalance = newSavedBalance - fees;
-        // if deposit is higher than withdraw -> transfer to owner the diff && update lastSavedBalance = newSavedBalance + diff
+        // if deposit is higher than withdraw -> transfer to owner the diff &&
+        // update lastSavedBalance = newSavedBalance + diff
         // IERC20()
         uint256 _pendingRedeem = balanceOf(address(pendingSilo));
         uint256 assetsToWithdraw = previewRedeem(_pendingRedeem);
@@ -674,25 +698,19 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         // either there are more deposits than withdrawals
         if (_pendingDeposit > assetsToWithdraw) {
             _asset.safeTransferFrom(
-                address(pendingSilo),
-                _owner,
-                _pendingDeposit - assetsToWithdraw
+                address(pendingSilo), _owner, _pendingDeposit - assetsToWithdraw
             );
             _asset.safeTransferFrom(
-                address(pendingSilo),
-                address(claimableSilo),
-                assetsToWithdraw
+                address(pendingSilo), address(claimableSilo), assetsToWithdraw
             );
         } else {
             _asset.safeTransferFrom(
                 _owner,
                 address(claimableSilo),
-                assetsToWithdraw  - _pendingDeposit
+                assetsToWithdraw - _pendingDeposit
             );
             _asset.safeTransferFrom(
-                address(pendingSilo),
-                address(claimableSilo),
-                _pendingDeposit
+                address(pendingSilo), address(claimableSilo), _pendingDeposit
             );
         }
 
@@ -703,10 +721,11 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         emit AsyncWithdraw(epochId, _pendingRedeem, _pendingRedeem);
 
         epochs[epochId].totalSupplySnapshot = totalSupply();
-        epochs[epochId].totalAssetsSnapshot = 
+        epochs[epochId].totalAssetsSnapshot =
             lastSavedBalance + _pendingDeposit - assetsToWithdraw;
-        
-        // if withdraw is higher than deposit -> transfer from owner the diff && update lastSavedBalance = newSavedBalance - diff
+
+        // if withdraw is higher than deposit -> transfer from owner the diff &&
+        // update lastSavedBalance = newSavedBalance - diff
         // do the settlement of the requests
         epochId++;
     }
