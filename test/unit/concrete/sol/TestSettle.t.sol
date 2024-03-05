@@ -5,26 +5,55 @@ import { TestBase, SyncSynthVault, AsyncSynthVault } from "../../../Base.t.sol";
 import "forge-std/console.sol";
 
 contract TestSettle is TestBase {
+    function setUp() external {
+        // vault should not be empty
+        usersDealApproveAndDeposit(vaultTested, 1);
+    }
+
     function test_RevertGiven_SenderNotOwner() external {
         // it should revert
+        close(vaultTested);
+        uint256 lastSavedBalance = vaultTested.lastSavedBalance();
+        vm.startPrank(user1.addr);
+        vm.expectRevert(); // not owner
+        vaultTested.settle(lastSavedBalance);
     }
 
     function test_RevertGiven_VaultIsPaused() external {
         // it should revert
+        close(vaultTested);
+        uint256 lastSavedBalance = vaultTested.lastSavedBalance();
+        pause(vaultTested);
+        vm.startPrank(vaultTested.owner());
+        vm.expectRevert(); // vault paused
+        vaultTested.settle(lastSavedBalance);
     }
 
     function test_RevertGiven_VaultIsOpen() external {
         // it should revert
+        uint256 lastSavedBalance = vaultTested.lastSavedBalance();
+        vm.startPrank(vaultTested.owner());
+        vm.expectRevert(); // vault paused
+        vaultTested.settle(lastSavedBalance);
     }
 
     function test_RevertGiven_NewSavedBalanceIs0() external {
         // it should revert
+        close(vaultTested);
+        vm.startPrank(vaultTested.owner());
+        vm.expectRevert(); // not owner
+        vaultTested.settle(0);
     }
 
     function test_RevertGiven_NewSavedBalanceIsGreaterThan0ButMoreThan3000BipsLessThanTheCurrentSavedBalance()
         external
     {
         // it should revert
+        close(vaultTested);
+        uint256 lastSavedBalance = vaultTested.lastSavedBalance();
+        vm.startPrank(vaultTested.owner());
+        vm.expectRevert(); // not owner
+        vaultTested.settle(lastSavedBalance / 2);
     }
 
     function test_GivenNewSavedBalanceIsGreaterThan0But1000BipsLessThanLastSavedBalance() external {
