@@ -660,9 +660,9 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
     }
 
     function settle(uint256 newSavedBalance)
-        external
-        onlyOwner
-        whenNotPaused
+        external 
+        onlyOwner 
+        whenNotPaused 
         whenClosed
     {
         address _owner = owner();
@@ -681,9 +681,11 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
             totalSupply()
         );
 
-        lastSavedBalance = newSavedBalance - fees;
-        // if deposit is higher than withdraw -> transfer to owner the diff &&
-        // update lastSavedBalance = newSavedBalance + diff
+
+        _lastSavedBalance = newSavedBalance - fees;
+        // if withdraw is higher than deposit -> transfer from owner the diff && update lastSavedBalance = newSavedBalance - diff
+        // do the settlement of the requests
+        // if deposit is higher than withdraw -> transfer to owner the diff && update lastSavedBalance = newSavedBalance + diff
         // IERC20()
         uint256 _pendingRedeem = balanceOf(address(pendingSilo));
         uint256 assetsToWithdraw = previewRedeem(_pendingRedeem);
