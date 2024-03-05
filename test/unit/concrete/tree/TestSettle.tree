@@ -1,0 +1,30 @@
+TestSettle
+├── given sender not owner
+│   └── it should revert
+├── given vault is paused
+│   └── it should revert
+├── given vault is open
+│   └── it should revert
+├── given newSavedBalance is 0
+│   └── it should revert
+├── given newSavedBalance is greater than 0 but more than 3000 bips less than the current saved balance
+│   └── it should revert
+├── given newSavedBalance is greater than 0 but 1000 bips less than lastSavedBalance
+│   └── it should pass assertSettle
+├── given newSavedBalance is greater than 0 but 1000 bips more than lastSavedBalance
+│   └── it should pass assertSettle
+├── given newSavedBalance is greater than 0 but more than 3000 bips more than the current saved balance
+│   └── it should pass assertSettle
+└── when assertSettle
+    ├── it should not revert
+    ├── it take 20% fees on the performance and emits an event about it (EpochEnd)
+    ├── it should show the new lastSavedBalance with performance fees taken in account (EpochEnd)
+    ├── it should process the redeem and deposit requests (checkable thx to totalSupply, newSavedBalance and fees)
+    ├── it should update the lastSavedBalance (lastSavedBalance = lastSavedBalance + pendingDeposit - pendingToWithdraw)
+    ├── it should transfer (pendingWithdraw - pendingDeposit) underlying from owner to the vault (claimable silo) if pendingWithdraw is higher than pendingDeposit
+    ├── it should transfer (pendingDeposit - pendingWithdraw) underlying from vault to the owner (claimable silo) if pendingDeposit is higher than pendingWithdraw
+    ├── it should not open the vault
+    ├── it should emit Deposit
+    ├── it should emit Withdraw
+    ├── it should emit AsyncDeposit
+    └── it should emit AsyncWithdraw
