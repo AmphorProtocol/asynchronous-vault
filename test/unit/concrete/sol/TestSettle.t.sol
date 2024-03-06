@@ -58,6 +58,7 @@ contract TestSettle is TestBase {
 
     function test_GivenNewSavedBalanceIsGreaterThan0But1000BipsLessThanLastSavedBalance() external {
         // it should pass assertSettle
+        close(vaultTested);
     }
 
     function test_GivenNewSavedBalanceIsGreaterThan0But1000BipsMoreThanLastSavedBalance() external {

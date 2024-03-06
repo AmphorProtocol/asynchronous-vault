@@ -952,6 +952,11 @@ abstract contract Assertions is EventsAssertions {
         AsyncSynthVault vault,
         int256 performanceInBps
     ) internal {
+        // todo add the followings checks
+
+        // it should transfer (pendingWithdraw - pendingDeposit) underlying from owner to the vault (claimable silo) if pendingWithdraw is higher than pendingDeposit
+        // it should transfer (pendingDeposit - pendingWithdraw) underlying from vault to the owner (claimable silo) if pendingDeposit is higher than pendingWithdraw
+
         uint256 totalAssetsBefore = vault.totalAssets();
         uint256 totalSupplyBefore = vault.totalSupply();
 
@@ -1002,7 +1007,7 @@ abstract contract Assertions is EventsAssertions {
 
         // Request management
         // giving back the fund
-        // todo if deposit higher than withraw
+        // todo numbers depends if deposit higher than withraw
         // assertTransferEvent(
         //     IERC20(vault.asset()),
         //     amphorLabs,
@@ -1052,7 +1057,7 @@ abstract contract Assertions is EventsAssertions {
         // );
 
         // assertEpochStartEvent(
-        //     vault, block.timestamp, totalAssetsBefore, totalSupplyBefore
+        //     vault, block.timestamp, vault.totalAssets(), totalSupplyBefore
         // );
 
         // open

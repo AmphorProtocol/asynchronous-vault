@@ -690,7 +690,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
                 address(claimableSilo),
                 assetsToWithdraw
             );
-        } else {
+        } else if (_pendingDeposit < assetsToWithdraw) {
             _asset.safeTransferFrom(
                 _owner,
                 address(claimableSilo),
