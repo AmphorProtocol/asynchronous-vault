@@ -12,15 +12,18 @@ import { UpgradeableBeacon } from
 import { BeaconProxy } from
     "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import "forge-std/console.sol"; //todo remove
+import { ERC20Permit } from
+    "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
+import { SigUtils } from "@test/utils/SigUtils.sol";
 
 abstract contract Constants is Test {
     // ERC20 tokens
     ERC20 immutable DAI = ERC20(vm.envAddress("DAI_MAINNET"));
-    ERC20 immutable USDC = ERC20(vm.envAddress("USDC_MAINNET"));
+    ERC20Permit immutable USDC = ERC20Permit(vm.envAddress("USDC_MAINNET"));
     ERC20 immutable USDT = ERC20(vm.envAddress("USDT_MAINNET"));
     ERC20 immutable WETH = ERC20(vm.envAddress("WETH_MAINNET"));
     ERC20 immutable ETH = ERC20(vm.envAddress("ETH_MAINNET"));
-    ERC20 immutable WSTETH = ERC20(vm.envAddress("WSTETH_MAINNET"));
+    ERC20Permit immutable WSTETH = ERC20Permit(vm.envAddress("WSTETH_MAINNET"));
     ERC20 immutable STETH = ERC20(vm.envAddress("STETH_MAINNET"));
     ERC20 immutable WBTC = ERC20(vm.envAddress("WBTC_MAINNET"));
 
@@ -55,6 +58,13 @@ abstract contract Constants is Test {
     string vaultNameWBTC = vm.envString("SYNTHETIC_WBTC_V1_NAME");
     string vaultSymbolWBTC = vm.envString("SYNTHETIC_WBTC_V1_SYMBOL");
     AsyncSynthVault vaultWBTC;
+
+    // SigUtils
+    SigUtils internal sigUtils;
+
+    //Underlying
+    ERC20 immutable underlying;
+    ERC20Permit immutable underlyingPermit;
 
     // Zapper
     //AsyncVaultZapper immutable zapper = new AsyncVaultZapper(permit2);
@@ -157,15 +167,23 @@ abstract contract Constants is Test {
                 == keccak256(abi.encodePacked("WSTETH"))
         ) {
             vaultTested = vaultWSTETH;
+            sigUtils = new SigUtils(WSTETH.DOMAIN_SEPARATOR());
+            underlying = WSTETH;
+            console.log(address(underlying));
         } else if (
             keccak256(abi.encodePacked(vm.envString("VAULT_TESTED")))
                 == keccak256(abi.encodePacked("WBTC"))
         ) {
             vaultTested = vaultWBTC;
+            underlying = WBTC;
         } else {
             console.log("vaultTestedName: ", vaultTestedName);
             vaultTested = vaultUSDC;
+            sigUtils = new SigUtils(USDC.DOMAIN_SEPARATOR());
+            underlying = USDC;
         }
+        underlyingPermit = ERC20Permit(address(underlying));
+        console.log(address(underlying));
     }
 
     // function _proxyDeploy(

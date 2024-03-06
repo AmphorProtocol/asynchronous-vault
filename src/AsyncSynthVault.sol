@@ -206,7 +206,9 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         if (_msgSender() != owner) {
             uint256 allowance = _asset.allowance(owner, _msgSender());
             if (allowance != type(uint256).max) {
-                revert("you are not approuve enough");
+                revert ERC20InsufficientAllowance(
+                    owner, assets, type(uint256).max
+                );
             }
         }
         if (previewClaimDeposit(receiver) > 0) {
@@ -596,7 +598,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
      * of the contract (`onlyOwner` modifier).
      */
     function close() external override onlyOwner {
-        if (!vaultIsOpen) revert VaultIsLocked();
+        if (!vaultIsOpen) revert VaultIsClosed();
 
         if (totalAssets() == 0) revert VaultIsEmpty();
 
