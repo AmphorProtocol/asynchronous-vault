@@ -68,6 +68,10 @@ contract TestSettle is TestBase {
         // it should pass assertSettle
     }
 
+    function test_GivenPendingDepositIsEqualToPendingWithdraw() external {
+        // it should pass assertSettle
+    }
+
     function test_WhenAssertSettle() external {
         // it should not revert
         // it take 20% fees on the performance and emits an event about it (EpochEnd)
