@@ -12,7 +12,7 @@ contract TestClose is TestBase {
         address owner = vaultTested.owner();
         vm.startPrank(owner);
         vaultTested.close();
-        vm.expectRevert(SyncSynthVault.VaultIsLocked.selector);
+        vm.expectRevert(SyncSynthVault.VaultIsClosed.selector);
         vaultTested.close();
         vm.stopPrank();
     }
