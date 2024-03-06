@@ -70,6 +70,8 @@ contract TestSettle is TestBase {
 
     function test_GivenPendingDepositIsEqualToPendingWithdraw() external {
         // it should pass assertSettle
+        close(vaultTested);
+        assertSettle(vaultTested, 0);
     }
 
     function test_WhenAssertSettle() external {
