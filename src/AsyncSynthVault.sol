@@ -713,8 +713,11 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         epochs[epochId].totalAssetsSnapshot = 
             _lastSavedBalance + _pendingDeposit - assetsToWithdraw;
 
-        lastSavedBalance = _lastSavedBalance + _pendingDeposit - assetsToWithdraw;
-        
+        _lastSavedBalance = _lastSavedBalance + _pendingDeposit - assetsToWithdraw;
+        lastSavedBalance = _lastSavedBalance;
+
+        emit EpochStart(block.timestamp, _lastSavedBalance, totalSupply());
+
         epochId++;
     }
 

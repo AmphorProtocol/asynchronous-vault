@@ -952,10 +952,7 @@ abstract contract Assertions is EventsAssertions {
         AsyncSynthVault vault,
         int256 performanceInBps
     ) internal {
-        // todo add the followings checks
-
-        // it should transfer (pendingWithdraw - pendingDeposit) underlying from owner to the vault (claimable silo) if pendingWithdraw is higher than pendingDeposit
-        // it should transfer (pendingDeposit - pendingWithdraw) underlying from vault to the owner (claimable silo) if pendingDeposit is higher than pendingWithdraw
+        // todo check lastsevedbalance evolution
 
         uint256 totalAssetsBefore = vault.totalAssets();
         uint256 totalSupplyBefore = vault.totalSupply();
@@ -1005,6 +1002,25 @@ abstract contract Assertions is EventsAssertions {
         vm.stopPrank();
         _dealAsset(vault.asset(), owner, assetsBeforeExecReq);
 
+
+        // it should transfer (pendingWithdraw - pendingDeposit) underlying from owner to the vault (claimable silo) if pendingWithdraw is higher than pendingDeposit
+        // it should transfer (pendingDeposit - pendingWithdraw) underlying from vault to the owner (claimable silo) if pendingDeposit is higher than pendingWithdraw
+
+        // if (stateBefore.pendingDeposit > stateBefore.pendingRedeem) {
+        //     assertTransferEvent(
+        //         IERC20(vault.asset()),
+        //         owner,
+        //         address(vault.claimableSilo()),
+        //         stateBefore.pendingDeposit - stateBefore.pendingRedeem
+        //     );
+        // } else {
+        //     assertTransferEvent(
+        //         IERC20(vault.asset()),
+        //         address(vault.claimableSilo()),
+        //         owner,
+        //         stateBefore.pendingRedeem - stateBefore.pendingDeposit
+        //     );
+        // }
         // Request management
         // giving back the fund
         // todo numbers depends if deposit higher than withraw
@@ -1016,49 +1032,52 @@ abstract contract Assertions is EventsAssertions {
         // );
 
         // ending the epoch
-        // assertEpochEndEvent(
-        //     vault,
-        //     block.timestamp,
-        //     stateBefore.lastSavedBalance,
-        //     assetReturned,
-        //     expectedFees,
-        //     stateBefore.totalSupply
-        // );
+        assertEpochEndEvent(
+            vault,
+            block.timestamp,
+            stateBefore.lastSavedBalance,
+            assetReturned,
+            expectedFees,
+            stateBefore.totalSupply
+        );
 
-        // assertDepositEvent(
-        //     vault,
-        //     address(vault.pendingSilo()),
-        //     address(vault.claimableSilo()),
-        //     stateBefore.pendingDeposit,
-        //     expectedSharesToMint
-        // );
+        assertDepositEvent(
+            vault,
+            address(owner),
+            address(owner),
+            stateBefore.pendingDeposit,
+            expectedSharesToMint
+        );
 
-        // assertAsyncDepositEvent(
-        //     vault,
-        //     stateBefore.epochId,
-        //     stateBefore.pendingDeposit,
-        //     stateBefore.pendingDeposit
-        // );
+        assertAsyncDepositEvent(
+            vault,
+            stateBefore.epochId,
+            stateBefore.pendingDeposit,
+            stateBefore.pendingDeposit
+        );
 
-        // assertWithdrawEvent(
-        //     vault,
-        //     address(vault.claimableSilo()),
-        //     address(vault.pendingSilo()),
-        //     address(vault.pendingSilo()),
-        //     expectedAssetsToRedeem,
-        //     stateBefore.pendingRedeem
-        // );
+        assertWithdrawEvent(
+            vault,
+            address(owner),
+            address(owner),
+            address(owner),
+            expectedAssetsToRedeem,
+            stateBefore.pendingRedeem
+        );
 
-        // assertAsyncWithdrawEvent(
-        //     vault,
-        //     stateBefore.epochId,
-        //     stateBefore.pendingRedeem,
-        //     stateBefore.pendingRedeem
-        // );
+        assertAsyncWithdrawEvent(
+            vault,
+            stateBefore.epochId,
+            stateBefore.pendingRedeem,
+            stateBefore.pendingRedeem
+        );
 
-        // assertEpochStartEvent(
-        //     vault, block.timestamp, vault.totalAssets(), totalSupplyBefore
-        // );
+        assertEpochStartEvent(
+            vault,
+            block.timestamp,
+            vault.totalAssets() - expectedAssetsToRedeem + stateBefore.pendingDeposit,
+            totalSupplyBefore + expectedSharesToMint - stateBefore.pendingRedeem
+        );
 
         // open
         settle(vault, performanceInBps);
