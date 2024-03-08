@@ -681,7 +681,6 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         // Settle assets balance //
         ///////////////////////////
         // either there are more deposits than withdrawals
-        // if it's equal it's a no-op
         if (_pendingDeposit > assetsToWithdraw) {
             _asset.safeTransferFrom(
                 address(pendingSilo),
@@ -708,6 +707,12 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
                     _pendingDeposit
                 );
             }
+        } else if (_pendingDeposit > 0) { // if _pendingDeposit == assetsToWithdraw AND _pendingDeposit > 0 (and assetsToWithdraw > 0)
+            _asset.safeTransferFrom(
+                address(pendingSilo),
+                address(claimableSilo),
+                assetsToWithdraw
+            );
         }
         ////////////////////////////////
 
@@ -717,11 +722,11 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         emit Withdraw(_owner, _owner, _owner, assetsToWithdraw, _pendingRedeem);
         emit AsyncWithdraw(epochId, _pendingRedeem, _pendingRedeem);
 
-        epochs[epochId].totalSupplySnapshot = totalSupply();
-        epochs[epochId].totalAssetsSnapshot = 
-            _lastSavedBalance + _pendingDeposit - assetsToWithdraw;
-
         _lastSavedBalance = _lastSavedBalance + _pendingDeposit - assetsToWithdraw;
+
+        epochs[epochId].totalSupplySnapshot = totalSupply();
+        epochs[epochId].totalAssetsSnapshot = _lastSavedBalance;
+
         lastSavedBalance = _lastSavedBalance;
 
         emit EpochStart(block.timestamp, _lastSavedBalance, totalSupply());
