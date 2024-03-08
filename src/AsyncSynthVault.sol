@@ -664,6 +664,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         );
 
         _lastSavedBalance = newSavedBalance - fees;
+        lastSavedBalance = _lastSavedBalance; // update lastSavedBalance in order to be able to preview the next deposit
         // if withdraw is higher than deposit -> transfer from owner the diff && update lastSavedBalance = newSavedBalance - diff
         // do the settlement of the requests
         // if deposit is higher than withdraw -> transfer to owner the diff && update lastSavedBalance = newSavedBalance + diff
