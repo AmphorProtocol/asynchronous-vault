@@ -654,29 +654,35 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
 
         // taking fees if positive yield
         uint256 fees = _computeFees(_lastSavedBalance, newSavedBalance);
+        uint256 _totalSupply = totalSupply();
 
         emit EpochEnd(
             block.timestamp,
             _lastSavedBalance,
             newSavedBalance,
             fees,
-            totalSupply()
+            _totalSupply
         );
 
         _lastSavedBalance = newSavedBalance - fees;
-        lastSavedBalance = _lastSavedBalance; // update lastSavedBalance in order to be able to preview the next deposit
         // if withdraw is higher than deposit -> transfer from owner the diff && update lastSavedBalance = newSavedBalance - diff
         // do the settlement of the requests
         // if deposit is higher than withdraw -> transfer to owner the diff && update lastSavedBalance = newSavedBalance + diff
         // IERC20()
-        uint256 _pendingRedeem = balanceOf(address(pendingSilo));
-        uint256 assetsToWithdraw = previewRedeem(_pendingRedeem);
-        uint256 _pendingDeposit = _asset.balanceOf(address(pendingSilo));
-        uint256 sharesToMint = previewDeposit(_pendingDeposit);
+        address pendingSiloAddr = address(pendingSilo); 
+        address claimableSiloAddr = address(claimableSilo);
+        uint256 _pendingRedeem = balanceOf(pendingSiloAddr);
+        uint256 assetsToWithdraw = _pendingRedeem.mulDiv(
+            _lastSavedBalance + 1, _totalSupply + 10 ** decimalsOffset, Math.Rounding.Floor
+        );
+        uint256 _pendingDeposit = _asset.balanceOf(pendingSiloAddr);
+        uint256 sharesToMint = _pendingDeposit.mulDiv(
+            _totalSupply + 10 ** decimalsOffset, _lastSavedBalance + 1, Math.Rounding.Floor
+        );
 
         // Settle the shares balance
-        _burn(address(pendingSilo), _pendingRedeem);
-        _mint(address(claimableSilo), sharesToMint);
+        _burn(pendingSiloAddr, _pendingRedeem);
+        _mint(claimableSiloAddr, sharesToMint);
 
         ///////////////////////////
         // Settle assets balance //
@@ -684,34 +690,34 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         // either there are more deposits than withdrawals
         if (_pendingDeposit > assetsToWithdraw) {
             _asset.safeTransferFrom(
-                address(pendingSilo),
+                pendingSiloAddr,
                 _owner,
                 _pendingDeposit - assetsToWithdraw
             );
             if (assetsToWithdraw > 0) {
                 _asset.safeTransferFrom(
-                    address(pendingSilo),
-                    address(claimableSilo),
+                    pendingSiloAddr,
+                    claimableSiloAddr,
                     assetsToWithdraw
                 );
             }
         } else if (_pendingDeposit < assetsToWithdraw) {
             _asset.safeTransferFrom(
                 _owner,
-                address(claimableSilo),
+                claimableSiloAddr,
                 assetsToWithdraw - _pendingDeposit
             );
             if (_pendingDeposit > 0) { // then two transfers
                 _asset.safeTransferFrom(
-                    address(pendingSilo),
-                    address(claimableSilo),
+                    pendingSiloAddr,
+                    claimableSiloAddr,
                     _pendingDeposit
                 );
             }
         } else if (_pendingDeposit > 0) { // if _pendingDeposit == assetsToWithdraw AND _pendingDeposit > 0 (and assetsToWithdraw > 0)
             _asset.safeTransferFrom(
-                address(pendingSilo),
-                address(claimableSilo),
+                pendingSiloAddr,
+                claimableSiloAddr,
                 assetsToWithdraw
             );
         }
@@ -725,12 +731,13 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
 
         _lastSavedBalance = _lastSavedBalance + _pendingDeposit - assetsToWithdraw;
 
-        epochs[epochId].totalSupplySnapshot = totalSupply();
+        _totalSupply = totalSupply();
+        epochs[epochId].totalSupplySnapshot = _totalSupply;
         epochs[epochId].totalAssetsSnapshot = _lastSavedBalance;
 
         lastSavedBalance = _lastSavedBalance;
 
-        emit EpochStart(block.timestamp, _lastSavedBalance, totalSupply());
+        emit EpochStart(block.timestamp, _lastSavedBalance, _totalSupply);
 
         epochId++;
     }

@@ -1017,8 +1017,8 @@ abstract contract Assertions is EventsAssertions {
         );
 
         uint256 expectedAssetsToRedeem = previewRedeem(
-            assetsBeforeExecReq + stateBefore.pendingDeposit,
-            stateBefore.totalSupply + expectedSharesToMint,
+            assetsBeforeExecReq,
+            stateBefore.totalSupply,
             stateBefore.pendingRedeem
         );
 
@@ -1078,15 +1078,15 @@ abstract contract Assertions is EventsAssertions {
         // open
         settle(vault, assetReturned);
 
-        // assertValues(
-        //     vault,
-        //     stateBefore,
-        //     expectedSharesToMint,
-        //     expectedAssetsToRedeem,
-        //     assetReturned,
-        //     expectedFees,
-        //     assetsBeforeExecReq
-        // );
+        assertValues(
+            vault,
+            stateBefore,
+            expectedSharesToMint,
+            expectedAssetsToRedeem,
+            assetReturned,
+            expectedFees,
+            assetsBeforeExecReq
+        );
     }
 
     function assertSettleEvents(
@@ -1108,8 +1108,8 @@ abstract contract Assertions is EventsAssertions {
             stateBefore.totalSupply
         );
 
-        console.log("stateBefore.pendingDeposit", stateBefore.pendingDeposit);
-        console.log("expectedSharesToMint", expectedSharesToMint);
+        // console.log("stateBefore.pendingDeposit", stateBefore.pendingDeposit);
+        // console.log("expectedSharesToMint", expectedSharesToMint);
 
         assertDepositEvent(
             vault,
@@ -1119,36 +1119,38 @@ abstract contract Assertions is EventsAssertions {
             expectedSharesToMint
         );
 
-        // assertAsyncDepositEvent(
-        //     vault,
-        //     stateBefore.epochId,
-        //     stateBefore.pendingDeposit,
-        //     stateBefore.pendingDeposit
-        // );
+        assertAsyncDepositEvent(
+            vault,
+            stateBefore.epochId,
+            stateBefore.pendingDeposit,
+            stateBefore.pendingDeposit
+        );
 
-        // assertWithdrawEvent(
-        //     vault,
-        //     address(owner),
-        //     address(owner),
-        //     address(owner),
-        //     expectedAssetsToRedeem,
-        //     stateBefore.pendingRedeem
-        // );
+        // console.log("stateBefore.pendingRedeem", stateBefore.pendingRedeem);
+        // console.log("expectedSharesToRedeem", expectedSharesToRedeem);
 
-        // assertAsyncWithdrawEvent(
-        //     vault,
-        //     stateBefore.epochId,
-        //     stateBefore.pendingRedeem,
-        //     stateBefore.pendingRedeem
-        // );
+        assertWithdrawEvent(
+            vault,
+            address(owner),
+            address(owner),
+            address(owner),
+            expectedAssetsToRedeem,
+            stateBefore.pendingRedeem
+        );
 
-        // // faulty
-        // assertEpochStartEvent(
-        //     vault, block.timestamp,
-        //     assetReturned + stateBefore.pendingDeposit
-        //         - expectedAssetsToRedeem - expectedFees,
-        //     stateBefore.totalSupply - expectedSharesToRedeem + expectedSharesToMint
-        // );
+        assertAsyncWithdrawEvent(
+            vault,
+            stateBefore.epochId,
+            stateBefore.pendingRedeem,
+            stateBefore.pendingRedeem
+        );
+
+        assertEpochStartEvent(
+            vault, block.timestamp,
+            assetReturned + stateBefore.pendingDeposit
+                - expectedAssetsToRedeem - expectedFees,
+            stateBefore.totalSupply - expectedSharesToRedeem + expectedSharesToMint
+        );
     }
 
     function assertValues(
@@ -1173,7 +1175,7 @@ abstract contract Assertions is EventsAssertions {
             "Claimable assets is not correct"
         );
 
-        // // //amount of pending deposits and redeems should be 0
+        //amount of pending deposits and redeems should be 0
         assertEq(vault.totalPendingDeposits(), 0, "Pending deposits is not 0");
         assertEq(vault.totalPendingRedeems(), 0, "Pending redeems is not 0");
 
