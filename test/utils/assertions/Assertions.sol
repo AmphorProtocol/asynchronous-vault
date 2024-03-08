@@ -1199,7 +1199,7 @@ abstract contract Assertions is EventsAssertions {
         assertEq(
             vault.lastSavedBalance(),
             assetReturned - expectedFees
-                + (stateBefore.pendingDeposit - expectedAssetsToRedeem)
+                + stateBefore.pendingDeposit - expectedAssetsToRedeem
         );
     }
 }

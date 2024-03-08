@@ -7,7 +7,7 @@ import "forge-std/console.sol";
 contract TestSettle is TestBase {
     function setUp() external {
         // vault should not be empty
-        usersDealApproveAndDeposit(vaultTested, 1);
+        usersDealApproveAndDeposit(vaultTested, 3);
     }
 
     function test_RevertGiven_SenderNotOwner() external {
@@ -91,6 +91,21 @@ contract TestSettle is TestBase {
         // it should pass assertSettle
         close(vaultTested);
         usersDealApproveAndRequestDeposit(vaultTested, 3);
+        assertSettle(vaultTested, 0);
+    }
+
+    function test_GivenOnlyAsyncDepositsAreNull() external {
+        // it should pass assertSettle
+        close(vaultTested);
+        usersDealApproveAndRequestRedeem(vaultTested, 1);
+        assertSettle(vaultTested, 0);
+    }
+
+    function test_GivenAsyncRedeemsAndDepositsAreEqual() external {
+        // it should pass assertSettle
+        close(vaultTested);
+        usersDealApproveAndRequestDeposit(vaultTested, 3);
+        usersDealApproveAndRequestRedeem(vaultTested, 3);
         assertSettle(vaultTested, 0);
     }
 
