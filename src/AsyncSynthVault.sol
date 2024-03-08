@@ -360,6 +360,9 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         if (_msgSender() != owner) {
             _spendAllowance(owner, _msgSender(), shares);
         }
+        console.log(
+            "previewClaimRedeem(receiver)", previewClaimRedeem(receiver)
+        );
         if (previewClaimRedeem(receiver) > 0) {
             revert MustClaimFirst(receiver);
         }
@@ -495,13 +498,12 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         whenNotPaused
         returns (uint256 assets)
     {
-        uint256 lastRequestId = lastDepositRequestId[owner];
+        uint256 lastRequestId = lastRedeemRequestId[owner];
 
         assets = previewClaimRedeem(owner);
 
         uint256 shares = epochs[lastRequestId].redeemRequestBalance[owner];
         epochs[lastRequestId].redeemRequestBalance[owner] = 0;
-
         _asset.safeTransferFrom(address(claimableSilo), address(this), assets);
         _asset.transfer(receiver, assets);
         emit ClaimRedeem(lastRequestId, owner, receiver, assets, shares);
@@ -662,9 +664,9 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
     }
 
     function settle(uint256 newSavedBalance)
-        external 
-        onlyOwner 
-        whenNotPaused 
+        external
+        onlyOwner
+        whenNotPaused
         whenClosed
     {
         address _owner = owner();
@@ -683,11 +685,12 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
             totalSupply()
         );
 
-
         _lastSavedBalance = newSavedBalance - fees;
-        // if withdraw is higher than deposit -> transfer from owner the diff && update lastSavedBalance = newSavedBalance - diff
+        // if withdraw is higher than deposit -> transfer from owner the diff &&
+        // update lastSavedBalance = newSavedBalance - diff
         // do the settlement of the requests
-        // if deposit is higher than withdraw -> transfer to owner the diff && update lastSavedBalance = newSavedBalance + diff
+        // if deposit is higher than withdraw -> transfer to owner the diff &&
+        // update lastSavedBalance = newSavedBalance + diff
         // IERC20()
         uint256 _pendingRedeem = balanceOf(address(pendingSilo));
         uint256 assetsToWithdraw = previewRedeem(_pendingRedeem);
