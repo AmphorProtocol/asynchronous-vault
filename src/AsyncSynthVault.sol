@@ -680,11 +680,6 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         ///////////////////////////
         // Settle assets balance //
         ///////////////////////////
-        _asset.safeTransferFrom(
-            address(pendingSilo),
-            address(claimableSilo),
-            _pendingDeposit
-        );
         // either there are more deposits than withdrawals
         // if it's equal it's a no-op
         if (_pendingDeposit > assetsToWithdraw) {

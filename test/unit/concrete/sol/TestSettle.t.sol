@@ -59,19 +59,38 @@ contract TestSettle is TestBase {
     function test_GivenNewSavedBalanceIsGreaterThan0But1000BipsLessThanLastSavedBalance() external {
         // it should pass assertSettle
         close(vaultTested);
+        assertSettle(vaultTested, -1000);
     }
 
     function test_GivenNewSavedBalanceIsGreaterThan0But1000BipsMoreThanLastSavedBalance() external {
         // it should pass assertSettle
+        close(vaultTested);
+        assertSettle(vaultTested, 1000);
+
     }
 
     function test_GivenNewSavedBalanceIsGreaterThan0ButMoreThan3000BipsMoreThanTheCurrentSavedBalance() external {
         // it should pass assertSettle
+        close(vaultTested);
+        assertSettle(vaultTested, 3001);
     }
 
-    function test_GivenPendingDepositIsEqualToPendingWithdraw() external {
+    function test_GivenPerfIs0Bip() external {
         // it should pass assertSettle
         close(vaultTested);
+        assertSettle(vaultTested, 0);
+    }
+
+    function test_GivenPerfIs1000Bip() external {
+        // it should pass assertSettle
+        close(vaultTested);
+        assertSettle(vaultTested, 1000);
+    }
+
+    function test_GivenOnlyAsyncRedeemsAreNull() external {
+        // it should pass assertSettle
+        close(vaultTested);
+        usersDealApproveAndRequestDeposit(vaultTested, 3);
         assertSettle(vaultTested, 0);
     }
 
