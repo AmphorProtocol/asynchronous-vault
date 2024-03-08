@@ -753,17 +753,11 @@ abstract contract Assertions is EventsAssertions {
         vault.open(toSendBack);
     }
 
-    function settle(AsyncSynthVault vault, int256 performanceInBips) public {
-        vm.assume(performanceInBips > -10_000 && performanceInBips < 10_000);
-        uint256 lastSavedBalance = vault.totalAssets();
-        uint256 toSendBack = uint256(
-            performanceToAssets(int256(lastSavedBalance), performanceInBips)
-        );
+    function settle(AsyncSynthVault vault, uint256 assetReturned) public {
         address owner = vault.owner();
         deal(owner, type(uint256).max);
-
         vm.prank(owner);
-        vault.settle(toSendBack);
+        vault.settle(assetReturned);
     }
 
     function _dealAsset(address asset, address owner, uint256 amount) public {
@@ -948,6 +942,40 @@ abstract contract Assertions is EventsAssertions {
         );
     }
 
+    function assertDecreaseRedeem(
+        AsyncSynthVault vault,
+        address receiver
+    )
+        internal
+    {
+        // it should decrease of assets the redeem request balance of owner
+        // it should decrease of assets the receiver underlying balance
+        // it should increase of assets the vault underlying balance
+        // it should emit `RedeemRequestDecreased` event -> todo
+        uint256 ownerRedeemRequestBalance = vault.pendingRedeemRequest(user1.addr);
+        uint256 ownerDecreaseAmount = ownerRedeemRequestBalance / 2;
+        uint256 finalOwnerRedeemRequestBalance =
+            ownerRedeemRequestBalance - ownerDecreaseAmount;
+        uint256 vaultUnderlyingBalanceBef =
+            IERC20(vault.asset()).balanceOf(address(vault));
+        uint256 user2UnderlyingBalanceBef =
+            IERC20(vault.asset()).balanceOf(receiver);
+        vm.startPrank(user1.addr);
+        vault.decreaseRedeemRequest(ownerDecreaseAmount, user2.addr);
+        vm.stopPrank();
+        assertEq(
+            vault.pendingRedeemRequest(user1.addr), finalOwnerRedeemRequestBalance
+        );
+        assertEq(
+            IERC20(vault.asset()).balanceOf(address(vault)),
+            vaultUnderlyingBalanceBef + ownerDecreaseAmount
+        );
+        assertEq(
+            IERC20(vault.asset()).balanceOf(receiver),
+            user2UnderlyingBalanceBef - ownerDecreaseAmount
+        );
+    }
+
     function assertSettle(
         AsyncSynthVault vault,
         int256 performanceInBps
@@ -1002,36 +1030,113 @@ abstract contract Assertions is EventsAssertions {
         vm.stopPrank();
         _dealAsset(vault.asset(), owner, assetsBeforeExecReq);
 
+        // futur share price calculation taking in account the returned asset and fees
+        uint256 sharePrice = _convertToShares(
+            totalAssetsBefore - expectedAssetsToRedeem + stateBefore.pendingDeposit,
+            totalSupplyBefore + expectedSharesToMint - stateBefore.pendingRedeem,
+            assetReturned - expectedFees,
+            Math.Rounding.Floor
+        );
 
-        // it should transfer (pendingWithdraw - pendingDeposit) underlying from owner to the vault (claimable silo) if pendingWithdraw is higher than pendingDeposit
-        // it should transfer (pendingDeposit - pendingWithdraw) underlying from vault to the owner (claimable silo) if pendingDeposit is higher than pendingWithdraw
-
-        // if (stateBefore.pendingDeposit > stateBefore.pendingRedeem) {
-        //     assertTransferEvent(
-        //         IERC20(vault.asset()),
-        //         owner,
-        //         address(vault.claimableSilo()),
-        //         stateBefore.pendingDeposit - stateBefore.pendingRedeem
-        //     );
-        // } else {
-        //     assertTransferEvent(
-        //         IERC20(vault.asset()),
-        //         address(vault.claimableSilo()),
-        //         owner,
-        //         stateBefore.pendingRedeem - stateBefore.pendingDeposit
-        //     );
-        // }
-        // Request management
-        // giving back the fund
-        // todo numbers depends if deposit higher than withraw
         // assertTransferEvent(
         //     IERC20(vault.asset()),
-        //     amphorLabs,
-        //     address(vault),
-        //     assetsBeforeExecReq
+        //     address(vault.pending()),
+        //     address(vault.claimableSilo()),
+        //     expectedAssetsToRedeem
         // );
 
+        // if (stateBefore.pendingDeposit > stateBefore.pendingRedeem * sharePrice) {
+        //     assertDecreaseRedeem(vault, owner);
+        //     assertTransferEvent(
+        //         IERC20(vault.asset()),
+        //         address(owner),
+        //         address(vault.claimableSilo()),
+        //         expectedAssetsToRedeem
+        //     );
+        // } else {
+        //     assertDecreaseDeposit(vault, owner);
+        //     assertTransferEvent(
+        //         IERC20(vault.asset()),
+        //         address(owner),
+        //         address(vault.claimableSilo()),
+        //         expectedAssetsToRedeem - stateBefore.pendingDeposit
+        //     );
+        // }
+
         // ending the epoch
+        assertSettleEvents(
+            vault,
+            stateBefore,
+            expectedSharesToMint,
+            expectedAssetsToRedeem,
+            assetReturned,
+            expectedFees,
+            totalSupplyBefore,
+            owner
+        );
+
+        // open
+        settle(vault, assetReturned);
+
+        // amount of claimable shares and assets should increase
+        assertEq(
+            vault.totalClaimableShares(),
+            stateBefore.totalClaimableShares + expectedSharesToMint,
+            "Claimable shares is not correct"
+        );
+
+        assertEq(
+            vault.totalClaimableAssets(),
+            stateBefore.totalClaimableAssets + expectedAssetsToRedeem,
+            "Claimable assets is not correct"
+        );
+
+        // //amount of pending deposits and redeems should be 0
+        assertEq(vault.totalPendingDeposits(), 0, "Pending deposits is not 0");
+        assertEq(vault.totalPendingRedeems(), 0, "Pending redeems is not 0");
+
+        assertTotalSupply(
+            vault,
+            stateBefore.totalSupply + expectedSharesToMint
+                - stateBefore.pendingRedeem
+        );
+
+        assertTotalAssets(
+            vault,
+            assetsBeforeExecReq - expectedAssetsToRedeem
+                + stateBefore.pendingDeposit
+        );
+
+        // // vault balance in assets should increase by assetReturned -
+        // // expectedFees + pendingDeposit
+        assertEq(
+            int(vault.totalAssets()),
+            int256(assetsBeforeExecReq) + int256(stateBefore.pendingDeposit)
+                - int256(expectedAssetsToRedeem)
+        );
+
+        assertEq(vault.vaultIsOpen(), false, "Vault is not closed");
+
+        assertEq(
+            vault.lastSavedBalance(),
+            assetReturned - expectedFees
+                + (stateBefore.pendingDeposit - expectedAssetsToRedeem)
+        );
+
+        assertTotalAssets(vault, totalAssetsBefore);
+        assertTotalSupply(vault, totalSupplyBefore);
+    }
+
+    function assertSettleEvents(
+        AsyncSynthVault vault,
+        VaultState memory stateBefore,
+        uint256 expectedSharesToMint,
+        uint256 expectedAssetsToRedeem,
+        uint256 assetReturned,
+        uint256 expectedFees,
+        uint256 totalSupplyBefore,
+        address owner
+    ) internal {
         assertEpochEndEvent(
             vault,
             block.timestamp,
@@ -1078,50 +1183,5 @@ abstract contract Assertions is EventsAssertions {
             vault.totalAssets() - expectedAssetsToRedeem + stateBefore.pendingDeposit,
             totalSupplyBefore + expectedSharesToMint - stateBefore.pendingRedeem
         );
-
-        // open
-        settle(vault, performanceInBps);
-
-        // amount of claimable shares and assets should increase
-        assertEq(
-            vault.totalClaimableShares(),
-            stateBefore.totalClaimableShares + expectedSharesToMint,
-            "Claimable shares is not correct"
-        );
-
-        assertEq(
-            vault.totalClaimableAssets(),
-            stateBefore.totalClaimableAssets + expectedAssetsToRedeem,
-            "Claimable assets is not correct"
-        );
-
-        // //amount of pending deposits and redeems should be 0
-        assertEq(vault.totalPendingDeposits(), 0, "Pending deposits is not 0");
-        assertEq(vault.totalPendingRedeems(), 0, "Pending redeems is not 0");
-
-        assertTotalSupply(
-            vault,
-            stateBefore.totalSupply + expectedSharesToMint
-                - stateBefore.pendingRedeem
-        );
-
-        assertTotalAssets(
-            vault,
-            assetsBeforeExecReq - expectedAssetsToRedeem
-                + stateBefore.pendingDeposit
-        );
-
-        // // vault balance in assets should increase by assetReturned -
-        // // expectedFees + pendingDeposit
-        assertEq(
-            int(vault.totalAssets()),
-            int256(assetsBeforeExecReq) + int256(stateBefore.pendingDeposit)
-                - int256(expectedAssetsToRedeem)
-        );
-
-        assertEq(vault.vaultIsOpen(), false, "Vault is not closed");
-
-        assertTotalAssets(vault, totalAssetsBefore);
-        assertTotalSupply(vault, totalSupplyBefore);
     }
 }

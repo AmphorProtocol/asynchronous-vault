@@ -677,31 +677,44 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         _burn(address(pendingSilo), _pendingRedeem);
         _mint(address(claimableSilo), sharesToMint);
 
-        // Settle assets balance
+        ///////////////////////////
+        // Settle assets balance //
+        ///////////////////////////
+        _asset.safeTransferFrom(
+            address(pendingSilo),
+            address(claimableSilo),
+            _pendingDeposit
+        );
         // either there are more deposits than withdrawals
+        // if it's equal it's a no-op
         if (_pendingDeposit > assetsToWithdraw) {
             _asset.safeTransferFrom(
                 address(pendingSilo),
                 _owner,
                 _pendingDeposit - assetsToWithdraw
             );
-            _asset.safeTransferFrom(
-                address(pendingSilo),
-                address(claimableSilo),
-                assetsToWithdraw
-            );
+            if (assetsToWithdraw > 0) {
+                _asset.safeTransferFrom(
+                    address(pendingSilo),
+                    address(claimableSilo),
+                    assetsToWithdraw
+                );
+            }
         } else if (_pendingDeposit < assetsToWithdraw) {
             _asset.safeTransferFrom(
                 _owner,
                 address(claimableSilo),
-                assetsToWithdraw  - _pendingDeposit
+                assetsToWithdraw - _pendingDeposit
             );
-            _asset.safeTransferFrom(
-                address(pendingSilo),
-                address(claimableSilo),
-                _pendingDeposit
-            );
+            if (_pendingDeposit > 0) { // then two transfers
+                _asset.safeTransferFrom(
+                    address(pendingSilo),
+                    address(claimableSilo),
+                    _pendingDeposit
+                );
+            }
         }
+        ////////////////////////////////
 
         // emit deposit + async deposit + withdraw + async withdraw
         emit Deposit(_owner, _owner, _pendingDeposit, sharesToMint);
