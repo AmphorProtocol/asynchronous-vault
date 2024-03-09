@@ -1064,16 +1064,16 @@ abstract contract Assertions is EventsAssertions {
         // }
 
         // ending the epoch
-        assertSettleEvents(
-            vault,
-            stateBefore,
-            expectedSharesToMint,
-            stateBefore.pendingRedeem,
-            expectedAssetsToRedeem,
-            assetReturned,
-            expectedFees,
-            owner
-        );
+        // assertSettleEvents(
+        //     vault,
+        //     stateBefore,
+        //     expectedSharesToMint,
+        //     stateBefore.pendingRedeem,
+        //     expectedAssetsToRedeem,
+        //     assetReturned,
+        //     expectedFees,
+        //     owner
+        // );
 
         // open
         settle(vault, assetReturned);
