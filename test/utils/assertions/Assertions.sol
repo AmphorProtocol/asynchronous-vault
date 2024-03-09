@@ -514,14 +514,15 @@ abstract contract Assertions is EventsAssertions {
         vm.stopPrank();
         _dealAsset(vault.asset(), owner, assetsBeforeExecReq);
 
-        // Request management
-        // giving back the fund
-        assertTransferEvent(
-            IERC20(vault.asset()),
-            amphorLabs,
-            address(vault),
-            assetsBeforeExecReq
-        );
+        // we don't check this anymore cause we are settling
+        // // Request management
+        // // giving back the fund
+        // assertTransferEvent(
+        //     IERC20(vault.asset()),
+        //     amphorLabs,
+        //     address(vault),
+        //     assetsBeforeExecReq
+        // );
 
         // // // // ending the epoch
         assertEpochEndEvent(
@@ -532,6 +533,12 @@ abstract contract Assertions is EventsAssertions {
             expectedFees,
             stateBefore.totalSupply
         );
+
+        // console.log("vault", address(vault));
+        // console.log("pendingSilos", address(vault.pendingSilo()));
+        // console.log("claimableSilos", address(vault.claimableSilo()));
+        // console.log("pendingDeposit", stateBefore.pendingDeposit);
+        // console.log("expectedSharesToMint", expectedSharesToMint);
 
         assertDepositEvent(
             vault,
@@ -547,6 +554,11 @@ abstract contract Assertions is EventsAssertions {
             stateBefore.pendingDeposit,
             stateBefore.pendingDeposit
         );
+
+        // console.log("pendingRedeem", stateBefore.pendingRedeem);
+        // console.log("expectedAssetsToRedeem", expectedAssetsToRedeem);
+        // console.log("pendingSilo", address(vault.pendingSilo()));
+        // console.log("claimableSilo", address(vault.claimableSilo()));
 
         assertWithdrawEvent(
             vault,

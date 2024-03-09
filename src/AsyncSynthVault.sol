@@ -631,12 +631,12 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         whenNotPaused 
         whenClosed
     {
-        _open(assetReturned);
-        _execRequests();
-        epochId++;
-        // (uint256 newBalance,) = _settle(assetReturned);
-        // _asset.safeTransferFrom(owner(), address(this), newBalance);
-        // vaultIsOpen = true;
+        // _open(assetReturned);
+        // _execRequests();
+        // epochId++;
+        (uint256 newBalance,) = _settle(assetReturned);
+        _asset.safeTransferFrom(owner(), address(this), newBalance);
+        vaultIsOpen = true;
     }
 
     function _checkMaxDrawdown(uint256 _lastSavedBalance, uint256 newSavedBalance) internal view {
@@ -765,9 +765,9 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
             );
         }
 
-        emit Deposit(settleValues.owner, settleValues.owner, settleValues.pendingDeposit, settleValues.sharesToMint);
+        emit Deposit(settleValues.pendingSiloAddr, settleValues.claimableSiloAddr, settleValues.pendingDeposit, settleValues.sharesToMint);
         emit AsyncDeposit(epochId, settleValues.pendingDeposit, settleValues.pendingDeposit);
-        emit Withdraw(settleValues.owner, settleValues.owner, settleValues.owner, settleValues.assetsToWithdraw, settleValues.pendingRedeem);
+        emit Withdraw(settleValues.pendingSiloAddr, settleValues.claimableSiloAddr, settleValues.pendingSiloAddr, settleValues.assetsToWithdraw, settleValues.pendingRedeem);
         emit AsyncWithdraw(epochId, settleValues.pendingRedeem, settleValues.pendingRedeem);
 
         settleValues.lastSavedBalance = settleValues.lastSavedBalance - settleValues.fees + settleValues.pendingDeposit - settleValues.assetsToWithdraw;
