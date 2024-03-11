@@ -779,7 +779,12 @@ abstract contract Assertions is EventsAssertions {
         assertApproxEqAbs(
             sharesToGetIfDeposit,
             sharesRedeemed,
-            1,
+            2,
+            "Claimed assets back in shares are not equal to redeemed shares"
+        );
+        assertEq(
+            vaultTested.previewClaimRedeem(receiver),
+            0,
             "Claimed assets back in shares are not equal to redeemed shares"
         );
     }

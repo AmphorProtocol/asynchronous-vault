@@ -454,6 +454,11 @@ abstract contract SyncSynthVault is
         view
         returns (uint256)
     {
+        console.log("convertToAssets in open vault");
+        console.log("totalAssets", totalAssets() + 1);
+        console.log("totalSupply", totalSupply() + 10 ** decimalsOffset);
+        console.log("shares", shares);
+        console.log(" ");
         return shares.mulDiv(
             totalAssets() + 1, totalSupply() + 10 ** decimalsOffset, rounding
         );
