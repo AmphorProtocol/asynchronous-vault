@@ -45,7 +45,8 @@ contract TestSettle is TestBase {
         vaultTested.settle(0);
     }
 
-    function test_RevertGiven_NewSavedBalanceIsGreaterThan0ButMoreThan3000BipsLessThanTheCurrentSavedBalance()
+    function test_RevertGiven_NewSavedBalanceIsGreaterThan0ButMoreThan3000BipsLessThanTheCurrentSavedBalance(
+    )
         external
     {
         // it should revert
@@ -56,20 +57,29 @@ contract TestSettle is TestBase {
         vaultTested.settle(lastSavedBalance / 2);
     }
 
-    function test_GivenNewSavedBalanceIsGreaterThan0But1000BipsLessThanLastSavedBalance() external {
+    function test_GivenNewSavedBalanceIsGreaterThan0But1000BipsLessThanLastSavedBalance(
+    )
+        external
+    {
         // it should pass assertSettle
         close(vaultTested);
         assertSettle(vaultTested, -1000);
     }
 
-    function test_GivenNewSavedBalanceIsGreaterThan0But1000BipsMoreThanLastSavedBalance() external {
+    function test_GivenNewSavedBalanceIsGreaterThan0But1000BipsMoreThanLastSavedBalance(
+    )
+        external
+    {
         // it should pass assertSettle
         close(vaultTested);
         assertSettle(vaultTested, 1000);
 
     }
 
-    function test_GivenNewSavedBalanceIsGreaterThan0ButMoreThan3000BipsMoreThanTheCurrentSavedBalance() external {
+    function test_GivenNewSavedBalanceIsGreaterThan0ButMoreThan3000BipsMoreThanTheCurrentSavedBalance(
+    )
+        external
+    {
         // it should pass assertSettle
         close(vaultTested);
         assertSettle(vaultTested, 3001);

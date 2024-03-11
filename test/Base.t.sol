@@ -9,6 +9,11 @@ import { IERC4626 } from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IERC20Metadata } from
     "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import { SigUtils } from "@test/utils/SigUtils.sol";
+import { ERC20Permit } from
+    "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
+import { ERC20Permit } from
+    "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
@@ -525,6 +530,23 @@ contract TestBase is AssertionsRequest {
         }
     }
 
+    function usersDeal(IERC4626 vault, uint256 userMax) internal {
+        userMax = userMax > users.length ? users.length : userMax;
+        uint256 amount = 0;
+        address underlying = address(vault.asset());
+        if (underlying == address(WSTETH)) {
+            amount = 100 * 10 ** WSTETH.decimals();
+        } else if (underlying == address(WBTC)) {
+            amount = 10 * 10 ** WBTC.decimals();
+        } else if (underlying == address(USDC)) {
+            amount = 1_000_000 * 10 ** USDC.decimals();
+        }
+        for (uint256 i = 0; i < userMax; i++) {
+            deal(users[i].addr, type(uint256).max);
+            _dealAsset(address(vault.asset()), users[i].addr, amount);
+        }
+    }
+
     function usersDealApprove(IERC4626 vault, uint256 userMax) internal {
         userMax = userMax > users.length ? users.length : userMax;
         uint256 amount = 0;
@@ -606,5 +628,24 @@ contract TestBase is AssertionsRequest {
         console.log("Redeem request amount", vault.balanceOf(owner));
         vault.requestRedeem(vault.balanceOf(owner), owner, owner, "");
         vm.stopPrank();
+    }
+
+    // Permit
+
+    function _executePermit(
+        ERC20Permit token,
+        VmSafe.Wallet memory owner,
+        address spender,
+        uint256 _value,
+        uint256 _deadline
+    )
+        internal
+    {
+        (uint8 v, bytes32 r, bytes32 s) = _signPermit(
+            owner, spender, _value, token.nonces(owner.addr), _deadline
+        );
+        ERC20Permit(address(token)).permit(
+            owner.addr, spender, _value, _deadline, v, r, s
+        );
     }
 }

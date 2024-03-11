@@ -2,7 +2,11 @@
 pragma solidity 0.8.21;
 
 import { IERC4626 } from "@openzeppelin/contracts/interfaces/IERC4626.sol";
-import { AsyncSynthVault } from "../../../src/AsyncSynthVault.sol";
+import {
+    AsyncSynthVault,
+    PermitParams,
+    SyncSynthVault
+} from "../../../src/AsyncSynthVault.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { VmSafe } from "forge-std/Vm.sol";
 
@@ -14,6 +18,7 @@ import { Constants } from "../Constants.sol";
 import { AsyncSynthVault } from "../../../src/AsyncSynthVault.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { console } from "forge-std/console.sol";
+import { SigUtils } from "@test/utils/SigUtils.sol";
 
 abstract contract Assertions is EventsAssertions {
     using Math for uint256;
@@ -125,6 +130,116 @@ abstract contract Assertions is EventsAssertions {
         assertSharesValueInAssets(
             vault, receiver, sharesValueBeforeDep.receiver + assets
         );
+    }
+
+    function assertDepositWithPermit(
+        SyncSynthVault vault,
+        address owner,
+        address receiver,
+        uint256 assets,
+        uint256 deadline
+    )
+        public
+    {
+        (uint8 v, bytes32 r, bytes32 s) = _signPermit(
+            user1,
+            address(vault),
+            assets,
+            underlyingPermit.nonces(user1.addr),
+            deadline
+        );
+        PermitParams memory params = PermitParams({
+            value: assets,
+            deadline: deadline,
+            v: v,
+            r: r,
+            s: s
+        });
+        // assets data before deposit
+        AssetsData memory assetsBefore =
+            getAssetsData(vault, owner, owner, receiver);
+
+        // shares data before deposit
+        SharesData memory sharesBefore =
+            getSharesData(vault, owner, owner, receiver);
+
+        // shares value in assets before deposit
+        SharesValueData memory sharesValueBeforeDep =
+            getSharesValueData(vault, owner, owner, receiver);
+
+        // expected shares after deposit
+        uint256 previewedShares = vault.previewDeposit(assets);
+
+        // assertions on events
+        assertTransferEvent(
+            IERC20(vault.asset()), owner, address(vault), assets
+        ); // transfer from owner to vault of its assets
+        assertTransferEvent(vault, address(0), receiver, previewedShares); // transfer
+            // from vault to receiver of its shares
+        assertDepositEvent(vault, owner, receiver, assets, previewedShares); // deposit
+            // event
+
+        // deposit //
+        vm.prank(owner);
+        uint256 depositReturn =
+            vault.depositWithPermit(assets, receiver, params);
+
+        // first check this to simplify the rest of the assertions
+        assertEq(
+            depositReturn,
+            previewedShares,
+            "Deposit return is not equal to previewDeposit return"
+        );
+
+        // assertion on total supply
+        assertTotalSupply(vault, sharesBefore.totalSupply + depositReturn);
+
+        // assertion on total assets
+        assertTotalAssets(vault, assetsBefore.totalAssets + assets);
+        assertVaultAssetBalance(vault, assetsBefore.vault + assets);
+
+        // assertion on shares
+        if (owner != receiver) {
+            assertSharesBalance(vault, owner, sharesBefore.owner);
+        }
+        assertSharesBalance(
+            vault, receiver, sharesBefore.receiver + previewedShares
+        );
+        assertSharesBalance(vault, address(vault), sharesBefore.vault);
+
+        // assertion on assets
+        assertAssetBalance(vault, owner, assetsBefore.owner - assets);
+        if (owner != receiver) {
+            assertAssetBalance(vault, receiver, assetsBefore.receiver);
+        }
+
+        // assertion on shares value in assets
+        assertSharesValueInAssets(
+            vault, receiver, sharesValueBeforeDep.receiver + assets
+        );
+    }
+
+    function _signPermit(
+        VmSafe.Wallet memory owner,
+        address _spender,
+        uint256 _value,
+        uint256 _nonce,
+        uint256 deadline
+    )
+        internal
+        view
+        returns (uint8 v, bytes32 r, bytes32 s)
+    {
+        SigUtils.Permit memory permit = SigUtils.Permit({
+            owner: owner.addr,
+            spender: _spender,
+            value: _value,
+            nonce: _nonce,
+            deadline: deadline
+        });
+        bytes32 digest = sigUtils.getTypedDataHash(permit);
+        (v, r, s) = vm.sign(owner.privateKey, digest);
+        return (v, r, s);
     }
 
     function assertMint(
@@ -680,7 +795,12 @@ abstract contract Assertions is EventsAssertions {
         assertApproxEqAbs(
             sharesToGetIfDeposit,
             sharesRedeemed,
-            1,
+            2,
+            "Claimed assets back in shares are not equal to redeemed shares"
+        );
+        assertEq(
+            vaultTested.previewClaimRedeem(receiver),
+            0,
             "Claimed assets back in shares are not equal to redeemed shares"
         );
     }

@@ -1,6 +1,6 @@
 TestClose
 ├── given vault is closed when close
-│   └── it should revert with VaultIsLocked
+│   └── it should revert with VaultIsClosed
 ├── given msgSender is not owner when close
 │   └── it should revert with OwnableUnauthorizedAccount(msg.sender)
 ├── given totalsAssets is x when open

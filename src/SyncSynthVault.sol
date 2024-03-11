@@ -139,7 +139,7 @@ abstract contract SyncSynthVault is
      * # ERRORS #
      * ##########
      */
-    error VaultIsLocked();
+    error VaultIsClosed();
     error VaultIsOpen();
     error FeesTooHigh();
     error ERC4626ExceededMaxDeposit(
@@ -454,6 +454,11 @@ abstract contract SyncSynthVault is
         view
         returns (uint256)
     {
+        console.log("convertToAssets in open vault");
+        console.log("totalAssets", totalAssets() + 1);
+        console.log("totalSupply", totalSupply() + 10 ** decimalsOffset);
+        console.log("shares", shares);
+        console.log(" ");
         return shares.mulDiv(
             totalAssets() + 1, totalSupply() + 10 ** decimalsOffset, rounding
         );
@@ -551,7 +556,7 @@ abstract contract SyncSynthVault is
      * @param newFee The new perf fees to be applied.
      */
     function setFee(uint16 newFee) external onlyOwner {
-        if (!vaultIsOpen) revert VaultIsLocked();
+        if (!vaultIsOpen) revert VaultIsClosed();
         if (newFee > MAX_FEES) revert FeesTooHigh();
         feesInBps = newFee;
         emit FeesChanged(feesInBps, newFee);
