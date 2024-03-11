@@ -17,7 +17,9 @@ contract TestPreviewClaimRedeem is TestBase {
         // it should return the amount of assets that can be claimed
         close(vaultTested);
         uint256 shares = 1000;
-        assertRequestRedeem(vaultTested, user1.addr, user1.addr, user1.addr, shares, "");
+        assertRequestRedeem(
+            vaultTested, user1.addr, user1.addr, user1.addr, shares, ""
+        );
         assertOpen(vaultTested, 1);
         assertApproxEqAbs(vaultTested.previewClaimRedeem(user1.addr), shares, 1);
     }

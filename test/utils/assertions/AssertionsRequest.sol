@@ -33,24 +33,41 @@ abstract contract AssertionsRequest is Assertions {
         uint256 receiver;
     }
 
-    function assertRequestDeposit(AsyncSynthVault vault, address sender, address owner, address receiver, uint256 assets, bytes memory data) public {
+    function assertRequestDeposit(
+        AsyncSynthVault vault,
+        address sender,
+        address owner,
+        address receiver,
+        uint256 assets,
+        bytes memory data
+    )
+        public
+    {
         uint256 epochId = vault.epochId();
 
         // assets data before deposit
-        AssetsData memory assetsBefore = getAssetsData(vault, sender, owner, receiver);
+        AssetsData memory assetsBefore =
+            getAssetsData(vault, sender, owner, receiver);
 
         // shares data before deposit
-        SharesData memory sharesBefore = getSharesData(vault, sender, owner, receiver);
+        SharesData memory sharesBefore =
+            getSharesData(vault, sender, owner, receiver);
 
         // pending deposits data before deposit
-        PendingDepositsData memory pendingDepositsBefore = getPendingDepositData(AsyncSynthVault(address(vault)), sender, owner, receiver);
+        PendingDepositsData memory pendingDepositsBefore = getPendingDepositData(
+            AsyncSynthVault(address(vault)), sender, owner, receiver
+        );
 
         // assertions on events
         // assertTransferEvent(
         //     IERC20(vault.asset()), owner, address(vault), assets
         // ); // transfer from owner to vault of its assets
-        assertTransferEvent(IERC20(vault.asset()), owner, address(vault.pendingSilo()), assets);
-        assertDepositRequestEvent(vault, receiver, owner, epochId, sender, assets);
+        assertTransferEvent(
+            IERC20(vault.asset()), owner, address(vault.pendingSilo()), assets
+        );
+        assertDepositRequestEvent(
+            vault, receiver, owner, epochId, sender, assets
+        );
 
         // request deposit //
         vm.prank(sender);
@@ -80,26 +97,43 @@ abstract contract AssertionsRequest is Assertions {
 
         // assertion on pending deposits, only total and receiver should
         // increase
-        assertPendingDepositRequest(vault, receiver, pendingDepositsBefore.receiver + assets);
+        assertPendingDepositRequest(
+            vault, receiver, pendingDepositsBefore.receiver + assets
+        );
         assertTotalPendingDeposits(vault, pendingDepositsBefore.vault + assets);
     }
 
-    function assertRequestRedeem(AsyncSynthVault vault, address sender, address owner, address receiver, uint256 shares, bytes memory data) public {
+    function assertRequestRedeem(
+        AsyncSynthVault vault,
+        address sender,
+        address owner,
+        address receiver,
+        uint256 shares,
+        bytes memory data
+    )
+        public
+    {
         uint256 epochId = vault.epochId();
 
         // assets data before deposit
-        AssetsData memory assetsBefore = getAssetsData(vault, sender, owner, receiver);
+        AssetsData memory assetsBefore =
+            getAssetsData(vault, sender, owner, receiver);
 
         // shares data before deposit
-        SharesData memory sharesBefore = getSharesData(vault, sender, owner, receiver);
+        SharesData memory sharesBefore =
+            getSharesData(vault, sender, owner, receiver);
 
         // pending deposits data before deposit
-        PendingRedeemsData memory pendingRedeemsBefore = getPendingRedeemData(AsyncSynthVault(address(vault)), sender, owner, receiver);
+        PendingRedeemsData memory pendingRedeemsBefore = getPendingRedeemData(
+            AsyncSynthVault(address(vault)), sender, owner, receiver
+        );
 
         // assertions on events
         assertTransferEvent(vault, owner, address(vault.pendingSilo()), shares); // transfer
             // from owner to vault of its assets
-        assertRedeemRequestEvent(vault, receiver, owner, epochId, sender, shares);
+        assertRedeemRequestEvent(
+            vault, receiver, owner, epochId, sender, shares
+        );
 
         // request redeem //
         vm.prank(sender);
@@ -134,41 +168,119 @@ abstract contract AssertionsRequest is Assertions {
         // assertion on pending deposits redeems, only total and receiver should
         // increase
 
-        assertPendingRedeemRequest(vault, receiver, pendingRedeemsBefore.receiver + shares);
+        assertPendingRedeemRequest(
+            vault, receiver, pendingRedeemsBefore.receiver + shares
+        );
         assertTotalPendingRedeems(vault, pendingRedeemsBefore.vault + shares);
     }
 
-    function assertPendingDepositRequest(IERC7540 vault, address owner, uint256 expected) public {
+    function assertPendingDepositRequest(
+        IERC7540 vault,
+        address owner,
+        uint256 expected
+    )
+        public
+    {
         string memory userLabel = vm.getLabel(owner);
         string memory vaultLabel = vm.getLabel(address(vault));
         string memory explanation = " | Current (left) != Expected (right)";
-        assertEq(vault.pendingDepositRequest(owner), expected, string.concat(userLabel, " has wrong pending deposit assets balance in ", vaultLabel, explanation));
+        assertEq(
+            vault.pendingDepositRequest(owner),
+            expected,
+            string.concat(
+                userLabel,
+                " has wrong pending deposit assets balance in ",
+                vaultLabel,
+                explanation
+            )
+        );
     }
 
-    function assertTotalPendingDeposits(AsyncSynthVault vault, uint256 expected) public {
+    function assertTotalPendingDeposits(
+        AsyncSynthVault vault,
+        uint256 expected
+    )
+        public
+    {
         string memory vaultLabel = vm.getLabel(address(vault));
         string memory explanation = " | Current (left) != Expected (right)";
-        assertEq(vault.totalPendingDeposits(), expected, string.concat("Total pending deposits in ", vaultLabel, explanation));
+        assertEq(
+            vault.totalPendingDeposits(),
+            expected,
+            string.concat("Total pending deposits in ", vaultLabel, explanation)
+        );
     }
 
-    function assertTotalPendingRedeems(AsyncSynthVault vault, uint256 expected) public {
+    function assertTotalPendingRedeems(
+        AsyncSynthVault vault,
+        uint256 expected
+    )
+        public
+    {
         string memory vaultLabel = vm.getLabel(address(vault));
         string memory explanation = " | Current (left) != Expected (right)";
-        assertEq(vault.totalPendingRedeems(), expected, string.concat("Total pending redeems in ", vaultLabel, explanation));
+        assertEq(
+            vault.totalPendingRedeems(),
+            expected,
+            string.concat("Total pending redeems in ", vaultLabel, explanation)
+        );
     }
 
-    function assertPendingRedeemRequest(IERC7540 vault, address owner, uint256 expected) public {
+    function assertPendingRedeemRequest(
+        IERC7540 vault,
+        address owner,
+        uint256 expected
+    )
+        public
+    {
         string memory userLabel = vm.getLabel(owner);
         string memory vaultLabel = vm.getLabel(address(vault));
         string memory explanation = " | Current (left) != Expected (right)";
-        assertEq(vault.pendingRedeemRequest(owner), expected, string.concat(userLabel, " has wrong pending redeem shares balance in ", vaultLabel, explanation));
+        assertEq(
+            vault.pendingRedeemRequest(owner),
+            expected,
+            string.concat(
+                userLabel,
+                " has wrong pending redeem shares balance in ",
+                vaultLabel,
+                explanation
+            )
+        );
     }
 
-    function getPendingDepositData(AsyncSynthVault vault, address sender, address owner, address receiver) public view returns (PendingDepositsData memory) {
-        return PendingDepositsData({ sender: vault.pendingDepositRequest(sender), owner: vault.pendingDepositRequest(owner), receiver: vault.pendingDepositRequest(receiver), vault: vault.totalPendingDeposits() });
+    function getPendingDepositData(
+        AsyncSynthVault vault,
+        address sender,
+        address owner,
+        address receiver
+    )
+        public
+        view
+        returns (PendingDepositsData memory)
+    {
+        return PendingDepositsData({
+            sender: vault.pendingDepositRequest(sender),
+            owner: vault.pendingDepositRequest(owner),
+            receiver: vault.pendingDepositRequest(receiver),
+            vault: vault.totalPendingDeposits()
+        });
     }
 
-    function getPendingRedeemData(AsyncSynthVault vault, address sender, address owner, address receiver) public view returns (PendingRedeemsData memory) {
-        return PendingRedeemsData({ sender: vault.pendingRedeemRequest(sender), owner: vault.pendingRedeemRequest(owner), receiver: vault.pendingRedeemRequest(receiver), vault: vault.totalPendingRedeems() });
+    function getPendingRedeemData(
+        AsyncSynthVault vault,
+        address sender,
+        address owner,
+        address receiver
+    )
+        public
+        view
+        returns (PendingRedeemsData memory)
+    {
+        return PendingRedeemsData({
+            sender: vault.pendingRedeemRequest(sender),
+            owner: vault.pendingRedeemRequest(owner),
+            receiver: vault.pendingRedeemRequest(receiver),
+            vault: vault.totalPendingRedeems()
+        });
     }
 }

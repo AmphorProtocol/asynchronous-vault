@@ -2,7 +2,21 @@
 pragma solidity 0.8.21;
 
 interface ERC7540Receiver {
-    function onERC7540DepositReceived(address operator, address owner, uint256 requestId, bytes memory data) external returns (bytes4);
+    function onERC7540DepositReceived(
+        address operator,
+        address owner,
+        uint256 requestId,
+        bytes memory data
+    )
+        external
+        returns (bytes4);
 
-    function onERC7540RedeemReceived(address operator, address owner, uint256 requestId, bytes memory data) external returns (bytes4);
+    function onERC7540RedeemReceived(
+        address operator,
+        address owner,
+        uint256 requestId,
+        bytes memory data
+    )
+        external
+        returns (bytes4);
 }

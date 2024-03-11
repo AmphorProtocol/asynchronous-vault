@@ -17,8 +17,12 @@ contract TestPreviewClaimDeposit is TestBase {
         // it should return the amount of assets that can be claimed
         close(vaultTested);
         uint256 assets = 1000;
-        assertRequestDeposit(vaultTested, user1.addr, user1.addr, user1.addr, assets, "");
+        assertRequestDeposit(
+            vaultTested, user1.addr, user1.addr, user1.addr, assets, ""
+        );
         assertOpen(vaultTested, 0);
-        assertApproxEqAbs(vaultTested.previewClaimDeposit(user1.addr), assets, 1);
+        assertApproxEqAbs(
+            vaultTested.previewClaimDeposit(user1.addr), assets, 1
+        );
     }
 }

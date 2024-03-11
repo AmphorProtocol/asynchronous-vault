@@ -2,7 +2,8 @@
 pragma solidity 0.8.21;
 
 import { TestBase, SyncSynthVault, AsyncSynthVault } from "../../../Base.t.sol";
-import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import { PausableUpgradeable } from
+    "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract TestRequestDeposit is TestBase {
@@ -39,12 +40,16 @@ contract TestRequestDeposit is TestBase {
         vm.stopPrank();
         assertClose(vaultTested);
         vm.startPrank(user1.addr);
-        vm.expectRevert(AsyncSynthVault.ERC7540CantRequestDepositOnBehalfOf.selector);
+        vm.expectRevert(
+            AsyncSynthVault.ERC7540CantRequestDepositOnBehalfOf.selector
+        );
         vaultTested.requestDeposit(1, user1.addr, user2.addr, "");
         vm.stopPrank();
     }
 
-    function test_GivenReceiverHasClaimableBalanceWhenRequestDeposit() external {
+    function test_GivenReceiverHasClaimableBalanceWhenRequestDeposit()
+        external
+    {
         // it should revert with maxDepositRequest
         usersDealApproveAndDeposit(vaultTested, 1);
 
@@ -56,28 +61,43 @@ contract TestRequestDeposit is TestBase {
         usersDealApprove(vaultTested, 1);
         vm.startPrank(user1.addr);
 
-        vm.expectRevert(abi.encodeWithSelector(AsyncSynthVault.MustClaimFirst.selector, user1.addr));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                AsyncSynthVault.MustClaimFirst.selector, user1.addr
+            )
+        );
         vaultTested.requestDeposit(1, user1.addr, user1.addr, "");
     }
 
     function test_WhenRequestDepositSucceed() external {
         usersDealApproveAndDeposit(vaultTested, 1);
         assertClose(vaultTested);
-        assertRequestDeposit(vaultTested, user1.addr, user1.addr, user1.addr, 56, "");
+        assertRequestDeposit(
+            vaultTested, user1.addr, user1.addr, user1.addr, 56, ""
+        );
     }
 
-    function test_GivenOwnerHasClaimableBalanceButNotReceiverWhenRequestDeposit() external {
+    function test_GivenOwnerHasClaimableBalanceButNotReceiverWhenRequestDeposit(
+    )
+        external
+    {
         // it should succeed
         usersDealApproveAndDeposit(vaultTested, 1);
         assertClose(vaultTested);
-        assertRequestDeposit(vaultTested, user1.addr, user1.addr, user1.addr, 56, "");
+        assertRequestDeposit(
+            vaultTested, user1.addr, user1.addr, user1.addr, 56, ""
+        );
         assertOpen(vaultTested, 0);
         assertClose(vaultTested);
         usersDealApprove(vaultTested, 4);
-        assertRequestDeposit(vaultTested, user1.addr, user1.addr, user4.addr, 56, "");
+        assertRequestDeposit(
+            vaultTested, user1.addr, user1.addr, user4.addr, 56, ""
+        );
     }
 
-    function test_GivenOwnerHaveNotEnoughApprovalBalanceWhenRequestDeposit() external {
+    function test_GivenOwnerHaveNotEnoughApprovalBalanceWhenRequestDeposit()
+        external
+    {
         // it should revert with ERC20InsufficientAllowance
         usersDealApproveAndDeposit(vaultTested, 1);
         assertClose(vaultTested);
@@ -87,7 +107,9 @@ contract TestRequestDeposit is TestBase {
         vm.stopPrank();
     }
 
-    function test_GivenOwnerHaveNotEnoughAssetsBalanceWhenRequestDeposit() external {
+    function test_GivenOwnerHaveNotEnoughAssetsBalanceWhenRequestDeposit()
+        external
+    {
         // it should revert with ERC20InsufficientBalance
         usersDealApproveAndDeposit(vaultTested, 1);
         assertClose(vaultTested);
@@ -96,7 +118,9 @@ contract TestRequestDeposit is TestBase {
         vaultTested.requestDeposit(100, user2.addr, user2.addr, "");
     }
 
-    function test_GivenDataParamSubmittedAndInvalidSelectorWhenRequestDeposit() external {
+    function test_GivenDataParamSubmittedAndInvalidSelectorWhenRequestDeposit()
+        external
+    {
         // it should revert with ReceiverFailed
         // it todo check ERC7540Receiver (and ReceiverFailed)
         usersDealApproveAndDeposit(vaultTested, 1);

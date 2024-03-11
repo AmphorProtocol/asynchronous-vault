@@ -20,31 +20,41 @@ contract TestClaimRedeem is TestBase {
         assertClose(vaultTested);
         uint256 shares = vaultTested.balanceOf(user5.addr);
 
-        assertRequestRedeem(vaultTested, user5.addr, user5.addr, user5.addr, shares, "");
+        assertRequestRedeem(
+            vaultTested, user5.addr, user5.addr, user5.addr, shares, ""
+        );
         assertOpen(vaultTested, 3);
         assertClaimRedeem(vaultTested, user5.addr, user5.addr, shares);
     }
 
-    function test_whenClaimRedeemWithSomethingToClaimAndVaultIsClosed() external {
+    function test_whenClaimRedeemWithSomethingToClaimAndVaultIsClosed()
+        external
+    {
         // it should revert with ERC4626ExceededMaxClaim
         usersDealApproveAndDeposit(vaultTested, 4);
         usersDealApprove(vaultTested, 5);
         assertClose(vaultTested);
         uint256 shares = vaultTested.balanceOf(user5.addr);
 
-        assertRequestRedeem(vaultTested, user5.addr, user5.addr, user5.addr, shares, "");
+        assertRequestRedeem(
+            vaultTested, user5.addr, user5.addr, user5.addr, shares, ""
+        );
         assertOpen(vaultTested, 3);
         assertClose(vaultTested);
         assertClaimRedeem(vaultTested, user5.addr, user5.addr, shares);
     }
 
     // claim with something to claim and vault is paused
-    function test_whenClaimRedeemWithSomethingToClaimAndVaultIsPaused() external {
+    function test_whenClaimRedeemWithSomethingToClaimAndVaultIsPaused()
+        external
+    {
         // it should revert with EnforcedPause
         usersDealApproveAndDeposit(vaultTested, 4);
         assertClose(vaultTested);
         uint256 shares = vaultTested.balanceOf(user1.addr);
-        assertRequestRedeem(vaultTested, user1.addr, user1.addr, user1.addr, shares, "");
+        assertRequestRedeem(
+            vaultTested, user1.addr, user1.addr, user1.addr, shares, ""
+        );
         assertOpen(vaultTested, 3);
         pause(vaultTested);
         vm.startPrank(user1.addr);

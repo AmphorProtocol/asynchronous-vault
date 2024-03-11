@@ -4,7 +4,9 @@ pragma solidity 0.8.21;
 import { TestBase } from "../../../Base.t.sol";
 
 contract TestEpochId is TestBase {
-    function test_GivenEpochIdEquals10GivenRequestIdEquals10WhenIsCurrentEpoch() external {
+    function test_GivenEpochIdEquals10GivenRequestIdEquals10WhenIsCurrentEpoch()
+        external
+    {
         // it should not revert
         // it should returns true
         usersDealApproveAndDeposit(vaultTested, 1);
