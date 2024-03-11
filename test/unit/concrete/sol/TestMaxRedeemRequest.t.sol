@@ -27,9 +27,6 @@ contract TestMaxRedeemRequest is TestBase {
         // it should return maxUint256
         usersDealApproveAndDeposit(vaultTested, 1); // vault should not be empty
         close(vaultTested);
-        assertEq(
-            vaultTested.maxRedeemRequest(user1.addr),
-            vaultTested.balanceOf(user1.addr)
-        );
+        assertEq(vaultTested.maxRedeemRequest(user1.addr), vaultTested.balanceOf(user1.addr));
     }
 }

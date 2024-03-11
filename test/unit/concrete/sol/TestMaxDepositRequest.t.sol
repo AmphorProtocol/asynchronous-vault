@@ -23,9 +23,7 @@ contract TestMaxDepositRequest is TestBase {
         assertEq(vaultTested.maxDepositRequest(user1.addr), 0);
     }
 
-    function test_GivenVaultClosedAndNotPausedWhenMaxDepositRequest()
-        external
-    {
+    function test_GivenVaultClosedAndNotPausedWhenMaxDepositRequest() external {
         // it should return maxUint256
         usersDealApproveAndDeposit(vaultTested, 1); // vault should not be empty
         close(vaultTested);

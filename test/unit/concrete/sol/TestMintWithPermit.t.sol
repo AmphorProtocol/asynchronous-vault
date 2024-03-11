@@ -8,16 +8,11 @@ contract TestMintWithPermit {
         // it should revert with ERC4626ExceededMaxMint
     }
 
-    function test_GivenRequiredAssetsHigherThanOwnerAllowanceToTheVaultWhenDeposit(
-    )
-        external
-    {
+    function test_GivenRequiredAssetsHigherThanOwnerAllowanceToTheVaultWhenDeposit() external {
         // it should revert with ERC20InsufficientAllowance
     }
 
-    function test_GivenRequiredAssetsHigherThanOwnerBalanceWhenDeposit()
-        external
-    {
+    function test_GivenRequiredAssetsHigherThanOwnerBalanceWhenDeposit() external {
         // it should revert with ERC20InsufficientBalance
     }
 
@@ -37,17 +32,11 @@ contract TestMintWithPermit {
         // it should revert with ERC20ZeroAmount (maybe)
     }
 
-    function test_GivenPreviewMintIsHigherThanTheAllowanceOfTheOwnerToTheVaultWhenMint(
-    )
-        external
-    {
+    function test_GivenPreviewMintIsHigherThanTheAllowanceOfTheOwnerToTheVaultWhenMint() external {
         // it should revert with ERC20InsufficientAllowance
     }
 
-    function test_GivenRequestedAmountOfSharesConvertedInAssetIsHigherThanTheBalanceOfTheOwnerWhenMint(
-    )
-        external
-    {
+    function test_GivenRequestedAmountOfSharesConvertedInAssetIsHigherThanTheBalanceOfTheOwnerWhenMint() external {
         // it should revert with ERC20InsufficientBalance
     }
 

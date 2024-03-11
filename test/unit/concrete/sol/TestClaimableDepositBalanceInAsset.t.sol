@@ -17,21 +17,15 @@ contract TestClaimableDepositBalanceInAsset is TestBase {
         // it should return the amount of assets that can be claimed
         close(vaultTested);
         uint256 assets = 1000;
-        assertRequestDeposit(
-            vaultTested, user1.addr, user1.addr, user1.addr, assets, ""
-        );
+        assertRequestDeposit(vaultTested, user1.addr, user1.addr, user1.addr, assets, "");
         assertOpen(vaultTested, 10);
-        assertApproxEqAbs(
-            vaultTested.previewClaimDeposit(user1.addr), assets, 1
-        );
+        assertApproxEqAbs(vaultTested.previewClaimDeposit(user1.addr), assets, 1);
     }
 
     function test_claimableDepositBalanceInAsset() external {
         close(vaultTested);
         uint256 assets = 10_000;
-        assertRequestDeposit(
-            vaultTested, user1.addr, user1.addr, user1.addr, assets, ""
-        );
+        assertRequestDeposit(vaultTested, user1.addr, user1.addr, user1.addr, assets, "");
         assertOpen(vaultTested, 0);
         assertEq(vaultTested.claimableDepositBalanceInAsset(user1.addr), assets);
     }
@@ -39,9 +33,7 @@ contract TestClaimableDepositBalanceInAsset is TestBase {
     function test_claimableDepositBalanceInAssetInProfit() external {
         close(vaultTested);
         uint256 assets = 10_000; // todo : to be fuzzed
-        assertRequestDeposit(
-            vaultTested, user1.addr, user1.addr, user1.addr, assets, ""
-        );
+        assertRequestDeposit(vaultTested, user1.addr, user1.addr, user1.addr, assets, "");
         assertOpen(vaultTested, 10);
 
         assertApproxEqAbs(

@@ -21,18 +21,11 @@ contract TestOpen is TestBase {
         address owner = vaultTested.owner();
         vm.prank(owner);
         vaultTested.close();
-        vm.expectRevert(
-            abi.encodeWithSignature(
-                "OwnableUnauthorizedAccount(address)", address(this)
-            )
-        );
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", address(this)));
         vaultTested.open(uint256(0));
     }
 
-    function test_GivenAssetReturnedIs0AndTotalsAssetsIsNot0AndMaxDrawdownIsNot0WhenOpen(
-    )
-        external
-    {
+    function test_GivenAssetReturnedIs0AndTotalsAssetsIsNot0AndMaxDrawdownIsNot0WhenOpen() external {
         // it should revert with MaxDrawdownReached
         usersDealApproveAndDeposit(vaultTested, 1);
         address owner = vaultTested.owner();
@@ -42,10 +35,7 @@ contract TestOpen is TestBase {
         vaultTested.open(uint256(0));
     }
 
-    function test_GivenAssetReturnedIs1AndTotalsAssetsIsOverAssetsReturnedAndMaxDrawdownIsNot0WhenOpen(
-    )
-        external
-    {
+    function test_GivenAssetReturnedIs1AndTotalsAssetsIsOverAssetsReturnedAndMaxDrawdownIsNot0WhenOpen() external {
         // it should revert with MaxDrawdownReached
         usersDealApproveAndDeposit(vaultTested, 1);
         address owner = vaultTested.owner();

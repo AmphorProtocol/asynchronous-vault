@@ -2,8 +2,7 @@
 pragma solidity 0.8.21;
 
 import { TestBase, SyncSynthVault, IERC20 } from "../../../Base.t.sol";
-import { PausableUpgradeable } from
-    "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 
 contract TestDecreaseDepositRequest is TestBase {
     function test_GivenVaultOpenWhenDecreaseDepositRequest() external {
@@ -12,9 +11,7 @@ contract TestDecreaseDepositRequest is TestBase {
         decreaseDepositRequest(vaultTested, user1, 1);
     }
 
-    function test_GivenVaultClosedAndPausedWhenDecreaseDepositRequest()
-        external
-    {
+    function test_GivenVaultClosedAndPausedWhenDecreaseDepositRequest() external {
         // it should revert with `EnforcedPause`
         usersDealApproveAndDeposit(vaultTested, 1);
         close(vaultTested);
@@ -24,9 +21,7 @@ contract TestDecreaseDepositRequest is TestBase {
         decreaseDepositRequest(vaultTested, user1, 1);
     }
 
-    function test_GivenVaultStateOkAndAssetsTooHighWhenDecreaseDepositRequest()
-        external
-    {
+    function test_GivenVaultStateOkAndAssetsTooHighWhenDecreaseDepositRequest() external {
         // it should revert if assets is higher than the owner deposit request
         // balance
         usersDealApproveAndDeposit(vaultTested, 1);
@@ -36,19 +31,13 @@ contract TestDecreaseDepositRequest is TestBase {
         decreaseDepositRequest(vaultTested, user1, userBalance + 1);
     }
 
-    function test_GivenVaultStateOkAndReceiverIsNotOwnerWhenDecreaseDepositRequest(
-    )
-        external
-    {
+    function test_GivenVaultStateOkAndReceiverIsNotOwnerWhenDecreaseDepositRequest() external {
         usersDealApproveAndDeposit(vaultTested, 1);
         close(vaultTested);
         assertDecreaseDeposit(vaultTested, user2.addr);
     }
 
-    function test_GivenVaultStateOkAndReceiverIsOwnerWhenDecreaseDepositRequest(
-    )
-        external
-    {
+    function test_GivenVaultStateOkAndReceiverIsOwnerWhenDecreaseDepositRequest() external {
         // it should pass same as above
         usersDealApproveAndDeposit(vaultTested, 1);
         close(vaultTested);

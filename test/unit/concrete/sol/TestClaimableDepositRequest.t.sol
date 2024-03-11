@@ -5,17 +5,12 @@ import { TestBase } from "../../../Base.t.sol";
 import "forge-std/console.sol";
 
 contract TestClaimableDepositRequest is TestBase {
-    function test_GivenAnOwnerWhoHasNotInteractedWithTheVaultWhenClaimableDepositRequest(
-    )
-        external
-    {
+    function test_GivenAnOwnerWhoHasNotInteractedWithTheVaultWhenClaimableDepositRequest() external {
         // it should return 0
         assertEq(vaultTested.claimableDepositRequest(user1.addr), 0);
     }
 
-    function test_GivenAnOwnerWithAPendingRequestWhenClaimableDepositRequest()
-        external
-    {
+    function test_GivenAnOwnerWithAPendingRequestWhenClaimableDepositRequest() external {
         // it should return 0
         // it should not revert
         usersDealApproveAndDeposit(vaultTested, 1); // vault should not be empty
@@ -25,9 +20,7 @@ contract TestClaimableDepositRequest is TestBase {
         assertEq(vaultTested.claimableDepositRequest(user1.addr), 0);
     }
 
-    function test_GivenAnOwnerWithAClaimableRequestWhenClaimableDepositRequest()
-        external
-    {
+    function test_GivenAnOwnerWithAClaimableRequestWhenClaimableDepositRequest() external {
         // it should return the amount of the claimable request
         // it should not revert
         usersDealApproveAndDeposit(vaultTested, 1); // vault should not be empty

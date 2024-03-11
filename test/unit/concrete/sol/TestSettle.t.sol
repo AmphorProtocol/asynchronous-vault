@@ -1,4 +1,3 @@
-
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
@@ -22,9 +21,7 @@ contract TestSettle is TestBase {
         // it should revert
     }
 
-    function test_RevertGiven_NewSavedBalanceIsGreaterThan0ButMoreThan3000BipsLessThanTheCurrentSavedBalance()
-        external
-    {
+    function test_RevertGiven_NewSavedBalanceIsGreaterThan0ButMoreThan3000BipsLessThanTheCurrentSavedBalance() external {
         // it should revert
     }
 
@@ -55,4 +52,3 @@ contract TestSettle is TestBase {
         // it should emit AsyncWithdraw
     }
 }
-

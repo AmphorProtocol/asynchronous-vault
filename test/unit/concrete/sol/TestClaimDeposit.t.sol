@@ -18,11 +18,8 @@ contract TestClaimDeposit is TestBase {
         usersDealApproveAndDeposit(vaultTested, 4);
         usersDealApprove(vaultTested, 10);
         assertClose(vaultTested);
-        uint256 assets =
-            IERC20Metadata(vaultTested.asset()).balanceOf(user5.addr);
-        assertRequestDeposit(
-            vaultTested, user5.addr, user5.addr, user5.addr, assets, ""
-        );
+        uint256 assets = IERC20Metadata(vaultTested.asset()).balanceOf(user5.addr);
+        assertRequestDeposit(vaultTested, user5.addr, user5.addr, user5.addr, assets, "");
         assertOpen(vaultTested, 3);
         assertClaimDeposit(vaultTested, user5.addr, user5.addr, assets);
     }
@@ -32,11 +29,8 @@ contract TestClaimDeposit is TestBase {
         usersDealApproveAndDeposit(vaultTested, 4);
         usersDealApprove(vaultTested, 5);
         assertClose(vaultTested);
-        uint256 assets =
-            IERC20Metadata(vaultTested.asset()).balanceOf(user5.addr);
-        assertRequestDeposit(
-            vaultTested, user5.addr, user5.addr, user5.addr, assets, ""
-        );
+        uint256 assets = IERC20Metadata(vaultTested.asset()).balanceOf(user5.addr);
+        assertRequestDeposit(vaultTested, user5.addr, user5.addr, user5.addr, assets, "");
         assertOpen(vaultTested, 3);
         assertClose(vaultTested);
         assertClaimDeposit(vaultTested, user5.addr, user5.addr, assets);
@@ -47,11 +41,8 @@ contract TestClaimDeposit is TestBase {
         // it should revert with EnforcedPause
         usersDealApproveAndDeposit(vaultTested, 4);
         assertClose(vaultTested);
-        uint256 assets =
-            IERC20Metadata(vaultTested.asset()).balanceOf(user1.addr);
-        assertRequestDeposit(
-            vaultTested, user1.addr, user1.addr, user1.addr, assets, ""
-        );
+        uint256 assets = IERC20Metadata(vaultTested.asset()).balanceOf(user1.addr);
+        assertRequestDeposit(vaultTested, user1.addr, user1.addr, user1.addr, assets, "");
         assertOpen(vaultTested, 3);
         pause(vaultTested);
         vm.startPrank(user1.addr);

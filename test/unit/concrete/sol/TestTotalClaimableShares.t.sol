@@ -11,20 +11,14 @@ contract TestTotalClaimableShares is TestBase {
         close(vaultTested);
         // deposit 1
         uint256 assets1 = 10_000;
-        assertRequestDeposit(
-            vaultTested, user1.addr, user1.addr, user1.addr, assets1, ""
-        );
+        assertRequestDeposit(vaultTested, user1.addr, user1.addr, user1.addr, assets1, "");
         // deposit 2
         uint256 assets2 = 145_768;
-        assertRequestDeposit(
-            vaultTested, user2.addr, user2.addr, user2.addr, assets2, ""
-        );
+        assertRequestDeposit(vaultTested, user2.addr, user2.addr, user2.addr, assets2, "");
         assertOpen(vaultTested, 4);
         uint256 shares1 = vaultTested.previewDeposit(assets1);
         uint256 shares2 = vaultTested.previewDeposit(assets2);
-        assertApproxEqAbs(
-            vaultTested.totalClaimableShares(), shares1 + shares2, 1
-        );
+        assertApproxEqAbs(vaultTested.totalClaimableShares(), shares1 + shares2, 1);
     }
 
     function test_TotalClaimableSharesEmptyVault() external {

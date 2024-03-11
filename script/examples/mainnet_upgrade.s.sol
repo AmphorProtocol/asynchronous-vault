@@ -6,10 +6,8 @@ import { AsyncSynthVault } from "../../src/AsyncSynthVault.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Upgrades, Options } from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import { IPermit2 } from "permit2/src/interfaces/IPermit2.sol";
-import { UpgradeableBeacon } from
-    "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
-import { BeaconProxy } from
-    "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
+import { UpgradeableBeacon } from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
+import { BeaconProxy } from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
 contract GOERLI_DeployAmphorSynthetic is Script {
     function run() external {
@@ -27,34 +25,14 @@ contract GOERLI_DeployAmphorSynthetic is Script {
 
         Options memory deploy;
         deploy.constructorData = abi.encode(permit2);
-        UpgradeableBeacon beacon = UpgradeableBeacon(
-            Upgrades.deployBeacon("SynthVault.sol", owner, deploy)
-        );
+        UpgradeableBeacon beacon = UpgradeableBeacon(Upgrades.deployBeacon("SynthVault.sol", owner, deploy));
 
-        BeaconProxy proxy = BeaconProxy(
-            payable(
-                Upgrades.deployBeaconProxy(
-                    address(beacon),
-                    abi.encodeCall(
-                        AsyncSynthVault.initialize,
-                        (
-                            fees,
-                            owner,
-                            IERC20(underlying),
-                            vaultName,
-                            vaultSymbol
-                        )
-                    )
-                )
-            )
-        );
+        BeaconProxy proxy = BeaconProxy(payable(Upgrades.deployBeaconProxy(address(beacon), abi.encodeCall(AsyncSynthVault.initialize, (fees, owner, IERC20(underlying), vaultName, vaultSymbol)))));
 
         address implementation = UpgradeableBeacon(beacon).implementation();
         console.log("Synthetic vault USDC contract address: ", address(proxy));
         console.log("Synthetic vault USDC beacon address: ", address(beacon));
-        console.log(
-            "Synthetic vault USDC implementation address: ", implementation
-        );
+        console.log("Synthetic vault USDC implementation address: ", implementation);
 
         Options memory upgrade;
         upgrade.referenceContract = "SynthVault2.sol";
@@ -75,9 +53,7 @@ contract GOERLI_DeployAmphorSynthetic is Script {
         // TODO
         //     variableInImpl// TODO
         // );// TODO
-        console.log(
-            "Synthetic vault USDC new implementation address: ", newImplInBeacon
-        );
+        console.log("Synthetic vault USDC new implementation address: ", newImplInBeacon);
         vm.stopBroadcast();
 
         //forge script script/goerli_deploy.s.sol:GOERLI_DeployAmphorSynthetic
