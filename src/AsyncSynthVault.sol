@@ -654,7 +654,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
             unchecked {
                 profits = newSavedBalance - _lastSavedBalance;
             }
-            fees = (profits).mulDiv(feesInBps, BPS_DIVIDER, Math.Rounding.Ceil);
+            fees = (profits).mulDiv(feesInBps, BPS_DIVIDER, Math.Rounding.Floor);
         }
     }
 
@@ -677,13 +677,22 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         address pendingSiloAddr = address(pendingSilo); 
         address claimableSiloAddr = address(claimableSilo);
         uint256 pendingRedeem = balanceOf(pendingSiloAddr);
-        uint256 assetsToWithdraw = pendingRedeem.mulDiv(
-            _lastSavedBalance + 1, totalSupply + 10 ** decimalsOffset, Math.Rounding.Floor
-        );
         uint256 pendingDeposit = _asset.balanceOf(pendingSiloAddr);
+        Math.Rounding redeemRounding = Math.Rounding.Floor;
+
         uint256 sharesToMint = pendingDeposit.mulDiv(
             totalSupply + 10 ** decimalsOffset, _lastSavedBalance + 1, Math.Rounding.Floor
         );
+        uint256 assetsToWithdraw = pendingRedeem.mulDiv(
+            _lastSavedBalance + 1, totalSupply + 10 ** decimalsOffset, redeemRounding // Math.Rounding.Ceil or Math.Rounding.Floor
+        );
+
+        console.log("sharesToMint", sharesToMint);
+        console.log("assetsToWithdraw", assetsToWithdraw);
+        console.log("pendingDeposit", pendingDeposit);
+        console.log("pendingRedeem", pendingRedeem);
+        console.log("totalSupply", totalSupply);
+        console.log("_lastSavedBalance", _lastSavedBalance);
 
         settleValues = SettleValues({
             lastSavedBalance: _lastSavedBalance + fees,
@@ -705,8 +714,8 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
     }
 
     function _settle(uint256 newSavedBalance) internal 
-        onlyOwner 
-        whenNotPaused 
+        onlyOwner
+        whenNotPaused
         whenClosed
         returns (uint256, uint256)
     {
@@ -717,7 +726,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
 
         emit EpochEnd(
             block.timestamp,
-            settleValues.lastSavedBalance,
+            lastSavedBalance,
             newSavedBalance,
             settleValues.fees,
             settleValues.totalSupply

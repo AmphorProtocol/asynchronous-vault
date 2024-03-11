@@ -524,7 +524,11 @@ abstract contract Assertions is EventsAssertions {
         //     assetsBeforeExecReq
         // );
 
-        // // // // ending the epoch
+        // console.log("assetReturned", assetReturned);
+        // console.log("expectedFees", expectedFees);
+        // console.log("totalSupply", stateBefore.totalSupply);
+        // console.log("lastSavedBalance", stateBefore.lastSavedBalance);
+        // ending the epoch
         assertEpochEndEvent(
             vault,
             block.timestamp,
@@ -555,17 +559,17 @@ abstract contract Assertions is EventsAssertions {
             stateBefore.pendingDeposit
         );
 
-        // console.log("pendingRedeem", stateBefore.pendingRedeem);
-        // console.log("expectedAssetsToRedeem", expectedAssetsToRedeem);
-        // console.log("pendingSilo", address(vault.pendingSilo()));
-        // console.log("claimableSilo", address(vault.claimableSilo()));
+        console.log("pendingRedeem", stateBefore.pendingRedeem);
+        console.log("expectedAssetsToRedeem", expectedAssetsToRedeem);
+        console.log("pendingSilo", address(vault.pendingSilo()));
+        console.log("claimableSilo", address(vault.claimableSilo()));
 
         assertWithdrawEvent(
             vault,
             address(vault.claimableSilo()),
             address(vault.pendingSilo()),
             address(vault.pendingSilo()),
-            expectedAssetsToRedeem,
+            expectedAssetsToRedeem, // In test_GivenPeriodIsInProfitAndRequestsWhenOpen we want 12503000000000000000 but we get 12502999999999999999
             stateBefore.pendingRedeem
         );
 
