@@ -548,7 +548,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         view
         returns (uint256)
     {
-        if (requestId == epochId) {
+        if (isCurrentEpoch(requestId)) {
             return 0;
         }
         uint256 totalAssets =
@@ -568,7 +568,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         view
         returns (uint256)
     {
-        if (requestId == epochId) {
+        if (isCurrentEpoch(requestId)) {
             return 0;
         }
         uint256 totalAssets = epochs[requestId].totalAssetsSnapshotForRedeem + 1;
