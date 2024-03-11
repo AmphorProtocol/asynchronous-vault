@@ -1,7 +1,12 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { IERC7540, IERC165, IERC7540Redeem } from "./interfaces/IERC7540.sol";
+import {
+    IERC7540,
+    IERC165,
+    IERC7540Redeem,
+    IERC7540Deposit
+} from "./interfaces/IERC7540.sol";
 import { ERC7540Receiver } from "./interfaces/ERC7540Receiver.sol";
 import {
     IERC20,
@@ -402,7 +407,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         address owner = _msgSender();
         uint256 oldBalance = epochs[epochId].redeemRequestBalance[owner];
         epochs[epochId].redeemRequestBalance[owner] -= shares;
-        transfer(receiver, shares);
+        _update(address(pendingSilo), receiver, shares);
 
         emit DecreaseRedeemRequest(
             epochId,
@@ -433,7 +438,8 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
 
     function supportsInterface(bytes4 interfaceId) public pure returns (bool) {
         return interfaceId == type(IERC165).interfaceId
-            || interfaceId == type(IERC7540Redeem).interfaceId;
+            || interfaceId == type(IERC7540Redeem).interfaceId
+            || interfaceId == type(IERC7540Deposit).interfaceId;
     }
 
     function previewClaimDeposit(address owner) public view returns (uint256) {
@@ -804,14 +810,14 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
 
     function claimAndRequestDepositWithPermit(
         uint256 assets,
-        address receiver,
         bytes memory data,
         PermitParams calldata permitParams
     )
         external
     {
-        _claimDeposit(receiver, receiver);
-        requestDepositWithPermit(assets, receiver, data, permitParams);
+        address msgSender = _msgSender();
+        _claimDeposit(msgSender, msgSender);
+        requestDepositWithPermit(assets, msgSender, data, permitParams);
     }
 
     function requestDepositWithPermit(
@@ -822,34 +828,10 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
     )
         public
     {
-        address owner = _msgSender();
-        if (_asset.allowance(owner, address(this)) < assets) {
-            execPermit(owner, address(this), permitParams);
+        address msgSender = _msgSender();
+        if (_asset.allowance(msgSender, address(this)) < assets) {
+            execPermit(msgSender, address(this), permitParams);
         }
-        return requestDeposit(assets, receiver, owner, data);
-    }
-
-    /*
-     * #################################
-     * #  Permit 2 RELATED FUNCTIONS   #
-     * #################################
-    */
-
-    function requestDepositWithPermit2(
-        uint160 assets,
-        address receiver,
-        bytes memory data,
-        IAllowanceTransfer.PermitSingle calldata permitSingle,
-        bytes calldata signature
-    )
-        external
-        whenClosed
-        whenNotPaused
-    {
-        address owner = _msgSender();
-        execPermit2(permitSingle, signature);
-        PERMIT2.transferFrom(owner, address(this), assets, address(_asset));
-
-        _createDepositRequest(assets, receiver, owner, data);
+        return requestDeposit(assets, receiver, msgSender, data);
     }
 }
