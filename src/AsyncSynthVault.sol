@@ -160,7 +160,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
     error ReceiverFailed();
     error NotOwner();
     error NullRequest();
-
+    error ERC7540CantRequestDepositOnBehalfOf();
     /*
      * ##############################
      * # AMPHOR SYNTHETIC FUNCTIONS #
@@ -206,12 +206,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
     {
         // vault
         if (_msgSender() != owner) {
-            uint256 allowance = _asset.allowance(owner, _msgSender());
-            if (allowance != type(uint256).max) {
-                revert ERC20InsufficientAllowance(
-                    owner, assets, type(uint256).max
-                );
-            }
+            revert ERC7540CantRequestDepositOnBehalfOf();
         }
         if (previewClaimDeposit(receiver) > 0) {
             revert MustClaimFirst(receiver);

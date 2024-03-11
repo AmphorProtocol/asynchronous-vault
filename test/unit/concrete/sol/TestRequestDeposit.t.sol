@@ -39,11 +39,12 @@ contract TestRequestDeposit is TestBase {
         IERC20(vaultTested.asset()).approve(user1.addr, type(uint256).max);
         vm.stopPrank();
         assertClose(vaultTested);
-        vm.prank(user1.addr);
+        vm.startPrank(user1.addr);
+        vm.expectRevert(
+            AsyncSynthVault.ERC7540CantRequestDepositOnBehalfOf.selector
+        );
         vaultTested.requestDeposit(1, user1.addr, user2.addr, "");
-        assertOpen(vaultTested, 0);
-        assertClose(vaultTested);
-        usersDealApprove(vaultTested, 1);
+        vm.stopPrank();
     }
 
     function test_GivenReceiverHasClaimableBalanceWhenRequestDeposit()
