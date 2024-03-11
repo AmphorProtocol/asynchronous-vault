@@ -158,7 +158,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
     error ReceiverFailed();
     error NotOwner();
     error NullRequest();
-
+    error ERC7540CantRequestDepositOnBehalfOf();
     /*
      * ##############################
      * # AMPHOR SYNTHETIC FUNCTIONS #
@@ -204,12 +204,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
     {
         // vault
         if (_msgSender() != owner) {
-            uint256 allowance = _asset.allowance(owner, _msgSender());
-            if (allowance != type(uint256).max) {
-                revert ERC20InsufficientAllowance(
-                    owner, assets, type(uint256).max
-                );
-            }
+            revert ERC7540CantRequestDepositOnBehalfOf();
         }
         if (previewClaimDeposit(receiver) > 0) {
             revert MustClaimFirst(receiver);
@@ -662,9 +657,9 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
     }
 
     function settle(uint256 newSavedBalance)
-        external 
-        onlyOwner 
-        whenNotPaused 
+        external
+        onlyOwner
+        whenNotPaused
         whenClosed
     {
         address _owner = owner();
@@ -683,11 +678,12 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
             totalSupply()
         );
 
-
         _lastSavedBalance = newSavedBalance - fees;
-        // if withdraw is higher than deposit -> transfer from owner the diff && update lastSavedBalance = newSavedBalance - diff
+        // if withdraw is higher than deposit -> transfer from owner the diff &&
+        // update lastSavedBalance = newSavedBalance - diff
         // do the settlement of the requests
-        // if deposit is higher than withdraw -> transfer to owner the diff && update lastSavedBalance = newSavedBalance + diff
+        // if deposit is higher than withdraw -> transfer to owner the diff &&
+        // update lastSavedBalance = newSavedBalance + diff
         // IERC20()
         uint256 _pendingRedeem = balanceOf(address(pendingSilo));
         uint256 assetsToWithdraw = previewRedeem(_pendingRedeem);
