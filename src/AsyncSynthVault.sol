@@ -61,6 +61,12 @@ import "forge-std/console.sol"; //todo remove
 using Math for uint256; // only used for `mulDiv` operations.
 using SafeERC20 for IERC20; // `safeTransfer` and `safeTransferFrom`
 
+/*
+    This structure contains all the informations needed to let user claim their
+    request after we processed those. To avoid rounding errors we store the
+totalSupply and totalAssets at the time of the deposit/redeem for the deposit
+and
+    the redeem. We also store the amount of assets and shares given by the user.*/
 struct EpochData {
     uint256 totalSupplySnapshotForRedeem;
     uint256 totalAssetsSnapshotForRedeem;
@@ -101,8 +107,11 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
 
     // @return Amount of the perf fees applied on the positive yield.
     uint256 public epochId;
-    Silo public pendingSilo;
-    Silo public claimableSilo;
+    Silo public pendingSilo; // to manage the pending deposits and redeems we
+        // store them in a contract whose function is to hold the assets/shares.
+    Silo public claimableSilo; // to manage the claimable deposits and redeems
+        // we
+        // store them in a contract whose function is to hold the assets/shares.
     mapping(uint256 epochId => EpochData epoch) public epochs;
     mapping(address user => uint256 epochId) public lastDepositRequestId;
     mapping(address user => uint256 epochId) public lastRedeemRequestId;
@@ -112,18 +121,6 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
      * # EVENTS #
      * ##########
     */
-
-    event AsyncDeposit(
-        uint256 indexed requestId,
-        uint256 requestedAssets,
-        uint256 acceptedAssets
-    );
-
-    event AsyncWithdraw(
-        uint256 indexed requestId,
-        uint256 requestedShares,
-        uint256 acceptedShares
-    );
 
     event DecreaseDepositRequest(
         uint256 indexed requestId,
@@ -201,6 +198,11 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         claimableSilo = new Silo(underlying);
     }
 
+    /*
+    Since we only allow one claimable request at a time, users must claim
+        their request before making a new one. This function let users claim
+        and request a deposit in one transaction.
+    */
     function claimAndRequestDeposit(
         uint256 assets,
         address receiver,
@@ -212,6 +214,9 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         requestDeposit(assets, receiver, _msgSender(), data);
     }
 
+    /*
+        Same logic as `claimAndRequestDeposit` but for redeem requests.
+    */
     function claimAndRequestRedeem(
         uint256 shares,
         bytes memory data
@@ -223,6 +228,11 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         requestRedeem(shares, owner, owner, data);
     }
 
+    /*
+    This function is used to decrease the amount of assets requested to deposit
+    by the
+        user. It can only be called by the user who made the request.
+    */
     function decreaseDepositRequest(uint256 assets)
         external
         whenClosed
@@ -241,6 +251,11 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         );
     }
 
+    /*
+    This function is used to decrease the amount of shares requested to redeem
+    by the
+        user. It can only be called by the user who made the request.
+    */
     function decreaseRedeemRequest(uint256 shares)
         external
         whenClosed
@@ -267,8 +282,8 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
 
     /**
      * @dev The `close` function is used to close the vault.
-     * It is the only way to lock the vault. It can only be called by the owner
-     * of the contract (`onlyOwner` modifier).
+     * It can only be called by the owner of the contract (`onlyOwner`
+     * modifier).
      */
     function close() external override onlyOwner {
         if (!vaultIsOpen) revert VaultIsClosed();
@@ -283,7 +298,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
 
     /**
      * @dev The `open` function is used to open the vault.
-     * @notice The `end` function is used to end the lock period of the vault.
+     * @notice The `open` function is used to end the lock period of the vault.
      * It can only be called by the owner of the contract (`onlyOwner` modifier)
      * and only when the vault is locked.
      * If there are profits, the performance fees are taken and sent to the
@@ -309,6 +324,8 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
      * #################################
     */
 
+    /* This function is used to claim the pending deposit and request a new one
+    in one transaction using permit signatures */
     function claimAndRequestDepositWithPermit(
         uint256 assets,
         bytes memory data,
@@ -321,6 +338,15 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         requestDepositWithPermit(assets, msgSender, data, permitParams);
     }
 
+    /*
+    Since amphor strategies can be time sensitive, we must be able to switch
+    epoch without needing
+    to put all the funds back. Using _settle we can virtually put back the
+    funds, check how much we owe
+    to users that want to redeem and maybe take the extra funds from the deposit
+    requests.
+    
+    */
     function settle(uint256 newSavedBalance) external {
         (uint256 lastSavedBalance, uint256 totalSupply) =
             _settle(newSavedBalance);
@@ -328,6 +354,10 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         emit EpochStart(block.timestamp, lastSavedBalance, totalSupply);
     }
 
+    /**
+     * @dev How many shares a users currently has waiting to be redeem.
+     *
+     */
     function pendingRedeemRequest(address owner)
         external
         view
@@ -336,6 +366,11 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         return epochs[epochId].redeemRequestBalance[owner];
     }
 
+    /**
+     * @dev How many shares are  virtually waiting for the user to be redeemed
+     * via
+     * the `claimRedeem` function.
+     */
     function claimableRedeemRequest(address owner)
         external
         view
@@ -347,6 +382,9 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
             : epochs[lastRequestId].redeemRequestBalance[owner];
     }
 
+    /**
+     * @dev How many assets are currently waiting to be deposited for the user.
+     */
     function pendingDepositRequest(address owner)
         external
         view
@@ -355,6 +393,10 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         return epochs[epochId].depositRequestBalance[owner];
     }
 
+    /**
+     * @dev How many assets are virtually waiting for the user to be deposit
+     * via the `claimDeposit` function.
+     */
     function claimableDepositRequest(address owner)
         external
         view
@@ -366,10 +408,16 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
             : epochs[lastRequestId].depositRequestBalance[owner];
     }
 
+    /**
+     * @dev How many assets are currently waiting to be deposited for all users.
+     */
     function totalPendingDeposits() external view returns (uint256) {
         return vaultIsOpen ? 0 : _asset.balanceOf(address(pendingSilo));
     }
 
+    /**
+     * @dev How many shares are  waiting to be redeemed for all users.
+     */
     function totalPendingRedeems() external view returns (uint256) {
         return vaultIsOpen ? 0 : balanceOf(address(pendingSilo));
     }
@@ -382,6 +430,14 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         return _asset.balanceOf(address(claimableSilo));
     }
 
+    /**
+     * @dev when the vault is closed, users can only request to deposit.
+     * By doing this funds will be sent and wait in the pendingSilo.
+     * When the owner will call the `open` or `settle` function, the funds will
+     * be
+     * deposited and the minted shares will be sent to the claimableSilo. Waiting
+     * for the users to claim them.
+     */
     function requestDeposit(
         uint256 assets,
         address receiver,
@@ -411,6 +467,15 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         _createDepositRequest(assets, receiver, owner, data);
     }
 
+    /**
+     * @dev when the vault is closed, users can only request to redeem.
+     * By doing this shares will be sent and wait in the pendingSilo.
+     * When the owner will call the `open` or `settle` function, the shares will
+     * be
+     * redeemed and the assets will be sent to the claimableSilo. Waiting for
+     * the
+     * users to claim them.
+     */
     function requestRedeem(
         uint256 shares,
         address receiver,
@@ -439,6 +504,10 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         _createRedeemRequest(shares, receiver, owner, data);
     }
 
+    /**
+     * @dev This function let users claim the shares we owe them after we
+     * processed their deposit request, in the _settle function.
+     */
     function claimDeposit(address receiver)
         public
         whenNotPaused
@@ -447,6 +516,11 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         return _claimDeposit(_msgSender(), receiver);
     }
 
+    /**
+     *
+     * @dev This function let users claim the assets we owe them after we
+     * processed their redeem request, in the _settle function.
+     */
     function claimRedeem(address receiver)
         public
         whenNotPaused
@@ -455,6 +529,9 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         return _claimRedeem(_msgSender(), receiver);
     }
 
+    /**
+     * @dev This funciton let user request a deposit using permit signatures.
+     */
     function requestDepositWithPermit(
         uint256 assets,
         address receiver,
@@ -470,32 +547,44 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         return requestDeposit(assets, receiver, msgSender, data);
     }
 
+    /**
+     * @dev users can request deposit only when the vault is closed and not
+     * paused.
+     */
     function maxDepositRequest(address) public view returns (uint256) {
         return vaultIsOpen || paused() ? 0 : type(uint256).max;
     }
 
+    /**
+     * @dev users can request redeem only when the vault is closed and not
+     * paused.
+     */
     function maxRedeemRequest(address owner) public view returns (uint256) {
         return vaultIsOpen || paused() ? 0 : balanceOf(owner);
     }
 
+    /**
+     * @dev This function let users preview how many shares they will get if
+     * they claim their deposit request.
+     */
     function previewClaimDeposit(address owner) public view returns (uint256) {
         uint256 lastRequestId = lastDepositRequestId[owner];
         uint256 assets = epochs[lastRequestId].depositRequestBalance[owner];
         return _convertToShares(assets, lastRequestId, Math.Rounding.Floor);
     }
 
+    /**
+     * @dev This function let users preview how many assets they will get if
+     * they claim their redeem request.
+     */
     function previewClaimRedeem(address owner) public view returns (uint256) {
         uint256 lastRequestId = lastRedeemRequestId[owner];
         uint256 shares = epochs[lastRequestId].redeemRequestBalance[owner];
         return _convertToAssets(shares, lastRequestId, Math.Rounding.Floor);
     }
 
-    /*
-     * ######################################
-     * # GENERAL ERC-7540 RELATED FUNCTIONS #
-     * ######################################
-    */
-
+    /**
+     */
     function convertToShares(
         uint256 assets,
         uint256 _epochId
@@ -518,6 +607,11 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         return _convertToAssets(shares, _epochId, Math.Rounding.Floor);
     }
 
+    /**
+     *
+     * Utils function to convert the shares claimable into assets. It can
+     * be used in the front end to save an rpc call.
+     */
     function claimableDepositBalanceInAsset(address owner)
         public
         view
@@ -527,6 +621,11 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         return convertToAssets(shares);
     }
 
+    /**
+     * Using this the owner can know if he will have to send money to the
+     * claimableSilo (for users who want to leave the vault) or if he will
+     * receive money from it.
+     */
     function previewSettle(uint256 newSavedBalance)
         public
         view
@@ -551,14 +650,11 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         uint256 pendingDeposit = _asset.balanceOf(pendingSiloAddr);
 
         uint256 sharesToMint = pendingDeposit.mulDiv(
-            totalSupply + 1,
-            _lastSavedBalance + 1,
-            Math.Rounding.Floor
+            totalSupply + 1, _lastSavedBalance + 1, Math.Rounding.Floor
         );
 
         uint256 totalAssetsSnapshotForDeposit = _lastSavedBalance + 1;
-        uint256 totalSupplySnapshotForDeposit =
-            totalSupply + 1;
+        uint256 totalSupplySnapshotForDeposit = totalSupply + 1;
 
         uint256 assetsToWithdraw = pendingRedeem.mulDiv(
             _lastSavedBalance + pendingDeposit + 1,
@@ -568,8 +664,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
 
         uint256 totalAssetsSnapshotForRedeem =
             _lastSavedBalance + pendingDeposit + 1;
-        uint256 totalSupplySnapshotForRedeem =
-            totalSupply + sharesToMint + 1;
+        uint256 totalSupplySnapshotForRedeem = totalSupply + sharesToMint + 1;
 
         settleValues = SettleValues({
             lastSavedBalance: _lastSavedBalance + fees,
@@ -591,6 +686,11 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         }
     }
 
+    /**
+     * @dev see EIP
+     * @param interfaceId The interface id to check for.
+     * @return True if the contract implements the interface.
+     */
     function supportsInterface(bytes4 interfaceId) public pure returns (bool) {
         return interfaceId == type(IERC165).interfaceId
             || interfaceId == type(IERC7540Redeem).interfaceId
@@ -743,18 +843,13 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
             settleValues.pendingDeposit,
             settleValues.sharesToMint
         );
-        emit AsyncDeposit(
-            epochId, settleValues.pendingDeposit, settleValues.pendingDeposit
-        );
+
         emit Withdraw(
             address(pendingSilo),
             address(claimableSilo),
             address(pendingSilo),
             settleValues.assetsToWithdraw,
             settleValues.pendingRedeem
-        );
-        emit AsyncWithdraw(
-            epochId, settleValues.pendingRedeem, settleValues.pendingRedeem
         );
 
         settleValues.lastSavedBalance = settleValues.lastSavedBalance
@@ -794,8 +889,8 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         }
         uint256 totalAssets =
             epochs[requestId].totalAssetsSnapshotForDeposit + 1;
-        uint256 totalSupply = epochs[requestId].totalSupplySnapshotForDeposit
-            + 1;
+        uint256 totalSupply =
+            epochs[requestId].totalSupplySnapshotForDeposit + 1;
 
         return assets.mulDiv(totalSupply, totalAssets, rounding);
     }
@@ -813,8 +908,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
             return 0;
         }
         uint256 totalAssets = epochs[requestId].totalAssetsSnapshotForRedeem + 1;
-        uint256 totalSupply = epochs[requestId].totalSupplySnapshotForRedeem
-            + 1;
+        uint256 totalSupply = epochs[requestId].totalSupplySnapshotForRedeem + 1;
 
         return shares.mulDiv(totalAssets, totalSupply, rounding);
     }
