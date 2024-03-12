@@ -316,6 +316,30 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         vaultIsOpen = true;
     }
 
+    /*
+     * #################################
+     * #   Permit RELATED FUNCTIONS    #
+     * #################################
+    */
+
+    function claimAndRequestDepositWithPermit(
+        uint256 assets,
+        bytes memory data,
+        PermitParams calldata permitParams
+    )
+        external
+    {
+        address msgSender = _msgSender();
+        _claimDeposit(msgSender, msgSender);
+        requestDepositWithPermit(assets, msgSender, data, permitParams);
+    }
+
+    function settle(uint256 newSavedBalance) external {
+        (uint256 lastSavedBalance, uint256 totalSupply) =
+            _settle(newSavedBalance);
+        lastSavedBalance = 0;
+        emit EpochStart(block.timestamp, lastSavedBalance, totalSupply);
+    }
 
     function pendingRedeemRequest(address owner)
         external
@@ -444,6 +468,21 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         return _claimRedeem(_msgSender(), receiver);
     }
 
+    function requestDepositWithPermit(
+        uint256 assets,
+        address receiver,
+        bytes memory data,
+        PermitParams calldata permitParams
+    )
+        public
+    {
+        address msgSender = _msgSender();
+        if (_asset.allowance(msgSender, address(this)) < assets) {
+            execPermit(msgSender, address(this), permitParams);
+        }
+        return requestDeposit(assets, receiver, msgSender, data);
+    }
+
     function maxDepositRequest(address) public view returns (uint256) {
         return vaultIsOpen || paused() ? 0 : type(uint256).max;
     }
@@ -500,12 +539,6 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
     {
         uint256 shares = previewClaimDeposit(owner);
         return convertToAssets(shares);
-    }
-
-    function supportsInterface(bytes4 interfaceId) public pure returns (bool) {
-        return interfaceId == type(IERC165).interfaceId
-            || interfaceId == type(IERC7540Redeem).interfaceId
-            || interfaceId == type(IERC7540Deposit).interfaceId;
     }
 
     function previewSettle(uint256 newSavedBalance)
@@ -570,6 +603,12 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         } else if (pendingDeposit < assetsToWithdraw) {
             assetsToVault = assetsToWithdraw - pendingDeposit;
         }
+    }
+
+    function supportsInterface(bytes4 interfaceId) public pure returns (bool) {
+        return interfaceId == type(IERC165).interfaceId
+            || interfaceId == type(IERC7540Redeem).interfaceId
+            || interfaceId == type(IERC7540Deposit).interfaceId;
     }
 
     // transfer must happen before this function is called
@@ -648,81 +687,6 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         _asset.safeTransferFrom(address(claimableSilo), address(this), assets);
         _asset.transfer(receiver, assets);
         emit ClaimRedeem(lastRequestId, owner, receiver, assets, shares);
-    }
-
-    function isCurrentEpoch(uint256 requestId) internal view returns (bool) {
-        return requestId == epochId;
-    }
-
-    function _convertToShares(
-        uint256 assets,
-        uint256 requestId,
-        Math.Rounding rounding
-    )
-        internal
-        view
-        returns (uint256)
-    {
-        if (isCurrentEpoch(requestId)) {
-            return 0;
-        }
-        uint256 totalAssets =
-            epochs[requestId].totalAssetsSnapshotForDeposit + 1;
-        uint256 totalSupply = epochs[requestId].totalSupplySnapshotForDeposit
-            + 10 ** decimalsOffset;
-
-        return assets.mulDiv(totalSupply, totalAssets, rounding);
-    }
-
-    function _convertToAssets(
-        uint256 shares,
-        uint256 requestId,
-        Math.Rounding rounding
-    )
-        internal
-        view
-        returns (uint256)
-    {
-        if (isCurrentEpoch(requestId)) {
-            return 0;
-        }
-        uint256 totalAssets = epochs[requestId].totalAssetsSnapshotForRedeem + 1;
-        uint256 totalSupply = epochs[requestId].totalSupplySnapshotForRedeem
-            + 10 ** decimalsOffset;
-
-        return shares.mulDiv(totalAssets, totalSupply, rounding);
-    }
-
-    function _checkMaxDrawdown(
-        uint256 _lastSavedBalance,
-        uint256 newSavedBalance
-    )
-        internal
-        view
-    {
-        if (
-            newSavedBalance
-                < _lastSavedBalance.mulDiv(
-                    BPS_DIVIDER - _maxDrawdown, BPS_DIVIDER, Math.Rounding.Ceil
-                )
-        ) revert MaxDrawdownReached();
-    }
-
-    function _computeFees(
-        uint256 _lastSavedBalance,
-        uint256 newSavedBalance
-    )
-        internal
-        view
-        returns (uint256 fees)
-    {
-        if (newSavedBalance > _lastSavedBalance && feesInBps > 0) {
-            uint256 profits;
-            unchecked {
-                profits = newSavedBalance - _lastSavedBalance;
-            }
-            fees = (profits).mulDiv(feesInBps, BPS_DIVIDER, Math.Rounding.Floor);
-        }
     }
 
     function _settle(uint256 newSavedBalance)
@@ -830,43 +794,78 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         return (settleValues.lastSavedBalance, totalSupply());
     }
 
-    function settle(uint256 newSavedBalance) external {
-        (uint256 lastSavedBalance, uint256 totalSupply) =
-            _settle(newSavedBalance);
-        lastSavedBalance = 0;
-        emit EpochStart(block.timestamp, lastSavedBalance, totalSupply);
+    function isCurrentEpoch(uint256 requestId) internal view returns (bool) {
+        return requestId == epochId;
     }
 
-    /*
-     * #################################
-     * #   Permit RELATED FUNCTIONS    #
-     * #################################
-    */
-
-    function claimAndRequestDepositWithPermit(
+    function _convertToShares(
         uint256 assets,
-        bytes memory data,
-        PermitParams calldata permitParams
+        uint256 requestId,
+        Math.Rounding rounding
     )
-        external
+        internal
+        view
+        returns (uint256)
     {
-        address msgSender = _msgSender();
-        _claimDeposit(msgSender, msgSender);
-        requestDepositWithPermit(assets, msgSender, data, permitParams);
-    }
-
-    function requestDepositWithPermit(
-        uint256 assets,
-        address receiver,
-        bytes memory data,
-        PermitParams calldata permitParams
-    )
-        public
-    {
-        address msgSender = _msgSender();
-        if (_asset.allowance(msgSender, address(this)) < assets) {
-            execPermit(msgSender, address(this), permitParams);
+        if (isCurrentEpoch(requestId)) {
+            return 0;
         }
-        return requestDeposit(assets, receiver, msgSender, data);
+        uint256 totalAssets =
+            epochs[requestId].totalAssetsSnapshotForDeposit + 1;
+        uint256 totalSupply = epochs[requestId].totalSupplySnapshotForDeposit
+            + 10 ** decimalsOffset;
+
+        return assets.mulDiv(totalSupply, totalAssets, rounding);
+    }
+
+    function _convertToAssets(
+        uint256 shares,
+        uint256 requestId,
+        Math.Rounding rounding
+    )
+        internal
+        view
+        returns (uint256)
+    {
+        if (isCurrentEpoch(requestId)) {
+            return 0;
+        }
+        uint256 totalAssets = epochs[requestId].totalAssetsSnapshotForRedeem + 1;
+        uint256 totalSupply = epochs[requestId].totalSupplySnapshotForRedeem
+            + 10 ** decimalsOffset;
+
+        return shares.mulDiv(totalAssets, totalSupply, rounding);
+    }
+
+    function _checkMaxDrawdown(
+        uint256 _lastSavedBalance,
+        uint256 newSavedBalance
+    )
+        internal
+        view
+    {
+        if (
+            newSavedBalance
+                < _lastSavedBalance.mulDiv(
+                    BPS_DIVIDER - _maxDrawdown, BPS_DIVIDER, Math.Rounding.Ceil
+                )
+        ) revert MaxDrawdownReached();
+    }
+
+    function _computeFees(
+        uint256 _lastSavedBalance,
+        uint256 newSavedBalance
+    )
+        internal
+        view
+        returns (uint256 fees)
+    {
+        if (newSavedBalance > _lastSavedBalance && feesInBps > 0) {
+            uint256 profits;
+            unchecked {
+                profits = newSavedBalance - _lastSavedBalance;
+            }
+            fees = (profits).mulDiv(feesInBps, BPS_DIVIDER, Math.Rounding.Floor);
+        }
     }
 }
