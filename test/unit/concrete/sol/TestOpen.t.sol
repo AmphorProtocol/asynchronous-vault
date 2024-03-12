@@ -99,4 +99,13 @@ contract TestOpen is TestBase {
         usersDealApproveAndRequestRedeem(vaultTested, 2, "");
         assertOpen(vaultTested, 3);
     }
+
+    function test_GivenMaxDrawdownIsReachedWhenOpen() external {
+        usersDealApproveAndDeposit(vaultTested, 2);
+        address owner = vaultTested.owner();
+        vm.prank(owner);
+        vaultTested.close();
+        usersDealApproveAndRequestRedeem(vaultTested, 2, "");
+        assertOpen(vaultTested, -3001, true);
+    }
 }

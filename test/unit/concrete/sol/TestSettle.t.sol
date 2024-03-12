@@ -118,6 +118,18 @@ contract TestSettle is TestBase {
         assertSettle(vaultTested, 0);
     }
 
+    function test_GivenMaxDrawdownIsReachedWhenSettle() external {
+        // it should revert
+        close(vaultTested);
+        usersDealApproveAndRequestRedeem(vaultTested, 3);
+        uint256 newLastSavedBalance = vaultTested.lastSavedBalance()/2;
+        vm.startPrank(vaultTested.owner());
+        vm.expectRevert(); // max drawdown reached
+        vaultTested.settle(
+            newLastSavedBalance
+        );
+    }
+
     // function test_WhenAssertSettle() external {
     //     // it should not revert
     //     // it take 20% fees on the performance and emits an event about it
