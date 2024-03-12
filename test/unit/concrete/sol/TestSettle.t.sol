@@ -73,7 +73,6 @@ contract TestSettle is TestBase {
         // it should pass assertSettle
         close(vaultTested);
         assertSettle(vaultTested, 1000);
-
     }
 
     function test_GivenNewSavedBalanceIsGreaterThan0ButMoreThan3000BipsMoreThanTheCurrentSavedBalance(
@@ -121,12 +120,20 @@ contract TestSettle is TestBase {
 
     // function test_WhenAssertSettle() external {
     //     // it should not revert
-    //     // it take 20% fees on the performance and emits an event about it (EpochEnd)
-    //     // it should show the new lastSavedBalance with performance fees taken in account (EpochEnd)
-    //     // it should process the redeem and deposit requests (checkable thx to totalSupply, newSavedBalance and fees)
-    //     // it should update the lastSavedBalance (lastSavedBalance = lastSavedBalance + pendingDeposit - pendingToWithdraw)
-    //     // it should transfer (pendingWithdraw - pendingDeposit) underlying from owner to the vault (claimable silo) if pendingWithdraw is higher than pendingDeposit
-    //     // it should transfer (pendingDeposit - pendingWithdraw) underlying from vault to the owner (claimable silo) if pendingDeposit is higher than pendingWithdraw
+    //     // it take 20% fees on the performance and emits an event about it
+    // (EpochEnd)
+    //     // it should show the new lastSavedBalance with performance fees
+    // taken in account (EpochEnd)
+    //     // it should process the redeem and deposit requests (checkable thx
+    // to totalSupply, newSavedBalance and fees)
+    //     // it should update the lastSavedBalance (lastSavedBalance =
+    // lastSavedBalance + pendingDeposit - pendingToWithdraw)
+    //     // it should transfer (pendingWithdraw - pendingDeposit) underlying
+    // from owner to the vault (claimable silo) if pendingWithdraw is higher
+    // than pendingDeposit
+    //     // it should transfer (pendingDeposit - pendingWithdraw) underlying
+    // from vault to the owner (claimable silo) if pendingDeposit is higher than
+    // pendingWithdraw
     //     // it should not open the vault
     //     // it should emit Deposit
     //     // it should emit Withdraw
