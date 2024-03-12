@@ -8,12 +8,7 @@ import {
     IERC7540Deposit
 } from "./interfaces/IERC7540.sol";
 import { ERC7540Receiver } from "./interfaces/ERC7540Receiver.sol";
-import {
-    IERC20,
-    SafeERC20,
-    Math,
-    PermitParams
-} from "./SyncSynthVault.sol";
+import { IERC20, SafeERC20, Math, PermitParams } from "./SyncSynthVault.sol";
 
 import { SyncSynthVault } from "./SyncSynthVault.sol";
 
@@ -208,13 +203,13 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
 
     function claimAndRequestDeposit(
         uint256 assets,
+        address receiver,
         bytes memory data
     )
         external
     {
-        address owner = _msgSender();
-        _claimDeposit(owner, owner);
-        requestDeposit(assets, owner, owner, data);
+        _claimDeposit(receiver, receiver);
+        requestDeposit(assets, receiver, _msgSender(), data);
     }
 
     function claimAndRequestRedeem(
@@ -228,9 +223,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         requestRedeem(shares, owner, owner, data);
     }
 
-    function decreaseDepositRequest(
-        uint256 assets
-    )
+    function decreaseDepositRequest(uint256 assets)
         external
         whenClosed
         whenNotPaused
@@ -248,9 +241,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         );
     }
 
-    function decreaseRedeemRequest(
-        uint256 shares
-    )
+    function decreaseRedeemRequest(uint256 shares)
         external
         whenClosed
         whenNotPaused
@@ -374,7 +365,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
             ? 0
             : epochs[lastRequestId].depositRequestBalance[owner];
     }
-    
+
     function totalPendingDeposits() external view returns (uint256) {
         return vaultIsOpen ? 0 : _asset.balanceOf(address(pendingSilo));
     }
@@ -390,7 +381,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
     function totalClaimableAssets() external view returns (uint256) {
         return _asset.balanceOf(address(claimableSilo));
     }
-    
+
     function requestDeposit(
         uint256 assets,
         address receiver,
@@ -498,7 +489,6 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         uint256 shares = epochs[lastRequestId].redeemRequestBalance[owner];
         return _convertToAssets(shares, lastRequestId, Math.Rounding.Floor);
     }
-
 
     /*
      * ######################################
@@ -716,9 +706,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         // either there are more deposits than withdrawals
         if (settleValues.pendingDeposit > settleValues.assetsToWithdraw) {
             _asset.safeTransferFrom(
-                address(pendingSilo),
-                owner(),
-                assetsToOwner
+                address(pendingSilo), owner(), assetsToOwner
             );
             if (settleValues.assetsToWithdraw > 0) {
                 _asset.safeTransferFrom(
@@ -730,9 +718,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         } else if (settleValues.pendingDeposit < settleValues.assetsToWithdraw)
         {
             _asset.safeTransferFrom(
-                owner(),
-                address(claimableSilo),
-                assetsToVault
+                owner(), address(claimableSilo), assetsToVault
             );
             if (settleValues.pendingDeposit > 0) {
                 _asset.safeTransferFrom(
