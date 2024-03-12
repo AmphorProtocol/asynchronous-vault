@@ -143,7 +143,6 @@ abstract contract SyncSynthVault is
     error ERC4626ExceededMaxRedeem(address owner, uint256 shares, uint256 max);
     error VaultIsEmpty(); // We cannot start an epoch with an empty vault
     error MaxDrawdownReached();
-    error InvalidSpender(); // for permit2
 
     uint8 private _underlyingDecimals;
 
@@ -183,7 +182,7 @@ abstract contract SyncSynthVault is
         __ERC20_init(name, symbol);
         __Ownable_init(owner);
         __ERC20Permit_init(name);
-        __ERC20Pausable_init(); // will audit
+        __ERC20Pausable_init();
     }
 
     /**
