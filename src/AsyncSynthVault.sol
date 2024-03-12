@@ -175,7 +175,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() SyncSynthVault() {
-        _disableInitializers();
+        //_disableInitializers();
     }
 
     function initialize(

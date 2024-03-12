@@ -122,11 +122,15 @@ abstract contract Constants is Test {
         Options memory deploy;
         deploy.constructorData = "";
 
-        UpgradeableBeacon beacon = UpgradeableBeacon(
-            Upgrades.deployBeacon("AsyncSynthVault.sol", amphorLabs, deploy)
-        );
-
         bool proxy = vm.envBool("PROXY");
+
+        UpgradeableBeacon beacon;
+        if (proxy) {
+            beacon = UpgradeableBeacon(
+                Upgrades.deployBeacon("AsyncSynthVault.sol", amphorLabs, deploy)
+            );
+        }
+    
         if (proxy) {
             vaultUSDC = _proxyDeploy(
                 beacon, amphorLabs, USDC, vaultNameUSDC, vaultSymbolUSDC
