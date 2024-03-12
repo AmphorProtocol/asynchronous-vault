@@ -1106,7 +1106,7 @@ abstract contract Assertions is EventsAssertions {
         // it should decrease of assets the deposit request balance of owner
         // it should decrease of assets the vault underlying balance
         // it should increase of assets the receiver underlying balance
-        // it should emit `DepositRequestDecreased` event -> todo
+        // it should emit `DepositRequestDecreased` event -> todo ?
         uint256 ownerDepRequestBalance = vault.pendingDepositRequest(sender);
         uint256 ownerDecreaseAmount = ownerDepRequestBalance / 2;
         uint256 finalOwnerDepRequestBalance =
@@ -1140,7 +1140,7 @@ abstract contract Assertions is EventsAssertions {
         // it should decrease of assets the redeem request balance of owner
         // it should decrease of assets the receiver underlying balance
         // it should increase of assets the vault underlying balance
-        // it should emit `RedeemRequestDecreased` event -> todo
+        // it should emit `RedeemRequestDecreased` event // not done
         uint256 ownerRedeemRequestBalance = vault.pendingRedeemRequest(sender);
         uint256 ownerDecreaseAmount = ownerRedeemRequestBalance / 2;
         uint256 finalOwnerRedeemRequestBalance =
@@ -1171,8 +1171,6 @@ abstract contract Assertions is EventsAssertions {
     )
         internal
     {
-        // todo check lastsevedbalance evolution
-
         // uint256 totalAssetsBefore = vault.totalAssets();
         // uint256 totalSupplyBefore = vault.totalSupply();
 

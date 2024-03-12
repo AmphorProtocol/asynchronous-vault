@@ -11,7 +11,7 @@ import { UpgradeableBeacon } from
     "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 import { BeaconProxy } from
     "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
-import "forge-std/console.sol"; //todo remove
+import "forge-std/console.sol";
 import { ERC20Permit } from
     "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 import { SigUtils } from "@test/utils/SigUtils.sol";
