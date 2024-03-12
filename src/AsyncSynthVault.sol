@@ -292,7 +292,6 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         return vaultIsOpen || paused() ? 0 : balanceOf(owner);
     }
 
-    // tree later
     function claimAndRequestDeposit(
         uint256 assets,
         address receiver,
@@ -308,21 +307,17 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
     // tree later
     function claimAndRequestRedeem(
         uint256 shares,
-        address receiver,
-        address owner,
         bytes memory data
     )
         external
     {
-        _claimRedeem(receiver, receiver);
-        requestRedeem(shares, receiver, owner, data);
+        address msgSender = _msgSender();
+        _claimRedeem(msgSender, msgSender);
+        requestRedeem(shares, msgSender, msgSender, data);
     }
 
     // tree done
-    function decreaseDepositRequest(
-        uint256 assets,
-        address receiver
-    )
+    function decreaseDepositRequest(uint256 assets)
         external
         whenClosed
         whenNotPaused
@@ -330,7 +325,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         address owner = _msgSender();
         uint256 oldBalance = epochs[epochId].depositRequestBalance[owner];
         epochs[epochId].depositRequestBalance[owner] -= assets;
-        _asset.safeTransferFrom(address(pendingSilo), receiver, assets);
+        _asset.safeTransferFrom(address(pendingSilo), owner, assets);
 
         emit DecreaseDepositRequest(
             epochId,
@@ -385,11 +380,11 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         }
 
         _update(owner, address(pendingSilo), shares);
-        console.log("shares to redeem", shares);
         // Create a new request
         _createRedeemRequest(shares, receiver, owner, data);
     }
 
+    // transfer must happen before this function is called
     function _createRedeemRequest(
         uint256 shares,
         address receiver,
@@ -411,10 +406,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         emit RedeemRequest(receiver, owner, epochId, _msgSender(), shares);
     }
 
-    function decreaseRedeemRequest(
-        uint256 shares,
-        address receiver
-    )
+    function decreaseRedeemRequest(uint256 shares)
         external
         whenClosed
         whenNotPaused
@@ -422,7 +414,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         address owner = _msgSender();
         uint256 oldBalance = epochs[epochId].redeemRequestBalance[owner];
         epochs[epochId].redeemRequestBalance[owner] -= shares;
-        _update(address(pendingSilo), receiver, shares);
+        _update(address(pendingSilo), owner, shares);
 
         emit DecreaseRedeemRequest(
             epochId,
