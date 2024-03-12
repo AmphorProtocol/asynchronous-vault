@@ -7,6 +7,8 @@ import {
     ERC20Upgradeable,
     IERC20
 } from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import { IERC20Metadata } from
+    "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { ERC20PermitUpgradeable } from
     "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
 import { ERC20PausableUpgradeable } from
@@ -146,6 +148,8 @@ abstract contract SyncSynthVault is
     error MaxDrawdownReached();
     error InvalidSpender(); // for permit2
 
+    uint8 private _underlyingDecimals;
+
     /*
      * ##############################
      * # AMPHOR SYNTHETIC FUNCTIONS #
@@ -178,6 +182,8 @@ abstract contract SyncSynthVault is
         vaultIsOpen = true;
         _maxDrawdown = 3000; // 30%
         _asset = underlying;
+        _underlyingDecimals =
+            uint8(IERC20Metadata(address(underlying)).decimals());
         __ERC20_init(name, symbol);
         __Ownable_init(owner);
         __ERC20Permit_init(name);
@@ -601,13 +607,18 @@ abstract contract SyncSynthVault is
         view
         returns (uint256)
     {
-        console.log("convertToAssets in open vault");
-        console.log("totalAssets", totalAssets() + 1);
-        console.log("totalSupply", totalSupply() + 10 ** DECIMALS_OFFSET);
-        console.log("shares", shares);
-        console.log(" ");
         return shares.mulDiv(
             totalAssets() + 1, totalSupply() + 10 ** DECIMALS_OFFSET, rounding
         );
+    }
+
+    function decimals()
+        public
+        view
+        virtual
+        override(ERC20Upgradeable, IERC20Metadata)
+        returns (uint8)
+    {
+        return _underlyingDecimals;
     }
 }

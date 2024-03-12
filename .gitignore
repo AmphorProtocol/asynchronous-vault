@@ -18,7 +18,10 @@ docs/
 node_modules/
 node_modules
 
+<<<<<<< Updated upstream
 # Coverage
+=======
+>>>>>>> Stashed changes
 report/
 lcov.info
 
