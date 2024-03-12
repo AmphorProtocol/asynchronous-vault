@@ -107,7 +107,6 @@ abstract contract SyncSynthVault is
     bool public vaultIsOpen; // vault is open or closed
     uint256 public lastSavedBalance; // last saved balance
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    uint8 public immutable DECIMALS_OFFSET; // offset for the decimals
 
     /*
      * ##########
@@ -159,7 +158,6 @@ abstract contract SyncSynthVault is
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         // _disableInitializers(); // TODO uncomment
-        DECIMALS_OFFSET = 0;
     }
 
     function initialize(
@@ -581,7 +579,7 @@ abstract contract SyncSynthVault is
         returns (uint256)
     {
         return assets.mulDiv(
-            totalSupply() + 10 ** DECIMALS_OFFSET, totalAssets() + 1, rounding
+            totalSupply() + 1, totalAssets() + 1, rounding
         );
     }
 
@@ -603,11 +601,11 @@ abstract contract SyncSynthVault is
     {
         console.log("convertToAssets in open vault");
         console.log("totalAssets", totalAssets() + 1);
-        console.log("totalSupply", totalSupply() + 10 ** DECIMALS_OFFSET);
+        console.log("totalSupply", totalSupply() + 1);
         console.log("shares", shares);
         console.log(" ");
         return shares.mulDiv(
-            totalAssets() + 1, totalSupply() + 10 ** DECIMALS_OFFSET, rounding
+            totalAssets() + 1, totalSupply() + 1, rounding
         );
     }
 }
