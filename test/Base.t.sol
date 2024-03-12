@@ -388,29 +388,7 @@ contract TestBase is AssertionsRequest {
         internal
     {
         vm.startPrank(user.addr);
-        vault.decreaseDepositRequest(amount, user.addr);
-    }
-
-    function decreaseRedeemRequest(
-        AsyncSynthVault vault,
-        VmSafe.Wallet memory user,
-        uint256 amount
-    )
-        internal
-    {
-        decreaseRedeemRequest(vault, user, user, amount);
-    }
-
-    function decreaseRedeemRequest(
-        AsyncSynthVault vault,
-        VmSafe.Wallet memory user,
-        VmSafe.Wallet memory receiver,
-        uint256 amount
-    )
-        internal
-    {
-        vm.startPrank(user.addr);
-        vault.decreaseRedeemRequest(amount, receiver.addr);
+        vault.decreaseDepositRequest(amount);
     }
 
     // USERS CONFIGURATION //
