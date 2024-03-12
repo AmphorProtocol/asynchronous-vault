@@ -11,10 +11,8 @@ import { ERC7540Receiver } from "./interfaces/ERC7540Receiver.sol";
 import {
     IERC20,
     SafeERC20,
-    ERC20Upgradeable,
     Math,
-    PermitParams,
-    IERC4626
+    PermitParams
 } from "./SyncSynthVault.sol";
 
 import { SyncSynthVault } from "./SyncSynthVault.sol";
@@ -208,87 +206,6 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         claimableSilo = new Silo(underlying);
     }
 
-    function isCurrentEpoch(uint256 requestId) internal view returns (bool) {
-        return requestId == epochId;
-    }
-
-    function requestDeposit(
-        uint256 assets,
-        address receiver,
-        address owner,
-        bytes memory data
-    )
-        public
-        whenNotPaused
-        whenClosed
-    {
-        // vault
-        if (_msgSender() != owner) {
-            revert ERC7540CantRequestDepositOnBehalfOf();
-        }
-        if (previewClaimDeposit(receiver) > 0) {
-            revert MustClaimFirst(receiver);
-        }
-
-        if (assets > maxDepositRequest(owner)) {
-            revert ExceededMaxDepositRequest(
-                receiver, assets, maxDepositRequest(owner)
-            );
-        }
-
-        _asset.safeTransferFrom(owner, address(pendingSilo), assets);
-
-        _createDepositRequest(assets, receiver, owner, data);
-    }
-
-    // transfer must happen before this function is called
-    function _createDepositRequest(
-        uint256 assets,
-        address receiver,
-        address owner,
-        bytes memory data
-    )
-        internal
-    {
-        epochs[epochId].depositRequestBalance[receiver] += assets;
-        if (lastDepositRequestId[receiver] != epochId) {
-            lastDepositRequestId[receiver] = epochId;
-        }
-
-        if (
-            data.length > 0
-                && ERC7540Receiver(receiver).onERC7540DepositReceived(
-                    _msgSender(), owner, epochId, data
-                ) != ERC7540Receiver.onERC7540DepositReceived.selector
-        ) revert ReceiverFailed();
-
-        emit DepositRequest(receiver, owner, epochId, _msgSender(), assets);
-    }
-
-    function totalPendingDeposits() external view returns (uint256) {
-        return vaultIsOpen ? 0 : _asset.balanceOf(address(pendingSilo));
-    }
-
-    function totalPendingRedeems() external view returns (uint256) {
-        return vaultIsOpen ? 0 : balanceOf(address(pendingSilo));
-    }
-
-    function totalClaimableShares() external view returns (uint256) {
-        return balanceOf(address(claimableSilo));
-    }
-
-    function totalClaimableAssets() external view returns (uint256) {
-        return _asset.balanceOf(address(claimableSilo));
-    }
-
-    function maxDepositRequest(address) public view returns (uint256) {
-        return vaultIsOpen || paused() ? 0 : type(uint256).max;
-    }
-
-    function maxRedeemRequest(address owner) public view returns (uint256) {
-        return vaultIsOpen || paused() ? 0 : balanceOf(owner);
-    }
-
     function claimAndRequestDeposit(
         uint256 assets,
         address receiver,
@@ -334,74 +251,6 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         );
     }
 
-    function pendingDepositRequest(address owner)
-        external
-        view
-        returns (uint256 assets)
-    {
-        return epochs[epochId].depositRequestBalance[owner];
-    }
-
-    function claimableDepositRequest(address owner)
-        external
-        view
-        returns (uint256 assets)
-    {
-        uint256 lastRequestId = lastDepositRequestId[owner];
-        return isCurrentEpoch(lastRequestId)
-            ? 0
-            : epochs[lastRequestId].depositRequestBalance[owner];
-    }
-
-    function requestRedeem(
-        uint256 shares,
-        address receiver,
-        address owner,
-        bytes memory data
-    )
-        public
-        whenNotPaused
-        whenClosed
-    {
-        if (_msgSender() != owner) {
-            _spendAllowance(owner, _msgSender(), shares);
-        }
-        if (previewClaimRedeem(receiver) > 0) {
-            revert MustClaimFirst(receiver);
-        }
-        if (shares > maxRedeemRequest(owner)) {
-            revert ExceededMaxRedeemRequest(
-                receiver, shares, maxRedeemRequest(owner)
-            );
-        }
-
-        _update(owner, address(pendingSilo), shares);
-        console.log("shares to redeem", shares);
-        // Create a new request
-        _createRedeemRequest(shares, receiver, owner, data);
-    }
-
-    function _createRedeemRequest(
-        uint256 shares,
-        address receiver,
-        address owner,
-        bytes memory data
-    )
-        internal
-    {
-        epochs[epochId].redeemRequestBalance[receiver] += shares;
-        lastRedeemRequestId[owner] = epochId;
-
-        if (
-            data.length > 0
-                && ERC7540Receiver(receiver).onERC7540RedeemReceived(
-                    _msgSender(), owner, epochId, data
-                ) != ERC7540Receiver.onERC7540RedeemReceived.selector
-        ) revert ReceiverFailed();
-
-        emit RedeemRequest(receiver, owner, epochId, _msgSender(), shares);
-    }
-
     function decreaseRedeemRequest(
         uint256 shares,
         address receiver
@@ -421,168 +270,6 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
             oldBalance,
             epochs[epochId].redeemRequestBalance[owner]
         );
-    }
-
-    function pendingRedeemRequest(address owner)
-        external
-        view
-        returns (uint256)
-    {
-        return epochs[epochId].redeemRequestBalance[owner];
-    }
-
-    function claimableRedeemRequest(address owner)
-        external
-        view
-        returns (uint256)
-    {
-        uint256 lastRequestId = lastRedeemRequestId[owner];
-        return isCurrentEpoch(lastRequestId)
-            ? 0
-            : epochs[lastRequestId].redeemRequestBalance[owner];
-    }
-
-    function supportsInterface(bytes4 interfaceId) public pure returns (bool) {
-        return interfaceId == type(IERC165).interfaceId
-            || interfaceId == type(IERC7540Redeem).interfaceId
-            || interfaceId == type(IERC7540Deposit).interfaceId;
-    }
-
-    function previewClaimDeposit(address owner) public view returns (uint256) {
-        uint256 lastRequestId = lastDepositRequestId[owner];
-        uint256 assets = epochs[lastRequestId].depositRequestBalance[owner];
-        return _convertToShares(assets, lastRequestId, Math.Rounding.Floor);
-    }
-
-    function previewClaimRedeem(address owner) public view returns (uint256) {
-        uint256 lastRequestId = lastRedeemRequestId[owner];
-        uint256 shares = epochs[lastRequestId].redeemRequestBalance[owner];
-        return _convertToAssets(shares, lastRequestId, Math.Rounding.Floor);
-    }
-
-    function claimDeposit(address receiver)
-        public
-        whenNotPaused
-        returns (uint256 shares)
-    {
-        return _claimDeposit(_msgSender(), receiver);
-    }
-
-    function _claimDeposit(
-        address owner,
-        address receiver
-    )
-        internal
-        returns (uint256 shares)
-    {
-        shares = previewClaimDeposit(owner);
-
-        uint256 lastRequestId = lastDepositRequestId[owner];
-        uint256 assets = epochs[lastRequestId].depositRequestBalance[owner];
-        epochs[lastRequestId].depositRequestBalance[owner] = 0;
-        _update(address(claimableSilo), receiver, shares);
-        emit ClaimDeposit(lastRequestId, owner, receiver, assets, shares);
-    }
-
-    function claimRedeem(address receiver)
-        public
-        whenNotPaused
-        returns (uint256 assets)
-    {
-        return _claimRedeem(_msgSender(), receiver);
-    }
-
-    function _claimRedeem(
-        address owner,
-        address receiver
-    )
-        internal
-        whenNotPaused
-        returns (uint256 assets)
-    {
-        assets = previewClaimRedeem(owner);
-        uint256 lastRequestId = lastRedeemRequestId[owner];
-        uint256 shares = epochs[lastRequestId].redeemRequestBalance[owner];
-        epochs[lastRequestId].redeemRequestBalance[owner] = 0;
-        _asset.safeTransferFrom(address(claimableSilo), address(this), assets);
-        _asset.transfer(receiver, assets);
-        emit ClaimRedeem(lastRequestId, owner, receiver, assets, shares);
-    }
-
-    /*
-     * ######################################
-     * # GENERAL ERC-7540 RELATED FUNCTIONS #
-     * ######################################
-    */
-
-    function convertToShares(
-        uint256 assets,
-        uint256 _epochId
-    )
-        public
-        view
-        returns (uint256)
-    {
-        return _convertToShares(assets, _epochId, Math.Rounding.Floor);
-    }
-
-    function convertToAssets(
-        uint256 shares,
-        uint256 _epochId
-    )
-        public
-        view
-        returns (uint256)
-    {
-        return _convertToAssets(shares, _epochId, Math.Rounding.Floor);
-    }
-
-    function claimableDepositBalanceInAsset(address owner)
-        public
-        view
-        returns (uint256)
-    {
-        uint256 shares = previewClaimDeposit(owner);
-        return convertToAssets(shares);
-    }
-
-    function _convertToShares(
-        uint256 assets,
-        uint256 requestId,
-        Math.Rounding rounding
-    )
-        internal
-        view
-        returns (uint256)
-    {
-        if (isCurrentEpoch(requestId)) {
-            return 0;
-        }
-        uint256 totalAssets =
-            epochs[requestId].totalAssetsSnapshotForDeposit + 1;
-        uint256 totalSupply = epochs[requestId].totalSupplySnapshotForDeposit
-            + 10 ** decimalsOffset;
-
-        return assets.mulDiv(totalSupply, totalAssets, rounding);
-    }
-
-    function _convertToAssets(
-        uint256 shares,
-        uint256 requestId,
-        Math.Rounding rounding
-    )
-        internal
-        view
-        returns (uint256)
-    {
-        if (isCurrentEpoch(requestId)) {
-            return 0;
-        }
-        uint256 totalAssets = epochs[requestId].totalAssetsSnapshotForRedeem + 1;
-        uint256 totalSupply = epochs[requestId].totalSupplySnapshotForRedeem
-            + 10 ** decimalsOffset;
-
-        return shares.mulDiv(totalAssets, totalSupply, rounding);
     }
 
     /*
@@ -629,6 +316,383 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         vaultIsOpen = true;
     }
 
+
+    function pendingRedeemRequest(address owner)
+        external
+        view
+        returns (uint256)
+    {
+        return epochs[epochId].redeemRequestBalance[owner];
+    }
+
+    function claimableRedeemRequest(address owner)
+        external
+        view
+        returns (uint256)
+    {
+        uint256 lastRequestId = lastRedeemRequestId[owner];
+        return isCurrentEpoch(lastRequestId)
+            ? 0
+            : epochs[lastRequestId].redeemRequestBalance[owner];
+    }
+
+    function pendingDepositRequest(address owner)
+        external
+        view
+        returns (uint256 assets)
+    {
+        return epochs[epochId].depositRequestBalance[owner];
+    }
+
+    function claimableDepositRequest(address owner)
+        external
+        view
+        returns (uint256 assets)
+    {
+        uint256 lastRequestId = lastDepositRequestId[owner];
+        return isCurrentEpoch(lastRequestId)
+            ? 0
+            : epochs[lastRequestId].depositRequestBalance[owner];
+    }
+    
+    function totalPendingDeposits() external view returns (uint256) {
+        return vaultIsOpen ? 0 : _asset.balanceOf(address(pendingSilo));
+    }
+
+    function totalPendingRedeems() external view returns (uint256) {
+        return vaultIsOpen ? 0 : balanceOf(address(pendingSilo));
+    }
+
+    function totalClaimableShares() external view returns (uint256) {
+        return balanceOf(address(claimableSilo));
+    }
+
+    function totalClaimableAssets() external view returns (uint256) {
+        return _asset.balanceOf(address(claimableSilo));
+    }
+    
+    function requestDeposit(
+        uint256 assets,
+        address receiver,
+        address owner,
+        bytes memory data
+    )
+        public
+        whenNotPaused
+        whenClosed
+    {
+        // vault
+        if (_msgSender() != owner) {
+            revert ERC7540CantRequestDepositOnBehalfOf();
+        }
+        if (previewClaimDeposit(receiver) > 0) {
+            revert MustClaimFirst(receiver);
+        }
+
+        if (assets > maxDepositRequest(owner)) {
+            revert ExceededMaxDepositRequest(
+                receiver, assets, maxDepositRequest(owner)
+            );
+        }
+
+        _asset.safeTransferFrom(owner, address(pendingSilo), assets);
+
+        _createDepositRequest(assets, receiver, owner, data);
+    }
+
+    function requestRedeem(
+        uint256 shares,
+        address receiver,
+        address owner,
+        bytes memory data
+    )
+        public
+        whenNotPaused
+        whenClosed
+    {
+        if (_msgSender() != owner) {
+            _spendAllowance(owner, _msgSender(), shares);
+        }
+        if (previewClaimRedeem(receiver) > 0) {
+            revert MustClaimFirst(receiver);
+        }
+        if (shares > maxRedeemRequest(owner)) {
+            revert ExceededMaxRedeemRequest(
+                receiver, shares, maxRedeemRequest(owner)
+            );
+        }
+
+        _update(owner, address(pendingSilo), shares);
+        console.log("shares to redeem", shares);
+        // Create a new request
+        _createRedeemRequest(shares, receiver, owner, data);
+    }
+
+    function claimDeposit(address receiver)
+        public
+        whenNotPaused
+        returns (uint256 shares)
+    {
+        return _claimDeposit(_msgSender(), receiver);
+    }
+
+    function claimRedeem(address receiver)
+        public
+        whenNotPaused
+        returns (uint256 assets)
+    {
+        return _claimRedeem(_msgSender(), receiver);
+    }
+
+    function maxDepositRequest(address) public view returns (uint256) {
+        return vaultIsOpen || paused() ? 0 : type(uint256).max;
+    }
+
+    function maxRedeemRequest(address owner) public view returns (uint256) {
+        return vaultIsOpen || paused() ? 0 : balanceOf(owner);
+    }
+
+    function previewClaimDeposit(address owner) public view returns (uint256) {
+        uint256 lastRequestId = lastDepositRequestId[owner];
+        uint256 assets = epochs[lastRequestId].depositRequestBalance[owner];
+        return _convertToShares(assets, lastRequestId, Math.Rounding.Floor);
+    }
+
+    function previewClaimRedeem(address owner) public view returns (uint256) {
+        uint256 lastRequestId = lastRedeemRequestId[owner];
+        uint256 shares = epochs[lastRequestId].redeemRequestBalance[owner];
+        return _convertToAssets(shares, lastRequestId, Math.Rounding.Floor);
+    }
+
+
+    /*
+     * ######################################
+     * # GENERAL ERC-7540 RELATED FUNCTIONS #
+     * ######################################
+    */
+
+    function convertToShares(
+        uint256 assets,
+        uint256 _epochId
+    )
+        public
+        view
+        returns (uint256)
+    {
+        return _convertToShares(assets, _epochId, Math.Rounding.Floor);
+    }
+
+    function convertToAssets(
+        uint256 shares,
+        uint256 _epochId
+    )
+        public
+        view
+        returns (uint256)
+    {
+        return _convertToAssets(shares, _epochId, Math.Rounding.Floor);
+    }
+
+    function claimableDepositBalanceInAsset(address owner)
+        public
+        view
+        returns (uint256)
+    {
+        uint256 shares = previewClaimDeposit(owner);
+        return convertToAssets(shares);
+    }
+
+    function supportsInterface(bytes4 interfaceId) public pure returns (bool) {
+        return interfaceId == type(IERC165).interfaceId
+            || interfaceId == type(IERC7540Redeem).interfaceId
+            || interfaceId == type(IERC7540Deposit).interfaceId;
+    }
+
+    function previewSettle(uint256 newSavedBalance)
+        public
+        view
+        returns (
+            uint256 assetsToOwner,
+            uint256 assetsToVault,
+            SettleValues memory settleValues
+        )
+    {
+        uint256 _lastSavedBalance = lastSavedBalance;
+        _checkMaxDrawdown(_lastSavedBalance, newSavedBalance);
+
+        // calculate the fees between lastSavedBalance and newSavedBalance
+        uint256 fees = _computeFees(_lastSavedBalance, newSavedBalance);
+        uint256 totalSupply = totalSupply();
+
+        // taking fees if positive yield
+        _lastSavedBalance = newSavedBalance - fees;
+
+        address pendingSiloAddr = address(pendingSilo);
+        uint256 pendingRedeem = balanceOf(pendingSiloAddr);
+        uint256 pendingDeposit = _asset.balanceOf(pendingSiloAddr);
+
+        uint256 sharesToMint = pendingDeposit.mulDiv(
+            totalSupply + 10 ** decimalsOffset,
+            _lastSavedBalance + 1,
+            Math.Rounding.Floor
+        );
+
+        uint256 totalAssetsSnapshotForDeposit = _lastSavedBalance + 1;
+        uint256 totalSupplySnapshotForDeposit =
+            totalSupply + 10 ** decimalsOffset;
+
+        uint256 assetsToWithdraw = pendingRedeem.mulDiv(
+            _lastSavedBalance + pendingDeposit + 1,
+            totalSupply + sharesToMint + 10 ** decimalsOffset,
+            Math.Rounding.Floor
+        );
+
+        uint256 totalAssetsSnapshotForRedeem =
+            _lastSavedBalance + pendingDeposit + 1;
+        uint256 totalSupplySnapshotForRedeem =
+            totalSupply + sharesToMint + 10 ** decimalsOffset;
+
+        settleValues = SettleValues({
+            lastSavedBalance: _lastSavedBalance + fees,
+            fees: fees,
+            pendingRedeem: pendingRedeem,
+            sharesToMint: sharesToMint,
+            pendingDeposit: pendingDeposit,
+            assetsToWithdraw: assetsToWithdraw,
+            totalAssetsSnapshotForDeposit: totalAssetsSnapshotForDeposit,
+            totalSupplySnapshotForDeposit: totalSupplySnapshotForDeposit,
+            totalAssetsSnapshotForRedeem: totalAssetsSnapshotForRedeem,
+            totalSupplySnapshotForRedeem: totalSupplySnapshotForRedeem
+        });
+
+        if (pendingDeposit > assetsToWithdraw) {
+            assetsToOwner = pendingDeposit - assetsToWithdraw;
+        } else if (pendingDeposit < assetsToWithdraw) {
+            assetsToVault = assetsToWithdraw - pendingDeposit;
+        }
+    }
+
+    // transfer must happen before this function is called
+    function _createDepositRequest(
+        uint256 assets,
+        address receiver,
+        address owner,
+        bytes memory data
+    )
+        internal
+    {
+        epochs[epochId].depositRequestBalance[receiver] += assets;
+        if (lastDepositRequestId[receiver] != epochId) {
+            lastDepositRequestId[receiver] = epochId;
+        }
+
+        if (
+            data.length > 0
+                && ERC7540Receiver(receiver).onERC7540DepositReceived(
+                    _msgSender(), owner, epochId, data
+                ) != ERC7540Receiver.onERC7540DepositReceived.selector
+        ) revert ReceiverFailed();
+
+        emit DepositRequest(receiver, owner, epochId, _msgSender(), assets);
+    }
+
+    function _createRedeemRequest(
+        uint256 shares,
+        address receiver,
+        address owner,
+        bytes memory data
+    )
+        internal
+    {
+        epochs[epochId].redeemRequestBalance[receiver] += shares;
+        lastRedeemRequestId[owner] = epochId;
+
+        if (
+            data.length > 0
+                && ERC7540Receiver(receiver).onERC7540RedeemReceived(
+                    _msgSender(), owner, epochId, data
+                ) != ERC7540Receiver.onERC7540RedeemReceived.selector
+        ) revert ReceiverFailed();
+
+        emit RedeemRequest(receiver, owner, epochId, _msgSender(), shares);
+    }
+
+    function _claimDeposit(
+        address owner,
+        address receiver
+    )
+        internal
+        returns (uint256 shares)
+    {
+        shares = previewClaimDeposit(owner);
+
+        uint256 lastRequestId = lastDepositRequestId[owner];
+        uint256 assets = epochs[lastRequestId].depositRequestBalance[owner];
+        epochs[lastRequestId].depositRequestBalance[owner] = 0;
+        _update(address(claimableSilo), receiver, shares);
+        emit ClaimDeposit(lastRequestId, owner, receiver, assets, shares);
+    }
+
+    function _claimRedeem(
+        address owner,
+        address receiver
+    )
+        internal
+        whenNotPaused
+        returns (uint256 assets)
+    {
+        assets = previewClaimRedeem(owner);
+        uint256 lastRequestId = lastRedeemRequestId[owner];
+        uint256 shares = epochs[lastRequestId].redeemRequestBalance[owner];
+        epochs[lastRequestId].redeemRequestBalance[owner] = 0;
+        _asset.safeTransferFrom(address(claimableSilo), address(this), assets);
+        _asset.transfer(receiver, assets);
+        emit ClaimRedeem(lastRequestId, owner, receiver, assets, shares);
+    }
+
+    function isCurrentEpoch(uint256 requestId) internal view returns (bool) {
+        return requestId == epochId;
+    }
+
+    function _convertToShares(
+        uint256 assets,
+        uint256 requestId,
+        Math.Rounding rounding
+    )
+        internal
+        view
+        returns (uint256)
+    {
+        if (isCurrentEpoch(requestId)) {
+            return 0;
+        }
+        uint256 totalAssets =
+            epochs[requestId].totalAssetsSnapshotForDeposit + 1;
+        uint256 totalSupply = epochs[requestId].totalSupplySnapshotForDeposit
+            + 10 ** decimalsOffset;
+
+        return assets.mulDiv(totalSupply, totalAssets, rounding);
+    }
+
+    function _convertToAssets(
+        uint256 shares,
+        uint256 requestId,
+        Math.Rounding rounding
+    )
+        internal
+        view
+        returns (uint256)
+    {
+        if (isCurrentEpoch(requestId)) {
+            return 0;
+        }
+        uint256 totalAssets = epochs[requestId].totalAssetsSnapshotForRedeem + 1;
+        uint256 totalSupply = epochs[requestId].totalSupplySnapshotForRedeem
+            + 10 ** decimalsOffset;
+
+        return shares.mulDiv(totalAssets, totalSupply, rounding);
+    }
+
     function _checkMaxDrawdown(
         uint256 _lastSavedBalance,
         uint256 newSavedBalance
@@ -658,71 +722,6 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
                 profits = newSavedBalance - _lastSavedBalance;
             }
             fees = (profits).mulDiv(feesInBps, BPS_DIVIDER, Math.Rounding.Floor);
-        }
-    }
-
-    function previewSettle(uint256 newSavedBalance)
-        public
-        view
-        returns (
-            uint256 assetsToOwner,
-            uint256 assetsToVault,
-            SettleValues memory settleValues
-        )
-    {
-        uint256 _lastSavedBalance = lastSavedBalance;
-        _checkMaxDrawdown(_lastSavedBalance, newSavedBalance);
-
-        // calculate the fees between lastSavedBalance and newSavedBalance
-        uint256 fees = _computeFees(_lastSavedBalance, newSavedBalance);
-        uint256 totalSupply = totalSupply();
-
-        // taking fees if positive yield
-        _lastSavedBalance = newSavedBalance - fees;
-
-        address pendingSiloAddr = address(pendingSilo);
-        uint256 pendingRedeem = balanceOf(pendingSiloAddr);
-        uint256 pendingDeposit = _asset.balanceOf(pendingSiloAddr);
-        Math.Rounding redeemRounding = Math.Rounding.Floor;
-
-        uint256 sharesToMint = pendingDeposit.mulDiv(
-            totalSupply + 10 ** decimalsOffset,
-            _lastSavedBalance + 1,
-            Math.Rounding.Floor
-        );
-
-        uint256 totalAssetsSnapshotForDeposit = _lastSavedBalance + 1;
-        uint256 totalSupplySnapshotForDeposit =
-            totalSupply + 10 ** decimalsOffset;
-
-        uint256 assetsToWithdraw = pendingRedeem.mulDiv(
-            _lastSavedBalance + pendingDeposit + 1,
-            totalSupply + sharesToMint + 10 ** decimalsOffset,
-            redeemRounding // Math.Rounding.Ceil or Math.Rounding.Floor
-        );
-
-        uint256 totalAssetsSnapshotForRedeem =
-            _lastSavedBalance + pendingDeposit + 1;
-        uint256 totalSupplySnapshotForRedeem =
-            totalSupply + sharesToMint + 10 ** decimalsOffset;
-
-        settleValues = SettleValues({
-            lastSavedBalance: _lastSavedBalance + fees,
-            fees: fees,
-            pendingRedeem: pendingRedeem,
-            sharesToMint: sharesToMint,
-            pendingDeposit: pendingDeposit,
-            assetsToWithdraw: assetsToWithdraw,
-            totalAssetsSnapshotForDeposit: totalAssetsSnapshotForDeposit,
-            totalSupplySnapshotForDeposit: totalSupplySnapshotForDeposit,
-            totalAssetsSnapshotForRedeem: totalAssetsSnapshotForRedeem,
-            totalSupplySnapshotForRedeem: totalSupplySnapshotForRedeem
-        });
-
-        if (pendingDeposit > assetsToWithdraw) {
-            assetsToOwner = pendingDeposit - assetsToWithdraw;
-        } else if (pendingDeposit < assetsToWithdraw) {
-            assetsToVault = assetsToWithdraw - pendingDeposit;
         }
     }
 
