@@ -14,17 +14,6 @@ import { PermitParams } from "./AsyncSynthVault.sol";
 import { ERC20Permit } from
     "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
-import {
-    IPermit2, ISignatureTransfer
-} from "permit2/src/interfaces/IPermit2.sol";
-
-struct Permit2Params {
-    uint256 amount;
-    uint256 nonce;
-    uint256 deadline;
-    address token;
-    bytes signature;
-}
 
 contract VaultZapper is Ownable2Step, Pausable {
     /**
@@ -40,9 +29,6 @@ contract VaultZapper is Ownable2Step, Pausable {
 
     mapping(IERC4626 vault => bool isAuthorized) public authorizedVaults;
     mapping(address routerAddress => bool isAuthorized) public authorizedRouters;
-
-    // The canonical permit2 contract.
-    IPermit2 public immutable PERMIT2;
 
     event ZapAndRequestDeposit(
         IERC7540 indexed vault,
@@ -89,9 +75,7 @@ contract VaultZapper is Ownable2Step, Pausable {
         _;
     }
 
-    constructor(IPermit2 permit2) Ownable(_msgSender()) {
-        PERMIT2 = permit2;
-    }
+    constructor() Ownable(_msgSender()) {}
 
     /**
      * @param token The IERC20 token to be claimed.
@@ -357,88 +341,4 @@ contract VaultZapper is Ownable2Step, Pausable {
         );
     }
 
-    /*
-     ###########################
-      PERMIT2 RELATED FUNCTIONS
-     ###########################
-    */
-
-    // Deposit some amount of an ERC20 token into this contract
-    // using Permit2.
-    function execPermit2(Permit2Params calldata permit2Params) internal {
-        // Transfer tokens from the caller to ourselves.
-        PERMIT2.permitTransferFrom(
-            // The permit message.
-            ISignatureTransfer.PermitTransferFrom({
-                permitted: ISignatureTransfer.TokenPermissions({
-                    token: permit2Params.token,
-                    amount: permit2Params.amount
-                }),
-                nonce: permit2Params.nonce,
-                deadline: permit2Params.deadline
-            }),
-            // The transfer recipient and amount.
-            ISignatureTransfer.SignatureTransferDetails({
-                to: address(this),
-                requestedAmount: permit2Params.amount
-            }),
-            // The owner of the tokens, which must also be
-            // the signer of the message, otherwise this call
-            // will fail.
-            _msgSender(),
-            // The packed signature that was the result of signing
-            // the EIP712 hash of `permit`.
-            permit2Params.signature
-        );
-    }
-
-    function zapAndRequestDepositWithPermit2(
-        IERC7540 vault,
-        address router,
-        uint256 amount,
-        bytes calldata data,
-        bytes calldata swapData,
-        Permit2Params calldata permit2Params
-    )
-        external
-    {
-        if (
-            IERC20(permit2Params.token).allowance(_msgSender(), address(this))
-                < amount
-        ) {
-            execPermit2(permit2Params);
-        }
-
-        zapAndRequestDeposit(
-            IERC20(permit2Params.token), vault, router, amount, data, swapData
-        );
-    }
-
-    function zapAndDepositWithPermit2(
-        IERC4626 vault,
-        address router,
-        uint256 amount,
-        uint256 minShares,
-        bytes calldata swapData,
-        Permit2Params calldata permit2Params
-    )
-        external
-        returns (uint256)
-    {
-        if (
-            IERC20(permit2Params.token).allowance(_msgSender(), address(this))
-                < amount
-        ) {
-            execPermit2(permit2Params);
-        }
-
-        return zapAndDeposit(
-            IERC20(permit2Params.token),
-            vault,
-            router,
-            amount,
-            minShares,
-            swapData
-        );
-    }
 }
