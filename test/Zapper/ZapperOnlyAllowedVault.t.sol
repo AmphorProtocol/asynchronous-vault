@@ -25,9 +25,7 @@ contract VaultZapperOnlyAllowedVault is OffChainCalls {
                 VaultZapper.NotVault.selector, IERC4626(address(0))
             )
         );
-        zapper.zapAndDeposit(
-            _USDC, IERC4626(address(0)), _router, 1 * 1e18, 0, ""
-        );
+        zapper.zapAndDeposit(_USDC, IERC4626(address(0)), _router, 1 * 1e18, "");
     }
 
     function test_fail_zapAndDepositWithPermitNotAllowedVault() public {
@@ -38,7 +36,6 @@ contract VaultZapperOnlyAllowedVault is OffChainCalls {
             IERC4626(address(0)),
             _router,
             1 * 1e18,
-            0,
             "",
             PermitParams({ r: "", s: "", v: 0, value: 0, deadline: 0 })
         );

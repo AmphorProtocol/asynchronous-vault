@@ -74,7 +74,6 @@ contract SyntheticZapperPermitTest is OffChainCalls {
         // permitParams);
 
         uint256 beforeDep = (IERC20(address(_vault)).balanceOf(user));
-        console.log("Shares balance before deposit", beforeDep);
 
         vm.prank(user);
 
@@ -84,7 +83,6 @@ contract SyntheticZapperPermitTest is OffChainCalls {
             _vault,
             params.router,
             params.amount,
-            1,
             swapData,
             permitParams
         );

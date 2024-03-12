@@ -26,7 +26,7 @@ contract VaultZapperOnlyAllowedRouter is OffChainCalls {
             )
         );
         zapper.zapAndDeposit(
-            IERC20(_USDC), IERC4626(address(0)), address(0), 1 * 1e18, 0, ""
+            IERC20(_USDC), IERC4626(address(0)), address(0), 1 * 1e18, ""
         );
     }
 
@@ -38,7 +38,6 @@ contract VaultZapperOnlyAllowedRouter is OffChainCalls {
             IERC4626(address(0)),
             address(0),
             1 * 1e18,
-            0,
             "",
             PermitParams({ r: "", s: "", v: 0, value: 0, deadline: 0 })
         );

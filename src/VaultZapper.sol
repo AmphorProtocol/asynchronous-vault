@@ -332,7 +332,7 @@ contract VaultZapper is Ownable2Step, Pausable {
 
     function zapAndClaimAndRequestDepositWithPermit(
         IERC20 tokenIn,
-        IERC7540 vault,
+        AsyncSynthVault vault,
         address router,
         uint256 amount,
         bytes calldata data,
