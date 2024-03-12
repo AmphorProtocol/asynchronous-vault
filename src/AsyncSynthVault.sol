@@ -8,12 +8,7 @@ import {
     IERC7540Deposit
 } from "./interfaces/IERC7540.sol";
 import { ERC7540Receiver } from "./interfaces/ERC7540Receiver.sol";
-import {
-    IERC20,
-    SafeERC20,
-    Math,
-    PermitParams
-} from "./SyncSynthVault.sol";
+import { IERC20, SafeERC20, Math, PermitParams } from "./SyncSynthVault.sol";
 
 import { SyncSynthVault } from "./SyncSynthVault.sol";
 
@@ -208,13 +203,13 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
 
     function claimAndRequestDeposit(
         uint256 assets,
+        address receiver,
         bytes memory data
     )
         external
     {
-        address owner = _msgSender();
-        _claimDeposit(owner, owner);
-        requestDeposit(assets, owner, owner, data);
+        _claimDeposit(receiver, receiver);
+        requestDeposit(assets, receiver, _msgSender(), data);
     }
 
     function claimAndRequestRedeem(
@@ -228,9 +223,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         requestRedeem(shares, owner, owner, data);
     }
 
-    function decreaseDepositRequest(
-        uint256 assets
-    )
+    function decreaseDepositRequest(uint256 assets)
         external
         whenClosed
         whenNotPaused
@@ -248,9 +241,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         );
     }
 
-    function decreaseRedeemRequest(
-        uint256 shares
-    )
+    function decreaseRedeemRequest(uint256 shares)
         external
         whenClosed
         whenNotPaused
@@ -285,8 +276,8 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         if (totalAssets() == 0) revert VaultIsEmpty();
 
         lastSavedBalance = totalAssets();
-        _asset.safeTransfer(owner(), lastSavedBalance);
         vaultIsOpen = false;
+        _asset.safeTransfer(owner(), lastSavedBalance);
         emit EpochStart(block.timestamp, lastSavedBalance, totalSupply());
     }
 
@@ -308,8 +299,8 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         whenClosed
     {
         (uint256 newBalance,) = _settle(assetReturned);
-        _asset.safeTransferFrom(owner(), address(this), newBalance);
         vaultIsOpen = true;
+        _asset.safeTransferFrom(owner(), address(this), newBalance);
     }
 
     /*
@@ -374,7 +365,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
             ? 0
             : epochs[lastRequestId].depositRequestBalance[owner];
     }
-    
+
     function totalPendingDeposits() external view returns (uint256) {
         return vaultIsOpen ? 0 : _asset.balanceOf(address(pendingSilo));
     }
@@ -390,7 +381,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
     function totalClaimableAssets() external view returns (uint256) {
         return _asset.balanceOf(address(claimableSilo));
     }
-    
+
     function requestDeposit(
         uint256 assets,
         address receiver,
@@ -499,7 +490,6 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         return _convertToAssets(shares, lastRequestId, Math.Rounding.Floor);
     }
 
-
     /*
      * ######################################
      * # GENERAL ERC-7540 RELATED FUNCTIONS #
@@ -561,25 +551,25 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         uint256 pendingDeposit = _asset.balanceOf(pendingSiloAddr);
 
         uint256 sharesToMint = pendingDeposit.mulDiv(
-            totalSupply + 10 ** DECIMALS_OFFSET,
+            totalSupply + 1,
             _lastSavedBalance + 1,
             Math.Rounding.Floor
         );
 
         uint256 totalAssetsSnapshotForDeposit = _lastSavedBalance + 1;
         uint256 totalSupplySnapshotForDeposit =
-            totalSupply + 10 ** DECIMALS_OFFSET;
+            totalSupply + 1;
 
         uint256 assetsToWithdraw = pendingRedeem.mulDiv(
             _lastSavedBalance + pendingDeposit + 1,
-            totalSupply + sharesToMint + 10 ** DECIMALS_OFFSET,
+            totalSupply + sharesToMint + 1,
             Math.Rounding.Floor
         );
 
         uint256 totalAssetsSnapshotForRedeem =
             _lastSavedBalance + pendingDeposit + 1;
         uint256 totalSupplySnapshotForRedeem =
-            totalSupply + sharesToMint + 10 ** DECIMALS_OFFSET;
+            totalSupply + sharesToMint + 1;
 
         settleValues = SettleValues({
             lastSavedBalance: _lastSavedBalance + fees,
@@ -716,9 +706,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         // either there are more deposits than withdrawals
         if (settleValues.pendingDeposit > settleValues.assetsToWithdraw) {
             _asset.safeTransferFrom(
-                address(pendingSilo),
-                owner(),
-                assetsToOwner
+                address(pendingSilo), owner(), assetsToOwner
             );
             if (settleValues.assetsToWithdraw > 0) {
                 _asset.safeTransferFrom(
@@ -730,9 +718,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         } else if (settleValues.pendingDeposit < settleValues.assetsToWithdraw)
         {
             _asset.safeTransferFrom(
-                owner(),
-                address(claimableSilo),
-                assetsToVault
+                owner(), address(claimableSilo), assetsToVault
             );
             if (settleValues.pendingDeposit > 0) {
                 _asset.safeTransferFrom(
@@ -809,7 +795,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         uint256 totalAssets =
             epochs[requestId].totalAssetsSnapshotForDeposit + 1;
         uint256 totalSupply = epochs[requestId].totalSupplySnapshotForDeposit
-            + 10 ** DECIMALS_OFFSET;
+            + 1;
 
         return assets.mulDiv(totalSupply, totalAssets, rounding);
     }
@@ -828,7 +814,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         }
         uint256 totalAssets = epochs[requestId].totalAssetsSnapshotForRedeem + 1;
         uint256 totalSupply = epochs[requestId].totalSupplySnapshotForRedeem
-            + 10 ** DECIMALS_OFFSET;
+            + 1;
 
         return shares.mulDiv(totalAssets, totalSupply, rounding);
     }
