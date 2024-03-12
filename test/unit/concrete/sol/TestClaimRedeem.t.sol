@@ -61,4 +61,25 @@ contract TestClaimRedeem is TestBase {
         vm.expectRevert();
         vaultTested.claimRedeem(user1.addr);
     }
+
+    function test_whenClaimRedeemWithSomethingToClaim2Times() external {
+        // it should revert with ERC4626ExceededMaxClaim
+        usersDealApproveAndDeposit(vaultTested, 5);
+        usersDealApprove(vaultTested, 10);
+        assertClose(vaultTested);
+        uint256 shares = vaultTested.balanceOf(user5.addr);
+
+        assertRequestRedeem(
+            vaultTested, user5.addr, user5.addr, user5.addr, shares, ""
+        );
+
+        assertOpen(vaultTested, 3);
+        assertClaimRedeem(vaultTested, user5.addr, user5.addr, shares);
+        uint256 assets =
+            IERC20Metadata(vaultTested.asset()).balanceOf(user5.addr);
+
+        uint256 assetsAfter =
+            IERC20Metadata(vaultTested.asset()).balanceOf(user5.addr);
+        assertEq(assets, assetsAfter);
+    }
 }
