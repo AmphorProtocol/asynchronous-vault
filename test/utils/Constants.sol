@@ -35,7 +35,7 @@ abstract contract Constants is Test {
     address immutable amphorLabs = vm.envAddress("AMPHORLABS_ADDRESS");
 
     // Permit2
-    IPermit2 immutable permit2 = IPermit2(vm.envAddress("PERMIT2"));
+    // IPermit2 immutable permit2 = IPermit2(vm.envAddress("PERMIT2"));
 
     // Fees
     uint16 fees = uint16(vm.envUint("INITIAL_FEES_AMOUNT"));
@@ -104,7 +104,7 @@ abstract contract Constants is Test {
         vm.label(address(WBTC), "WBTC");
 
         vm.label(address(amphorLabs), "amphorLabs");
-        vm.label(address(permit2), "permit2");
+        // vm.label(address(permit2), "permit2");
 
         //vm.label(address(zapper), "zapper");
 
@@ -120,7 +120,7 @@ abstract contract Constants is Test {
         users.push(user10);
 
         Options memory deploy;
-        deploy.constructorData = abi.encode(permit2);
+        deploy.constructorData = "";
 
         // UpgradeableBeacon beacon = UpgradeableBeacon(
         //     Upgrades.deployBeacon("AsyncSynthVault.sol", amphorLabs, deploy)
@@ -130,7 +130,7 @@ abstract contract Constants is Test {
         //     beacon, amphorLabs, USDC, vaultNameUSDC, vaultSymbolUSDC
         // );
         vm.startPrank(amphorLabs);
-        vaultUSDC = new AsyncSynthVault(permit2);
+        vaultUSDC = new AsyncSynthVault();
         vaultUSDC.initialize(
             fees, amphorLabs, USDC, vaultNameUSDC, vaultSymbolUSDC
         );
@@ -141,7 +141,7 @@ abstract contract Constants is Test {
         // vaultWSTETH = _proxyDeploy(
         //     beacon, amphorLabs, WSTETH, vaultNameWSTETH, vaultSymbolWSTETH
         // );
-        vaultWSTETH = new AsyncSynthVault(permit2);
+        vaultWSTETH = new AsyncSynthVault();
         vaultWSTETH.initialize(
             fees, amphorLabs, WSTETH, vaultNameWSTETH, vaultSymbolWSTETH
         );
@@ -154,7 +154,7 @@ abstract contract Constants is Test {
         // vaultWBTC = _proxyDeploy(
         //     beacon, amphorLabs, WBTC, vaultNameWBTC, vaultSymbolWBTC
         // );
-        vaultWBTC = new AsyncSynthVault(permit2);
+        vaultWBTC = new AsyncSynthVault();
         vaultWBTC.initialize(
             fees, amphorLabs, WBTC, vaultNameWBTC, vaultSymbolWBTC
         );

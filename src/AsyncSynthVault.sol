@@ -11,7 +11,6 @@ import { ERC7540Receiver } from "./interfaces/ERC7540Receiver.sol";
 import {
     IERC20,
     SafeERC20,
-    IAllowanceTransfer,
     ERC20Upgradeable,
     Math,
     PermitParams,
@@ -23,6 +22,7 @@ import { SyncSynthVault } from "./SyncSynthVault.sol";
 import "forge-std/console.sol"; //todo remove
 
 /**
+ *         @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  *         @@@@@@@@@@@@@@@@@@@@%=::::::=%@@@@@@@@@@@@@@@@@@@@
  *         @@@@@@@@@@@@@@@@@@@@*=#=--=*=*@@@@@@@@@@@@@@@@@@@@
  *         @@@@@@@@@@@@@@@@@@@@:*=    =#:@@@@@@@@@@@@@@@@@@@@
@@ -186,8 +186,8 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
      */
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(IAllowanceTransfer _permit2) SyncSynthVault(_permit2) {
-        // _disableInitializers(); // TODO uncomment after
+    constructor() SyncSynthVault() {
+        //_disableInitializers();
     }
 
     function initialize(
@@ -748,11 +748,11 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         whenClosed
         returns (uint256, uint256)
     {
-        uint256 assetsToOwner;
-        uint256 assetsToVault;
-        SettleValues memory settleValues;
-        (assetsToOwner, assetsToVault, settleValues) =
-            previewSettle(newSavedBalance);
+        (
+            uint256 assetsToOwner,
+            uint256 assetsToVault,
+            SettleValues memory settleValues
+        ) = previewSettle(newSavedBalance);
 
         emit EpochEnd(
             block.timestamp,
@@ -774,8 +774,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
             _asset.safeTransferFrom(
                 address(pendingSilo),
                 owner(),
-                settleValues.pendingDeposit - settleValues.assetsToWithdraw // change
-                    // thx to previewSettle
+                assetsToOwner
             );
             if (settleValues.assetsToWithdraw > 0) {
                 _asset.safeTransferFrom(
@@ -789,11 +788,9 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
             _asset.safeTransferFrom(
                 owner(),
                 address(claimableSilo),
-                settleValues.assetsToWithdraw - settleValues.pendingDeposit // change
-                    // thx to previewSettle
+                assetsToVault
             );
             if (settleValues.pendingDeposit > 0) {
-                // then two transfers
                 _asset.safeTransferFrom(
                     address(pendingSilo),
                     address(claimableSilo),

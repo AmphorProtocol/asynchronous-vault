@@ -25,6 +25,7 @@ import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import "forge-std/console.sol"; //todo remove
 
 /*
+ *         @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  *         @@@@@@@@@@@@@@@@@@@@%=::::::=%@@@@@@@@@@@@@@@@@@@@
  *         @@@@@@@@@@@@@@@@@@@@*=#=--=*=*@@@@@@@@@@@@@@@@@@@@
  *         @@@@@@@@@@@@@@@@@@@@:*=    =#:@@@@@@@@@@@@@@@@@@@@
@@ -89,8 +90,6 @@ struct Permit2Params {
 uint256 constant BPS_DIVIDER = 10_000;
 uint16 constant MAX_FEES = 3000; // 30%
 
-// todo -> add some batch functions
-
 abstract contract SyncSynthVault is
     IERC4626,
     Ownable2StepUpgradeable,
@@ -106,14 +105,11 @@ abstract contract SyncSynthVault is
     // @return Amount of the perf fees applied on the positive yield.
     uint16 public feesInBps;
     uint16 internal _maxDrawdown; // guardrail
-    IERC20 internal _asset; // underlying todo make small cap
+    IERC20 internal _asset; // underlying asset
     bool public vaultIsOpen; // vault is open or closed
     uint256 public lastSavedBalance; // last saved balance
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     uint8 public immutable decimalsOffset; // offset for the decimals
-    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    IAllowanceTransfer public immutable PERMIT2; // The canonical permit2
-        // contract. We can make it immutable because it is common to all proxy
 
     /*
      * ##########
@@ -163,9 +159,8 @@ abstract contract SyncSynthVault is
     }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(IAllowanceTransfer _permit2) {
+    constructor() {
         // _disableInitializers(); // TODO uncomment
-        PERMIT2 = _permit2;
         decimalsOffset = 0;
     }
 
@@ -528,24 +523,6 @@ abstract contract SyncSynthVault is
      * # AMPHOR SYNTHETIC RELATED FUNCTIONS #
      * ######################################
     */
-    // todo
-    function restruct(uint256 virtualReturnedAsset) external onlyOwner {
-        uint256 _totalAssets = totalAssets();
-        emit EpochEnd(
-            block.timestamp,
-            _totalAssets,
-            virtualReturnedAsset,
-            0,
-            totalSupply()
-        );
-        emit EpochStart(block.timestamp, _totalAssets, totalSupply());
-    }
-
-    /*
-     * ######################################
-     * # AMPHOR SYNTHETIC RELATED FUNCTIONS #
-     * ######################################
-    */
 
     /**
      * @dev The `setFee` function is used to modify the protocol fees.
@@ -563,7 +540,7 @@ abstract contract SyncSynthVault is
     }
 
     function setMaxDrawdown(uint16 newMaxDrawdown) external onlyOwner {
-        if (newMaxDrawdown > 10_000) revert(); // add error
+        if (newMaxDrawdown > 10_000) revert MaxDrawdownReached();
         _maxDrawdown = newMaxDrawdown;
     }
 
@@ -589,7 +566,7 @@ abstract contract SyncSynthVault is
         virtual
         override(ERC20Upgradeable, ERC20PausableUpgradeable)
     {
-        ERC20PausableUpgradeable._update(from, to, value); // will audit
+        ERC20PausableUpgradeable._update(from, to, value);
     }
 
     /*
