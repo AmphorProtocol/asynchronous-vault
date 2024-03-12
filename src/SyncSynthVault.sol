@@ -584,9 +584,7 @@ abstract contract SyncSynthVault is
         view
         returns (uint256)
     {
-        return assets.mulDiv(
-            totalSupply() + 1, totalAssets() + 1, rounding
-        );
+        return assets.mulDiv(totalSupply() + 1, totalAssets() + 1, rounding);
     }
 
     /**
@@ -605,9 +603,7 @@ abstract contract SyncSynthVault is
         view
         returns (uint256)
     {
-        return shares.mulDiv(
-            totalAssets() + 1, totalSupply() + 1, rounding
-        );
+        return shares.mulDiv(totalAssets() + 1, totalSupply() + 1, rounding);
     }
 
     function decimals()
