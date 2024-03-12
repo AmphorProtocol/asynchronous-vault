@@ -276,8 +276,8 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         if (totalAssets() == 0) revert VaultIsEmpty();
 
         lastSavedBalance = totalAssets();
-        _asset.safeTransfer(owner(), lastSavedBalance);
         vaultIsOpen = false;
+        _asset.safeTransfer(owner(), lastSavedBalance);
         emit EpochStart(block.timestamp, lastSavedBalance, totalSupply());
     }
 
@@ -299,8 +299,8 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         whenClosed
     {
         (uint256 newBalance,) = _settle(assetReturned);
-        _asset.safeTransferFrom(owner(), address(this), newBalance);
         vaultIsOpen = true;
+        _asset.safeTransferFrom(owner(), address(this), newBalance);
     }
 
     /*
@@ -551,25 +551,25 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         uint256 pendingDeposit = _asset.balanceOf(pendingSiloAddr);
 
         uint256 sharesToMint = pendingDeposit.mulDiv(
-            totalSupply + 10 ** DECIMALS_OFFSET,
+            totalSupply + 1,
             _lastSavedBalance + 1,
             Math.Rounding.Floor
         );
 
         uint256 totalAssetsSnapshotForDeposit = _lastSavedBalance + 1;
         uint256 totalSupplySnapshotForDeposit =
-            totalSupply + 10 ** DECIMALS_OFFSET;
+            totalSupply + 1;
 
         uint256 assetsToWithdraw = pendingRedeem.mulDiv(
             _lastSavedBalance + pendingDeposit + 1,
-            totalSupply + sharesToMint + 10 ** DECIMALS_OFFSET,
+            totalSupply + sharesToMint + 1,
             Math.Rounding.Floor
         );
 
         uint256 totalAssetsSnapshotForRedeem =
             _lastSavedBalance + pendingDeposit + 1;
         uint256 totalSupplySnapshotForRedeem =
-            totalSupply + sharesToMint + 10 ** DECIMALS_OFFSET;
+            totalSupply + sharesToMint + 1;
 
         settleValues = SettleValues({
             lastSavedBalance: _lastSavedBalance + fees,
@@ -795,7 +795,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         uint256 totalAssets =
             epochs[requestId].totalAssetsSnapshotForDeposit + 1;
         uint256 totalSupply = epochs[requestId].totalSupplySnapshotForDeposit
-            + 10 ** DECIMALS_OFFSET;
+            + 1;
 
         return assets.mulDiv(totalSupply, totalAssets, rounding);
     }
@@ -814,7 +814,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         }
         uint256 totalAssets = epochs[requestId].totalAssetsSnapshotForRedeem + 1;
         uint256 totalSupply = epochs[requestId].totalSupplySnapshotForRedeem
-            + 10 ** DECIMALS_OFFSET;
+            + 1;
 
         return shares.mulDiv(totalAssets, totalSupply, rounding);
     }
