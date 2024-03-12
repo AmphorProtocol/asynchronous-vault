@@ -18,8 +18,6 @@ import { Initializable } from
 import { ERC20Permit } from
     "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 import { IERC4626 } from "@openzeppelin/contracts/interfaces/IERC4626.sol";
-import { IAllowanceTransfer } from
-    "permit2/src/interfaces/IAllowanceTransfer.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import "forge-std/console.sol"; //todo remove
@@ -109,7 +107,7 @@ abstract contract SyncSynthVault is
     bool public vaultIsOpen; // vault is open or closed
     uint256 public lastSavedBalance; // last saved balance
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    uint8 public immutable decimalsOffset; // offset for the decimals
+    uint8 public immutable DECIMALS_OFFSET; // offset for the decimals
 
     /*
      * ##########
@@ -161,7 +159,7 @@ abstract contract SyncSynthVault is
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         // _disableInitializers(); // TODO uncomment
-        decimalsOffset = 0;
+        DECIMALS_OFFSET = 0;
     }
 
     function initialize(
@@ -186,11 +184,196 @@ abstract contract SyncSynthVault is
         __ERC20Pausable_init(); // will audit
     }
 
+    /**
+     * @dev The `withdraw` function is used to withdraw the specified underlying
+     * assets amount in exchange of a proportional amount of shares.
+     * @param assets The underlying assets amount to be converted into shares.
+     * @param receiver The address of the shares receiver.
+     * @param owner The address of the owner.
+     * @return Amount of shares received in exchange of the specified underlying
+     * assets amount.
+     */
+    function withdraw(
+        uint256 assets,
+        address receiver,
+        address owner
+    )
+        external
+        whenNotPaused
+        returns (uint256)
+    {
+        uint256 maxAssets = maxWithdraw(owner);
+        if (assets > maxAssets) {
+            revert ERC4626ExceededMaxWithdraw(owner, assets, maxAssets);
+        }
+
+        uint256 sharesAmount = previewWithdraw(assets);
+        _withdraw(_msgSender(), receiver, owner, assets, sharesAmount);
+
+        return sharesAmount;
+    }
+
+    /*
+     * #################################
+     * # Pausability RELATED FUNCTIONS #
+     * #################################
+    */
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    function unpause() external onlyOwner {
+        _unpause();
+    }
+
     /*
      * ######################################
-     * # GENERAL ERC-4626 RELATED FUNCTIONS #
+     * # AMPHOR SYNTHETIC RELATED FUNCTIONS #
      * ######################################
     */
+
+    /**
+     * @dev The `setFee` function is used to modify the protocol fees.
+     * @notice The `setFee` function is used to modify the perf fees.
+     * It can only be called by the owner of the contract (`onlyOwner`
+     * modifier).
+     * It can't exceed 30% (3000 in BPS).
+     * @param newFee The new perf fees to be applied.
+     */
+    function setFee(uint16 newFee) external onlyOwner {
+        if (!vaultIsOpen) revert VaultIsClosed();
+        if (newFee > MAX_FEES) revert FeesTooHigh();
+        feesInBps = newFee;
+        emit FeesChanged(feesInBps, newFee);
+    }
+
+    function setMaxDrawdown(uint16 newMaxDrawdown) external onlyOwner {
+        if (newMaxDrawdown > 10_000) revert MaxDrawdownReached();
+        _maxDrawdown = newMaxDrawdown;
+    }
+
+    function open(uint256 assetReturned) external virtual;
+    function close() external virtual;
+
+    /*
+     * #################################
+     * #   Permit RELATED FUNCTIONS    #
+     * #################################
+    */
+
+    /**
+     * @dev The `depositWithPermit` function is used to deposit underlying
+     * assets
+     * into the vault using a permit for approval.
+     * @param assets The underlying assets amount to be converted into
+     * shares.
+     * @param receiver The address of the shares receiver.
+     * @param permitParams The permit struct containing the permit signature and
+     * data.
+     * @return Amount of shares received in exchange of the specified underlying
+     * assets amount.
+     */
+    function depositWithPermit(
+        uint256 assets,
+        address receiver,
+        PermitParams calldata permitParams
+    )
+        external
+        returns (uint256)
+    {
+        if (_asset.allowance(msg.sender, address(this)) < assets) {
+            execPermit(_msgSender(), address(this), permitParams);
+        }
+        return deposit(assets, receiver);
+    }
+
+    /**
+     * @dev See {IERC4626-deposit}
+     * @notice The `deposit` function is used to deposit underlying assets into
+     * the vault.
+     * @param assets The underlying assets amount to be converted into shares.
+     * @param receiver The address of the shares receiver.
+     * @return Amount of shares received in exchange of the
+     * specified underlying assets amount.
+     */
+    function deposit(
+        uint256 assets,
+        address receiver
+    )
+        public
+        whenNotPaused
+        returns (uint256)
+    {
+        uint256 maxAssets = maxDeposit(receiver);
+        if (assets > maxAssets) {
+            revert ERC4626ExceededMaxDeposit(receiver, assets, maxAssets);
+        }
+
+        uint256 sharesAmount = previewDeposit(assets);
+        _deposit(_msgSender(), receiver, assets, sharesAmount);
+
+        return sharesAmount;
+    }
+
+    /**
+     * @dev The `mint` function is used to mint the specified amount of shares
+     * in
+     * exchange of the corresponding assets amount from owner.
+     * @param shares The shares amount to be converted into underlying assets.
+     * @param receiver The address of the shares receiver.
+     * @return Amount of underlying assets deposited in exchange of the
+     * specified
+     * amount of shares.
+     */
+    function mint(
+        uint256 shares,
+        address receiver
+    )
+        public
+        whenNotPaused
+        returns (uint256)
+    {
+        uint256 maxShares = maxMint(receiver);
+        if (shares > maxShares) {
+            revert ERC4626ExceededMaxMint(receiver, shares, maxShares);
+        }
+
+        uint256 assetsAmount = previewMint(shares);
+        _deposit(_msgSender(), receiver, assetsAmount, shares);
+
+        return assetsAmount;
+    }
+
+    /**
+     * @dev The `redeem` function is used to redeem the specified amount of
+     * shares in exchange of the corresponding underlying assets amount from
+     * owner.
+     * @param shares The shares amount to be converted into underlying assets.
+     * @param receiver The address of the shares receiver.
+     * @param owner The address of the owner.
+     * @return Amount of underlying assets received in exchange of the specified
+     * amount of shares.
+     */
+    // tree done
+    function redeem(
+        uint256 shares,
+        address receiver,
+        address owner
+    )
+        public
+        whenNotPaused
+        returns (uint256)
+    {
+        uint256 maxShares = maxRedeem(owner);
+        if (shares > maxShares) {
+            revert ERC4626ExceededMaxRedeem(owner, shares, maxShares);
+        }
+
+        uint256 assetsAmount = previewRedeem(shares);
+        _withdraw(_msgSender(), receiver, owner, assetsAmount, shares);
+
+        return assetsAmount;
+    }
 
     // @return address of the underlying asset.
     function asset() public view returns (address) {
@@ -293,173 +476,6 @@ abstract contract SyncSynthVault is
     }
 
     /**
-     * @dev See {IERC4626-deposit}
-     * @notice The `deposit` function is used to deposit underlying assets into
-     * the vault.
-     * @param assets The underlying assets amount to be converted into shares.
-     * @param receiver The address of the shares receiver.
-     * @return Amount of shares received in exchange of the
-     * specified underlying assets amount.
-     */
-    //tree done
-    function deposit(
-        uint256 assets,
-        address receiver
-    )
-        public
-        whenNotPaused
-        returns (uint256)
-    {
-        uint256 maxAssets = maxDeposit(receiver);
-        if (assets > maxAssets) {
-            revert ERC4626ExceededMaxDeposit(receiver, assets, maxAssets);
-        }
-
-        uint256 sharesAmount = previewDeposit(assets);
-        _deposit(_msgSender(), receiver, assets, sharesAmount);
-
-        return sharesAmount;
-    }
-
-    /**
-     * @dev The `mint` function is used to mint the specified amount of shares
-     * in
-     * exchange of the corresponding assets amount from owner.
-     * @param shares The shares amount to be converted into underlying assets.
-     * @param receiver The address of the shares receiver.
-     * @return Amount of underlying assets deposited in exchange of the
-     * specified
-     * amount of shares.
-     */
-    // tree done
-    function mint(
-        uint256 shares,
-        address receiver
-    )
-        public
-        whenNotPaused
-        returns (uint256)
-    {
-        uint256 maxShares = maxMint(receiver);
-        if (shares > maxShares) {
-            revert ERC4626ExceededMaxMint(receiver, shares, maxShares);
-        }
-
-        uint256 assetsAmount = previewMint(shares);
-        _deposit(_msgSender(), receiver, assetsAmount, shares);
-
-        return assetsAmount;
-    }
-
-    /**
-     * @dev The `withdraw` function is used to withdraw the specified underlying
-     * assets amount in exchange of a proportional amount of shares.
-     * @param assets The underlying assets amount to be converted into shares.
-     * @param receiver The address of the shares receiver.
-     * @param owner The address of the owner.
-     * @return Amount of shares received in exchange of the specified underlying
-     * assets amount.
-     */
-    // tree done
-    function withdraw(
-        uint256 assets,
-        address receiver,
-        address owner
-    )
-        external
-        whenNotPaused
-        returns (uint256)
-    {
-        uint256 maxAssets = maxWithdraw(owner);
-        if (assets > maxAssets) {
-            revert ERC4626ExceededMaxWithdraw(owner, assets, maxAssets);
-        }
-
-        uint256 sharesAmount = previewWithdraw(assets);
-        _withdraw(_msgSender(), receiver, owner, assets, sharesAmount);
-
-        return sharesAmount;
-    }
-
-    /**
-     * @dev The `redeem` function is used to redeem the specified amount of
-     * shares in exchange of the corresponding underlying assets amount from
-     * owner.
-     * @param shares The shares amount to be converted into underlying assets.
-     * @param receiver The address of the shares receiver.
-     * @param owner The address of the owner.
-     * @return Amount of underlying assets received in exchange of the specified
-     * amount of shares.
-     */
-    // tree done
-    function redeem(
-        uint256 shares,
-        address receiver,
-        address owner
-    )
-        public
-        whenNotPaused
-        returns (uint256)
-    {
-        uint256 maxShares = maxRedeem(owner);
-        if (shares > maxShares) {
-            revert ERC4626ExceededMaxRedeem(owner, shares, maxShares);
-        }
-
-        uint256 assetsAmount = previewRedeem(shares);
-        _withdraw(_msgSender(), receiver, owner, assetsAmount, shares);
-
-        return assetsAmount;
-    }
-
-    /**
-     * @dev Internal conversion function (from assets to shares) with support
-     * for rounding direction.
-     * @param assets Theunderlying assets amount to be converted into shares.
-     * @param rounding The rounding direction.
-     * @return Amount of shares received in exchange of the specified underlying
-     * assets amount.
-     */
-    function _convertToShares(
-        uint256 assets,
-        Math.Rounding rounding
-    )
-        internal
-        view
-        returns (uint256)
-    {
-        return assets.mulDiv(
-            totalSupply() + 10 ** decimalsOffset, totalAssets() + 1, rounding
-        );
-    }
-
-    /**
-     * @dev Internal conversion function (from shares to assets) with support
-     * for rounding direction.
-     * @param shares The shares amount to be converted into underlying assets.
-     * @param rounding The rounding direction.
-     * @return Amount of underlying assets received in exchange of the
-     * specified amount of shares.
-     */
-    function _convertToAssets(
-        uint256 shares,
-        Math.Rounding rounding
-    )
-        internal
-        view
-        returns (uint256)
-    {
-        console.log("convertToAssets in open vault");
-        console.log("totalAssets", totalAssets() + 1);
-        console.log("totalSupply", totalSupply() + 10 ** decimalsOffset);
-        console.log("shares", shares);
-        console.log(" ");
-        return shares.mulDiv(
-            totalAssets() + 1, totalSupply() + 10 ** decimalsOffset, rounding
-        );
-    }
-
-    /**
      * @dev The `_deposit` function is used to deposit the specified underlying
      * assets amount in exchange of a proportionnal amount of shares.
      * @param caller The address of the caller.
@@ -518,45 +534,6 @@ abstract contract SyncSynthVault is
         emit Withdraw(caller, receiver, owner, assets, shares);
     }
 
-    /*
-     * ######################################
-     * # AMPHOR SYNTHETIC RELATED FUNCTIONS #
-     * ######################################
-    */
-
-    /**
-     * @dev The `setFee` function is used to modify the protocol fees.
-     * @notice The `setFee` function is used to modify the perf fees.
-     * It can only be called by the owner of the contract (`onlyOwner`
-     * modifier).
-     * It can't exceed 30% (3000 in BPS).
-     * @param newFee The new perf fees to be applied.
-     */
-    function setFee(uint16 newFee) external onlyOwner {
-        if (!vaultIsOpen) revert VaultIsClosed();
-        if (newFee > MAX_FEES) revert FeesTooHigh();
-        feesInBps = newFee;
-        emit FeesChanged(feesInBps, newFee);
-    }
-
-    function setMaxDrawdown(uint16 newMaxDrawdown) external onlyOwner {
-        if (newMaxDrawdown > 10_000) revert MaxDrawdownReached();
-        _maxDrawdown = newMaxDrawdown;
-    }
-
-    /*
-     * #################################
-     * # Pausability RELATED FUNCTIONS #
-     * #################################
-    */
-    function pause() public onlyOwner {
-        _pause();
-    }
-
-    function unpause() public onlyOwner {
-        _unpause();
-    }
-
     function _update(
         address from,
         address to,
@@ -567,38 +544,6 @@ abstract contract SyncSynthVault is
         override(ERC20Upgradeable, ERC20PausableUpgradeable)
     {
         ERC20PausableUpgradeable._update(from, to, value);
-    }
-
-    /*
-     * #################################
-     * #   Permit RELATED FUNCTIONS    #
-     * #################################
-    */
-
-    /**
-     * @dev The `depositWithPermit` function is used to deposit underlying
-     * assets
-     * into the vault using a permit for approval.
-     * @param assets The underlying assets amount to be converted into
-     * shares.
-     * @param receiver The address of the shares receiver.
-     * @param permitParams The permit struct containing the permit signature and
-     * data.
-     * @return Amount of shares received in exchange of the specified underlying
-     * assets amount.
-     */
-    function depositWithPermit(
-        uint256 assets,
-        address receiver,
-        PermitParams calldata permitParams
-    )
-        external
-        returns (uint256)
-    {
-        if (_asset.allowance(msg.sender, address(this)) < assets) {
-            execPermit(_msgSender(), address(this), permitParams);
-        }
-        return deposit(assets, receiver);
     }
 
     function execPermit(
@@ -619,6 +564,50 @@ abstract contract SyncSynthVault is
         );
     }
 
-    function open(uint256 assetReturned) external virtual;
-    function close() external virtual;
+    /**
+     * @dev Internal conversion function (from assets to shares) with support
+     * for rounding direction.
+     * @param assets Theunderlying assets amount to be converted into shares.
+     * @param rounding The rounding direction.
+     * @return Amount of shares received in exchange of the specified underlying
+     * assets amount.
+     */
+    function _convertToShares(
+        uint256 assets,
+        Math.Rounding rounding
+    )
+        internal
+        view
+        returns (uint256)
+    {
+        return assets.mulDiv(
+            totalSupply() + 10 ** DECIMALS_OFFSET, totalAssets() + 1, rounding
+        );
+    }
+
+    /**
+     * @dev Internal conversion function (from shares to assets) with support
+     * for rounding direction.
+     * @param shares The shares amount to be converted into underlying assets.
+     * @param rounding The rounding direction.
+     * @return Amount of underlying assets received in exchange of the
+     * specified amount of shares.
+     */
+    function _convertToAssets(
+        uint256 shares,
+        Math.Rounding rounding
+    )
+        internal
+        view
+        returns (uint256)
+    {
+        console.log("convertToAssets in open vault");
+        console.log("totalAssets", totalAssets() + 1);
+        console.log("totalSupply", totalSupply() + 10 ** DECIMALS_OFFSET);
+        console.log("shares", shares);
+        console.log(" ");
+        return shares.mulDiv(
+            totalAssets() + 1, totalSupply() + 10 ** DECIMALS_OFFSET, rounding
+        );
+    }
 }

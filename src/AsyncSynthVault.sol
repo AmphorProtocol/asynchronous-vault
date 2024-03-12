@@ -565,25 +565,25 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         uint256 pendingDeposit = _asset.balanceOf(pendingSiloAddr);
 
         uint256 sharesToMint = pendingDeposit.mulDiv(
-            totalSupply + 10 ** decimalsOffset,
+            totalSupply + 10 ** DECIMALS_OFFSET,
             _lastSavedBalance + 1,
             Math.Rounding.Floor
         );
 
         uint256 totalAssetsSnapshotForDeposit = _lastSavedBalance + 1;
         uint256 totalSupplySnapshotForDeposit =
-            totalSupply + 10 ** decimalsOffset;
+            totalSupply + 10 ** DECIMALS_OFFSET;
 
         uint256 assetsToWithdraw = pendingRedeem.mulDiv(
             _lastSavedBalance + pendingDeposit + 1,
-            totalSupply + sharesToMint + 10 ** decimalsOffset,
+            totalSupply + sharesToMint + 10 ** DECIMALS_OFFSET,
             Math.Rounding.Floor
         );
 
         uint256 totalAssetsSnapshotForRedeem =
             _lastSavedBalance + pendingDeposit + 1;
         uint256 totalSupplySnapshotForRedeem =
-            totalSupply + sharesToMint + 10 ** decimalsOffset;
+            totalSupply + sharesToMint + 10 ** DECIMALS_OFFSET;
 
         settleValues = SettleValues({
             lastSavedBalance: _lastSavedBalance + fees,
@@ -813,7 +813,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         uint256 totalAssets =
             epochs[requestId].totalAssetsSnapshotForDeposit + 1;
         uint256 totalSupply = epochs[requestId].totalSupplySnapshotForDeposit
-            + 10 ** decimalsOffset;
+            + 10 ** DECIMALS_OFFSET;
 
         return assets.mulDiv(totalSupply, totalAssets, rounding);
     }
@@ -832,7 +832,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         }
         uint256 totalAssets = epochs[requestId].totalAssetsSnapshotForRedeem + 1;
         uint256 totalSupply = epochs[requestId].totalSupplySnapshotForRedeem
-            + 10 ** decimalsOffset;
+            + 10 ** DECIMALS_OFFSET;
 
         return shares.mulDiv(totalAssets, totalSupply, rounding);
     }
