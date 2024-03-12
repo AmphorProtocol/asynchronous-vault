@@ -53,230 +53,32 @@ contract VaultZapperRequestDeposit is OffChainCalls {
         _zapAndClaimAndRequestDeposit(usdcToWstEth, _vault);
     }
 
-    // function test_zapAndDepositUsdcWBTC() public {
-    //     Swap memory usdcToWbtc =
-    //         Swap(_router, _USDC, _WBTC, 1500 * 1e6, 1, address(0), 20);
-    //     _setUpVaultAndZapper(_WBTC);
-    //     _zapAndDeposit(usdcToWbtc, _vault);
-    // }
+    function test_zapClaimAndRequestDepositPermit_USDCWSTETH() public {
+        _dealAsset(address(_WSTETH), address(this), 1000 * 10e18);
+        _dealAsset(address(_WSTETH), user, 1000 * 10e18);
+        _dealAsset(address(_USDC), user, 100 * 10e6);
+        _setUpVaultAndZapper(_WSTETH);
+        _WSTETH.approve(address(_vault), type(uint256).max);
+        _vault.deposit(10 * 10e18, address(this));
 
-    // function test_zapAndDepositDAIUSDC() public {
-    //     Swap memory daiToUsdc =
-    //         Swap(_router, _DAI, _USDC, 150 * 1e6, 1, address(0), 20);
-    //     _setUpVaultAndZapper(_USDC);
-    //     _zapAndDeposit(daiToUsdc, _vault);
-    // }
+        vm.prank(_amphorLabs);
+        _vault.close();
+        vm.startPrank(user);
+        _WSTETH.approve(address(_vault), type(uint256).max);
+        _vault.requestDeposit(10 * 10e18, user, user, "");
+        vm.stopPrank();
 
-    // //// test_failZapAndDepositUnknownReason ////
-    // function test_failZapAndDepositUsdcWSTETHUnknownReason() public {
-    //     Swap memory usdcToWstEth =
-    //         Swap(_router, _USDC, _WSTETH, 150_000_000 * 1e6, 1, address(0),
-    // 0);
-    //     _setUpVaultAndZapper(_WSTETH);
-    //     _failZapAndDeposit(usdcToWstEth, 150_000_000 * 1e6);
-    // }
+        uint256 lastSavedBalance = _vault.totalAssets();
 
-    // function test_failZapAndDepositUsdcWBTCUnknownReason() public {
-    //     Swap memory usdcToWbtc =
-    //         Swap(_router, _USDC, _WBTC, 150_000_000 * 1e6, 1, address(0), 0);
-    //     _setUpVaultAndZapper(_WBTC);
-    //     _failZapAndDeposit(usdcToWbtc, 150_000_000 * 1e6);
-    // }
-
-    // function test_failZapAndDepositDaiUsdcUnknownReason() public {
-    //     Swap memory daiToUsdc =
-    //         Swap(_router, _DAI, _USDC, 150_000_000 * 1e45, 1, address(0), 0);
-    //     _setUpVaultAndZapper(_USDC);
-    //     _failZapAndDeposit(daiToUsdc, 150 * 1e45);
-    // }
-
-    // //// test_failZapAndDepositERC20PlusEth ////
-    // function test_failZapAndDepositERC20PlusEthWSTETH() public {
-    //     Swap memory usdcToWstEth =
-    //         Swap(_router, _USDC, _WSTETH, 1500 * 1e6, 1, address(0), 30);
-    //     _setUpVaultAndZapper(_WSTETH);
-    //     _failZapAndDeposit_eth(usdcToWstEth, 1500 * 1e6);
-    // }
-
-    // function test_failZapAndDepositERC20PlusEthUSDC() public {
-    //     Swap memory usdcToWbtc =
-    //         Swap(_router, _USDC, _WBTC, 1500 * 1e6, 1, address(0), 30);
-    //     _setUpVaultAndZapper(_WBTC);
-    //     _failZapAndDeposit_eth(usdcToWbtc, 1500 * 1e6);
-    // }
-
-    // function test_failZapAndDepositERC20PlusEthWBTC() public {
-    //     Swap memory daiToUsdc =
-    //         Swap(_router, _DAI, _USDC, 1500 * 1e6, 1, address(0), 30);
-    //     _setUpVaultAndZapper(_USDC);
-    //     _failZapAndDeposit_eth(daiToUsdc, 1500 * 1e6);
-    // }
-
-    // //// test_inconsistantZapAndDeposit ////
-    // function test_inconsistantZapAndDepositUsdcWSTETH() public {
-    //     Swap memory usdcToWstEth = Swap(
-    //         _router,
-    //         IERC20(_USDC),
-    //         IERC20(_WSTETH),
-    //         1000 * 1e6,
-    //         1,
-    //         address(0),
-    //         20
-    //     );
-    //     _setUpVaultAndZapper(_WSTETH);
-    //     _failZapAndDeposit(usdcToWstEth, 1500 * 1e6);
-    // }
-
-    // function test_inconsistantZapAndDepositUsdcWBTC() public {
-    //     Swap memory usdcToWbtc = Swap(
-    //         _router, IERC20(_USDC), IERC20(_WBTC), 1000 * 1e6, 1, address(0),
-    // 20
-    //     );
-    //     _setUpVaultAndZapper(_WBTC);
-    //     _failZapAndDeposit(usdcToWbtc, 1500 * 1e6);
-    // }
-
-    // function test_inconsistantZapAndDepositDaiUSDC() public {
-    //     Swap memory daiToUsdc = Swap(
-    //         _router, IERC20(_DAI), IERC20(_USDC), 1000 * 1e6, 1, address(0),
-    // 20
-    //     );
-    //     _setUpVaultAndZapper(_USDC);
-    //     _failZapAndDeposit(daiToUsdc, 1500 * 1e6);
-    // }
-
-    // //// test_failZapAndDeposit ////
-    // function test_failZapAndDepositUsdcWSTETH() public {
-    //     Swap memory usdcToWstEth = Swap(
-    //         _router,
-    //         IERC20(_USDC),
-    //         IERC20(_WSTETH),
-    //         1000 * 1e6,
-    //         type(uint256).max,
-    //         address(0),
-    //         20
-    //     );
-    //     _setUpVaultAndZapper(_WSTETH);
-    //     _failZapAndDeposit(usdcToWstEth, 1500 * 1e6);
-    // }
-
-    // function test_failZapAndDepositUsdcWBTC() public {
-    //     Swap memory usdcToWbtc = Swap(
-    //         _router,
-    //         IERC20(_USDC),
-    //         IERC20(_WBTC),
-    //         1000 * 1e6,
-    //         type(uint256).max,
-    //         address(0),
-    //         20
-    //     );
-    //     _setUpVaultAndZapper(_WBTC);
-    //     _failZapAndDeposit(usdcToWbtc, 1500 * 1e6);
-    // }
-
-    // function test_failZapAndDepositDaiUSDC() public {
-    //     Swap memory daiToUsdc = Swap(
-    //         _router,
-    //         IERC20(_DAI),
-    //         IERC20(_USDC),
-    //         1000 * 1e6,
-    //         type(uint256).max,
-    //         address(0),
-    //         20
-    //     );
-    //     _setUpVaultAndZapper(_USDC);
-    //     _failZapAndDeposit(daiToUsdc, 1500 * 1e6);
-    // }
-
-    // //// test_zapAndDepositEth ////
-    // function test_zapAndDepositEthWSTETH() public {
-    //     Swap memory ethToWstEth =
-    //         Swap(_router, _ETH, _WSTETH, 1e18, 1, address(0), 200);
-    //     _zapAndDeposit_eth(ethToWstEth);
-    // }
-
-    // function test_zapAndDepositEthWBTC() public {
-    //     Swap memory ethToWbtc =
-    //         Swap(_router, _ETH, _WBTC, 1e18, 1, address(0), 200);
-    //     _setUpVaultAndZapper(_WBTC);
-    //     _zapAndDeposit_eth(ethToWbtc);
-    // }
-
-    // function test_zapAndDepositEthUSDC() public {
-    //     Swap memory ethToUsdc =
-    //         Swap(_router, _ETH, _USDC, 1e18, 1, address(0), 200);
-    //     _setUpVaultAndZapper(_USDC);
-    //     _zapAndDeposit_eth(ethToUsdc);
-    // }
-
-    // //// test_inconsistantZapAndDepositEth ////
-    // function test_inconsistantZapAndDepositEthWSTETH() public {
-    //     Swap memory ethToWstEth =
-    //         Swap(_router, _ETH, _WSTETH, 1e18, 1, address(0), 10_000);
-    //     _setUpVaultAndZapper(_WSTETH);
-    //     _failZapAndDeposit_eth(ethToWstEth, 2e18);
-    // }
-
-    // function test_inconsistantZapAndDepositEthWBTC() public {
-    //     Swap memory ethToWbtc =
-    //         Swap(_router, _ETH, _WBTC, 1e18, 1, address(0), 10_000);
-    //     _setUpVaultAndZapper(_WBTC);
-    //     _failZapAndDeposit_eth(ethToWbtc, 2e18);
-    // }
-
-    // function test_inconsistantZapAndDepositEthUSDC() public {
-    //     Swap memory ethToUsdc =
-    //         Swap(_router, _ETH, _USDC, 1e18, 1, address(0), 10_000);
-    //     _setUpVaultAndZapper(_USDC);
-    //     _failZapAndDeposit_eth(ethToUsdc, 2e18);
-    // }
-
-    // //// test_inconsistantZapAndDepositEthNullShares ////
-    // function test_inconsistantZapAndDepositEthWSTETHNullShares() public {
-    //     Swap memory ethToWstEth = Swap(
-    //         _router, IERC20(_ETH), IERC20(_WSTETH), 1e18, 0, address(0),
-    // 10_000
-    //     );
-    //     _failZapAndDeposit_eth(ethToWstEth, 2e18);
-    // }
-
-    // function test_inconsistantZapAndDepositEthWBTCNullShares() public {
-    //     Swap memory ethToWbtc = Swap(
-    //         _router, IERC20(_ETH), IERC20(_WBTC), 1e18, 0, address(0), 10_000
-    //     );
-    //     _failZapAndDeposit_eth(ethToWbtc, 2e18);
-    // }
-
-    // function test_inconsistantZapAndDepositEthUSDCNullShares() public {
-    //     Swap memory ethToUSDC = Swap(
-    //         _router, IERC20(_ETH), IERC20(_USDC), 1e18, 0, address(0), 10_000
-    //     );
-    //     _failZapAndDeposit_eth(ethToUSDC, 2e18);
-    // }
-
-    // //// test_inconsistantZapAndDepositErc20NullShares ////
-    // function test_inconsistantZapAndDepositUsdcWSTETHNullShares() public {
-    //     Swap memory usdcToWstEth =
-    //         Swap(_router, _USDC, _WSTETH, 1000 * 1e6, 0, address(0), 20);
-    //     _setUpVaultAndZapper(_WSTETH);
-    //     _failZapAndDeposit(usdcToWstEth, 1500 * 1e6);
-    // }
-
-    // function test_inconsistantZapAndDepositUsdcWBTCNullShares() public {
-    //     Swap memory usdcToWbtc =
-    //         Swap(_router, _USDC, _WBTC, 1000 * 1e6, 0, address(0), 20);
-    //     _setUpVaultAndZapper(_WBTC);
-    //     _failZapAndDeposit(usdcToWbtc, 1500 * 1e6);
-    // }
-
-    // function test_inconsistantZapAndDepositDaiUSDCNullShares() public {
-    //     Swap memory daiToUsdc = Swap(
-    //         _router, IERC20(_DAI), IERC20(_USDC), 1000 * 1e18, 0, address(0),
-    // 20
-    //     );
-    //     _setUpVaultAndZapper(_USDC);
-    //     _failZapAndDeposit(daiToUsdc, 1500 * 1e6);
-    // }
+        vm.startPrank(_amphorLabs);
+        _WSTETH.approve(address(_vault), type(uint256).max);
+        _vault.open(lastSavedBalance);
+        _vault.close();
+        vm.stopPrank();
+        _zapAndClaimAndRequestDepositPermit(
+            Swap(_router, _USDC, _WSTETH, 15 * 1e6, 1, address(0), 20)
+        );
+    }
 
     // UTILITY FUNCTIONS
 
@@ -333,122 +135,76 @@ contract VaultZapperRequestDeposit is OffChainCalls {
         _getTokenIn(params);
         vm.expectRevert();
         zapper.zapAndDeposit(
-            params.tokenIn,
-            _vault,
-            params.router,
-            amount,
-            params.minAmount,
-            swapData
+            params.tokenIn, _vault, params.router, amount, swapData
         );
     }
 
-    // function _zapAndDeposit_eth(Swap memory params) public {
-    //     bytes memory swapData =
-    //         _getSwapData(address(zapper), address(zapper), params);
-    //     _getTokenIn(params);
+    function _zapAndClaimAndRequestDepositPermit(Swap memory params) public {
+        ERC20Permit token = ERC20Permit(address(params.tokenIn));
+        sigUtils = new SigUtils(token.DOMAIN_SEPARATOR());
 
-    //     _setUpVaultAndZapper(params.tokenOut);
-    //     uint256 beforeDep = _vault.balanceOf(address(this));
-    //     if (keccak256(swapData) == keccak256(hex"")) vm.expectRevert();
-    //     zapper.zapAndDeposit{ value: params.amount }(
-    //         params.tokenIn,
-    //         _vault,
-    //         params.router,
-    //         params.amount,
-    //         params.minAmount,
-    //         swapData
-    //     );
-    //     uint256 afterDep = _vault.balanceOf(address(this));
-    //     if (keccak256(swapData) != keccak256(hex"")) {
-    //         assertTrue(afterDep > beforeDep, "Deposit failed");
-    //     }
-    // }
+        SigUtils.Permit memory permit = SigUtils.Permit({
+            owner: user,
+            spender: address(zapper),
+            value: params.amount,
+            nonce: token.nonces(user),
+            deadline: block.timestamp + 1 days
+        });
+        (uint8 v, bytes32 r, bytes32 s) = _signPermit(
+            user, permit.spender, permit.value, permit.nonce, permit.deadline
+        );
 
-    // function _failZapAndDeposit_eth(
-    //     Swap memory params,
-    //     uint256 amount
-    // )
-    //     public
-    // {
-    //     bytes memory swapData =
-    //         _getSwapData(address(zapper), address(zapper), params);
-    //     _setUpVaultAndZapper(params.tokenOut);
-    //     _getTokenIn(params);
-    //     vm.expectRevert();
-    //     zapper.zapAndDeposit{ value: amount }(
-    //         params.tokenIn,
-    //         _vault,
-    //         params.router,
-    //         params.amount,
-    //         params.minAmount,
-    //         swapData
-    //     );
-    // }
+        PermitParams memory permitParams = PermitParams({
+            value: permit.value,
+            deadline: block.timestamp + 1 days,
+            v: v,
+            r: r,
+            s: s
+        });
 
-    // function test_fail_zapAndDeposit_NotEnoughShares() public {
-    //     Swap memory params = Swap(
-    //         _router,
-    //         IERC20(_USDC),
-    //         IERC20(_WSTETH),
-    //         1500 * 1e6,
-    //         type(uint256).max,
-    //         vm.envAddress("USDC_WHALE"),
-    //         100
-    //     );
-    //     bytes memory swapData =
-    //         _getSwapData(address(zapper), address(zapper), params);
-    //     _setUpVaultAndZapper(params.tokenOut);
-    //     _getTokenIn(params);
-    //     uint256 beforeDepTokenIn =
-    //         (IERC20(address(params.tokenIn)).balanceOf(address(this)));
+        uint256 beforeDep = (IERC20(address(_vault)).balanceOf(user));
+        bytes memory swapData =
+            _getSwapData(address(zapper), address(zapper), params);
+        vm.prank(user);
+        zapper.zapAndClaimAndRequestDepositWithPermit(
+            params.tokenIn,
+            _vault,
+            params.router,
+            params.amount,
+            "",
+            swapData,
+            permitParams
+        );
 
-    //     uint256 value = params.tokenIn == IERC20(_ETH) ? params.amount : 0;
-    //     vm.expectRevert();
-    //     zapper.zapAndDeposit{ value: value }(
-    //         params.tokenIn,
-    //         _vault,
-    //         params.router,
-    //         params.amount,
-    //         params.minAmount,
-    //         swapData
-    //     );
-    //     uint256 afterDepTokenIn =
-    //         (IERC20(address(params.tokenIn)).balanceOf(address(this)));
-    //     assertTrue(afterDepTokenIn == beforeDepTokenIn, "Deposit failed");
-    // }
+        uint256 afterDep = (IERC20(address(_vault)).balanceOf(user));
 
-    // function test_fail_zapAndDeposit_RouterFails() public {
-    //     Swap memory params = Swap(
-    //         _router,
-    //         IERC20(_USDC),
-    //         IERC20(_WSTETH),
-    //         1500 * 1e6,
-    //         type(uint256).max,
-    //         vm.envAddress("USDC_WHALE"),
-    //         100
-    //     );
-    //     bytes memory swapData =
-    //         _getSwapData(address(zapper), address(zapper), params);
-    //     if (keccak256(swapData) != keccak256(hex"")) swapData[0] = hex"00";
-    //     _setUpVaultAndZapper(params.tokenOut);
-    //     _getTokenIn(params);
-    //     uint256 beforeDepTokenIn =
-    //         (IERC20(address(params.tokenIn)).balanceOf(address(this)));
+        if (keccak256(swapData) != keccak256(hex"")) {
+            assertTrue(afterDep > beforeDep, "Deposit permit failed");
+        }
+    }
 
-    //     uint256 value = params.tokenIn == IERC20(_ETH) ? params.amount : 0;
-    //     vm.expectRevert();
-    //     zapper.zapAndDeposit{ value: value }(
-    //         params.tokenIn,
-    //         _vault,
-    //         params.router,
-    //         params.amount,
-    //         params.minAmount,
-    //         swapData
-    //     );
-    //     uint256 afterDepTokenIn =
-    //         (IERC20(address(params.tokenIn)).balanceOf(address(this)));
-    //     assertTrue(afterDepTokenIn == beforeDepTokenIn, "Deposit failed");
-    // }
+    function _signPermit(
+        address _owner,
+        address _spender,
+        uint256 _value,
+        uint256 _nonce,
+        uint256 deadline
+    )
+        internal
+        view
+        returns (uint8 v, bytes32 r, bytes32 s)
+    {
+        SigUtils.Permit memory permit = SigUtils.Permit({
+            owner: _owner,
+            spender: _spender,
+            value: _value,
+            nonce: _nonce,
+            deadline: deadline
+        });
+        bytes32 digest = sigUtils.getTypedDataHash(permit);
+        (v, r, s) = vm.sign(userPrivateKey, digest);
+        return (v, r, s);
+    }
 
     function _setUpVaultAndZapper(IERC20 asset) public {
         _vault = new AsyncSynthVault();

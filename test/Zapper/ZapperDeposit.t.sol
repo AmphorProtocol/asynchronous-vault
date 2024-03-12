@@ -255,12 +255,7 @@ contract VaultZapperDeposit is OffChainCalls {
         uint256 beforeDep = vault.balanceOf(address(this));
         if (keccak256(swapData) == keccak256(hex"")) vm.expectRevert();
         zapper.zapAndDeposit(
-            params.tokenIn,
-            vault,
-            params.router,
-            params.amount,
-            params.minAmount,
-            swapData
+            params.tokenIn, vault, params.router, params.amount, swapData
         );
         uint256 afterDep = vault.balanceOf(address(this));
         if (keccak256(swapData) != keccak256(hex"")) {
@@ -275,12 +270,7 @@ contract VaultZapperDeposit is OffChainCalls {
         _getTokenIn(params);
         vm.expectRevert();
         zapper.zapAndDeposit(
-            params.tokenIn,
-            _vault,
-            params.router,
-            amount,
-            params.minAmount,
-            swapData
+            params.tokenIn, _vault, params.router, amount, swapData
         );
     }
 
@@ -293,12 +283,7 @@ contract VaultZapperDeposit is OffChainCalls {
         uint256 beforeDep = _vault.balanceOf(address(this));
         if (keccak256(swapData) == keccak256(hex"")) vm.expectRevert();
         zapper.zapAndDeposit{ value: params.amount }(
-            params.tokenIn,
-            _vault,
-            params.router,
-            params.amount,
-            params.minAmount,
-            swapData
+            params.tokenIn, _vault, params.router, params.amount, swapData
         );
         uint256 afterDep = _vault.balanceOf(address(this));
         if (keccak256(swapData) != keccak256(hex"")) {
@@ -318,12 +303,7 @@ contract VaultZapperDeposit is OffChainCalls {
         _getTokenIn(params);
         vm.expectRevert();
         zapper.zapAndDeposit{ value: amount }(
-            params.tokenIn,
-            _vault,
-            params.router,
-            params.amount,
-            params.minAmount,
-            swapData
+            params.tokenIn, _vault, params.router, params.amount, swapData
         );
     }
 
@@ -347,12 +327,7 @@ contract VaultZapperDeposit is OffChainCalls {
         uint256 value = params.tokenIn == IERC20(_ETH) ? params.amount : 0;
         vm.expectRevert();
         zapper.zapAndDeposit{ value: value }(
-            params.tokenIn,
-            _vault,
-            params.router,
-            params.amount,
-            params.minAmount,
-            swapData
+            params.tokenIn, _vault, params.router, params.amount, swapData
         );
         uint256 afterDepTokenIn =
             (IERC20(address(params.tokenIn)).balanceOf(address(this)));
@@ -380,12 +355,7 @@ contract VaultZapperDeposit is OffChainCalls {
         uint256 value = params.tokenIn == IERC20(_ETH) ? params.amount : 0;
         vm.expectRevert();
         zapper.zapAndDeposit{ value: value }(
-            params.tokenIn,
-            _vault,
-            params.router,
-            params.amount,
-            params.minAmount,
-            swapData
+            params.tokenIn, _vault, params.router, params.amount, swapData
         );
         uint256 afterDepTokenIn =
             (IERC20(address(params.tokenIn)).balanceOf(address(this)));
