@@ -584,6 +584,16 @@ abstract contract Assertions is EventsAssertions {
     )
         public
     {
+        assertOpen(vault, performanceInBps, false);
+    }
+
+    function assertOpen(
+        AsyncSynthVault vault,
+        int256 performanceInBps,
+        bool shouldRevert
+    )
+        public
+    {
         VaultState memory stateBefore = getVaultState(vault);
         // expected shares and assets to mint and withdraw when request are
         // executed
@@ -695,52 +705,53 @@ abstract contract Assertions is EventsAssertions {
         // );
 
         // open
-        open(vault, performanceInBps);
+        open(vault, performanceInBps, shouldRevert);
+        if (!shouldRevert) {
+            // it should set isOpen to true
+            assertEq(vault.vaultIsOpen(), true, "Vault is not open");
 
-        // it should set isOpen to true
-        assertEq(vault.vaultIsOpen(), true, "Vault is not open");
+            // amount of claimable shares and assets should increase
+            assertApproxEqAbs(
+                vault.totalClaimableShares(),
+                stateBefore.totalClaimableShares + expectedSharesToMint,
+                1,
+                "Claimable shares is not correct"
+            );
 
-        // amount of claimable shares and assets should increase
-        assertApproxEqAbs(
-            vault.totalClaimableShares(),
-            stateBefore.totalClaimableShares + expectedSharesToMint,
-            1,
-            "Claimable shares is not correct"
-        );
+            assertApproxEqAbs(
+                vault.totalClaimableAssets(),
+                stateBefore.totalClaimableAssets + expectedAssetsToRedeem,
+                1,
+                "Claimable assets is not correct"
+            );
 
-        assertApproxEqAbs(
-            vault.totalClaimableAssets(),
-            stateBefore.totalClaimableAssets + expectedAssetsToRedeem,
-            1,
-            "Claimable assets is not correct"
-        );
+            //amount of pending deposits and redeems should be 0
+            assertEq(vault.totalPendingDeposits(), 0, "Pending deposits is not 0");
+            assertEq(vault.totalPendingRedeems(), 0, "Pending redeems is not 0");
 
-        //amount of pending deposits and redeems should be 0
-        assertEq(vault.totalPendingDeposits(), 0, "Pending deposits is not 0");
-        assertEq(vault.totalPendingRedeems(), 0, "Pending redeems is not 0");
+            assertTotalSupply(
+                vault,
+                stateBefore.totalSupply + expectedSharesToMint
+                    - stateBefore.pendingRedeem,
+                1
+            );
 
-        assertTotalSupply(
-            vault,
-            stateBefore.totalSupply + expectedSharesToMint
-                - stateBefore.pendingRedeem,
-            1
-        );
+            assertTotalAssets(
+                vault,
+                assetsBeforeExecReq - expectedAssetsToRedeem
+                    + stateBefore.pendingDeposit,
+                1
+            );
 
-        assertTotalAssets(
-            vault,
-            assetsBeforeExecReq - expectedAssetsToRedeem
-                + stateBefore.pendingDeposit,
-            1
-        );
-
-        // vault balance in assets should increase by assetReturned -
-        // expectedFees + pendingDeposit
-        assertVaultAssetBalance(
-            vault,
-            assetsBeforeExecReq + stateBefore.pendingDeposit
-                - expectedAssetsToRedeem,
-            1
-        );
+            // vault balance in assets should increase by assetReturned -
+            // expectedFees + pendingDeposit
+            assertVaultAssetBalance(
+                vault,
+                assetsBeforeExecReq + stateBefore.pendingDeposit
+                    - expectedAssetsToRedeem,
+                1
+            );
+        }
     }
 
     function assertClaimDeposit(
@@ -880,7 +891,7 @@ abstract contract Assertions is EventsAssertions {
         return uint256(toSendBack);
     }
 
-    function open(AsyncSynthVault vault, int256 performanceInBips) public {
+    function open(AsyncSynthVault vault, int256 performanceInBips, bool shouldRevert) public {
         vm.assume(performanceInBips > -10_000 && performanceInBips < 10_000);
         uint256 lastSavedBalance = vault.totalAssets();
         uint256 toSendBack = uint256(
@@ -888,9 +899,14 @@ abstract contract Assertions is EventsAssertions {
         );
         address owner = vault.owner();
         deal(owner, type(uint256).max);
-
-        vm.prank(owner);
-        vault.open(toSendBack);
+        if (shouldRevert) {
+            vm.prank(owner);
+            vm.expectRevert();
+            vault.open(toSendBack);
+        } else {
+            vm.prank(owner);
+            vault.open(toSendBack);
+        }
     }
 
     function settle(AsyncSynthVault vault, uint256 assetReturned) public {
