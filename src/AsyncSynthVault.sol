@@ -208,31 +208,28 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
 
     function claimAndRequestDeposit(
         uint256 assets,
-        address receiver,
-        address owner,
         bytes memory data
     )
         external
     {
-        _claimDeposit(receiver, receiver);
-        requestDeposit(assets, receiver, owner, data);
+        address owner = _msgSender();
+        _claimDeposit(owner, owner);
+        requestDeposit(assets, owner, owner, data);
     }
 
     function claimAndRequestRedeem(
         uint256 shares,
-        address receiver,
-        address owner,
         bytes memory data
     )
         external
     {
-        _claimRedeem(receiver, receiver);
-        requestRedeem(shares, receiver, owner, data);
+        address owner = _msgSender();
+        _claimRedeem(owner, owner);
+        requestRedeem(shares, owner, owner, data);
     }
 
     function decreaseDepositRequest(
-        uint256 assets,
-        address receiver
+        uint256 assets
     )
         external
         whenClosed
@@ -241,7 +238,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         address owner = _msgSender();
         uint256 oldBalance = epochs[epochId].depositRequestBalance[owner];
         epochs[epochId].depositRequestBalance[owner] -= assets;
-        _asset.safeTransferFrom(address(pendingSilo), receiver, assets);
+        _asset.safeTransferFrom(address(pendingSilo), owner, assets);
 
         emit DecreaseDepositRequest(
             epochId,
@@ -252,8 +249,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
     }
 
     function decreaseRedeemRequest(
-        uint256 shares,
-        address receiver
+        uint256 shares
     )
         external
         whenClosed
@@ -262,7 +258,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         address owner = _msgSender();
         uint256 oldBalance = epochs[epochId].redeemRequestBalance[owner];
         epochs[epochId].redeemRequestBalance[owner] -= shares;
-        _update(address(pendingSilo), receiver, shares);
+        _update(address(pendingSilo), owner, shares);
 
         emit DecreaseRedeemRequest(
             epochId,

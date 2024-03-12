@@ -1099,7 +1099,7 @@ abstract contract Assertions is EventsAssertions {
 
     function assertDecreaseDeposit(
         AsyncSynthVault vault,
-        address receiver
+        address sender
     )
         internal
     {
@@ -1107,33 +1107,33 @@ abstract contract Assertions is EventsAssertions {
         // it should decrease of assets the vault underlying balance
         // it should increase of assets the receiver underlying balance
         // it should emit `DepositRequestDecreased` event -> todo
-        uint256 ownerDepRequestBalance = vault.pendingDepositRequest(user1.addr);
+        uint256 ownerDepRequestBalance = vault.pendingDepositRequest(sender);
         uint256 ownerDecreaseAmount = ownerDepRequestBalance / 2;
         uint256 finalOwnerDepRequestBalance =
             ownerDepRequestBalance - ownerDecreaseAmount;
         uint256 vaultUnderlyingBalanceBef =
             IERC20(vault.asset()).balanceOf(address(vault));
         uint256 user2UnderlyingBalanceBef =
-            IERC20(vault.asset()).balanceOf(receiver);
-        vm.startPrank(user1.addr);
-        vault.decreaseRedeemRequest(ownerDecreaseAmount, user2.addr);
+            IERC20(vault.asset()).balanceOf(sender);
+        vm.startPrank(sender);
+        vault.decreaseRedeemRequest(ownerDecreaseAmount);
         vm.stopPrank();
         assertEq(
-            vault.pendingDepositRequest(user1.addr), finalOwnerDepRequestBalance
+            vault.pendingDepositRequest(sender), finalOwnerDepRequestBalance
         );
         assertEq(
             IERC20(vault.asset()).balanceOf(address(vault)),
             vaultUnderlyingBalanceBef - ownerDecreaseAmount
         );
         assertEq(
-            IERC20(vault.asset()).balanceOf(receiver),
+            IERC20(vault.asset()).balanceOf(sender),
             user2UnderlyingBalanceBef + ownerDecreaseAmount
         );
     }
 
     function assertDecreaseRedeem(
         AsyncSynthVault vault,
-        address receiver
+        address sender
     )
         internal
     {
@@ -1141,28 +1141,26 @@ abstract contract Assertions is EventsAssertions {
         // it should decrease of assets the receiver underlying balance
         // it should increase of assets the vault underlying balance
         // it should emit `RedeemRequestDecreased` event -> todo
-        uint256 ownerRedeemRequestBalance =
-            vault.pendingRedeemRequest(user1.addr);
+        uint256 ownerRedeemRequestBalance = vault.pendingRedeemRequest(sender);
         uint256 ownerDecreaseAmount = ownerRedeemRequestBalance / 2;
         uint256 finalOwnerRedeemRequestBalance =
             ownerRedeemRequestBalance - ownerDecreaseAmount;
         uint256 vaultUnderlyingBalanceBef =
             IERC20(vault.asset()).balanceOf(address(vault));
         uint256 user2UnderlyingBalanceBef =
-            IERC20(vault.asset()).balanceOf(receiver);
-        vm.startPrank(user1.addr);
-        vault.decreaseRedeemRequest(ownerDecreaseAmount, user2.addr);
+            IERC20(vault.asset()).balanceOf(sender);
+        vm.startPrank(sender);
+        vault.decreaseRedeemRequest(ownerDecreaseAmount);
         vm.stopPrank();
         assertEq(
-            vault.pendingRedeemRequest(user1.addr),
-            finalOwnerRedeemRequestBalance
+            vault.pendingRedeemRequest(sender), finalOwnerRedeemRequestBalance
         );
         assertEq(
             IERC20(vault.asset()).balanceOf(address(vault)),
             vaultUnderlyingBalanceBef + ownerDecreaseAmount
         );
         assertEq(
-            IERC20(vault.asset()).balanceOf(receiver),
+            IERC20(vault.asset()).balanceOf(sender),
             user2UnderlyingBalanceBef - ownerDecreaseAmount
         );
     }
