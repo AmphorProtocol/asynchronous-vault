@@ -285,8 +285,8 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         if (totalAssets() == 0) revert VaultIsEmpty();
 
         lastSavedBalance = totalAssets();
-        _asset.safeTransfer(owner(), lastSavedBalance);
         vaultIsOpen = false;
+        _asset.safeTransfer(owner(), lastSavedBalance);
         emit EpochStart(block.timestamp, lastSavedBalance, totalSupply());
     }
 
@@ -308,8 +308,8 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         whenClosed
     {
         (uint256 newBalance,) = _settle(assetReturned);
-        _asset.safeTransferFrom(owner(), address(this), newBalance);
         vaultIsOpen = true;
+        _asset.safeTransferFrom(owner(), address(this), newBalance);
     }
 
     /*
