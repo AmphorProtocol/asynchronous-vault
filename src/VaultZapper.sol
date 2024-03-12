@@ -10,7 +10,7 @@ import { SafeERC20 } from
     "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { IERC7540, IERC4626 } from "./interfaces/IERC7540.sol";
-import { PermitParams } from "./AsyncSynthVault.sol";
+import { PermitParams, AsyncSynthVault } from "./AsyncSynthVault.sol";
 import { ERC20Permit } from
     "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
@@ -241,6 +241,43 @@ contract VaultZapper is Ownable2Step, Pausable {
             IERC20(vault.asset()).balanceOf(address(this))
                 - initialTokenOutBalance,
             _msgSender(),
+            address(this),
+            data
+        );
+
+        emit ZapAndRequestDeposit({
+            vault: vault,
+            router: router,
+            tokenIn: tokenIn,
+            amount: amountIn
+        });
+    }
+
+    function zapAndClaimAndRequestDeposit(
+        IERC20 tokenIn,
+        AsyncSynthVault vault,
+        address router,
+        uint256 amountIn,
+        bytes calldata data,
+        bytes calldata swapData
+    )
+        public
+        payable
+        onlyAllowedRouter(router)
+        onlyAllowedVault(vault)
+        whenNotPaused
+    {
+        uint256 initialTokenOutBalance =
+            IERC20(vault.asset()).balanceOf(address(this)); // tokenOut balance to
+            // deposit, not final value
+
+        // Zap
+        _zapIn(tokenIn, router, amountIn, swapData);
+
+        // Claim for the user and request deposit
+        vault.claimAndRequestDeposit(
+            IERC20(vault.asset()).balanceOf(address(this))
+                - initialTokenOutBalance,
             _msgSender(),
             data
         );

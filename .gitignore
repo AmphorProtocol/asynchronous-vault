@@ -18,7 +18,6 @@ docs/
 node_modules/
 node_modules
 
-# Coverage
 report/
 lcov.info
 
