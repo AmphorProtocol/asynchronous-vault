@@ -18,10 +18,9 @@ docs/
 node_modules/
 node_modules
 
-<<<<<<< HEAD
-=======
-
 # Coverage
->>>>>>> tests
 report/
 lcov.info
+
+# Mac files
+.DS_Store

@@ -294,7 +294,7 @@ abstract contract SyncSynthVault is
 
     function totalAssets() public view returns (uint256) {
         if (vaultIsOpen) return _asset.balanceOf(address(this));
-        return _asset.balanceOf(address(this)) + lastSavedBalance;
+        else return _asset.balanceOf(address(this)) + lastSavedBalance;
     }
 
     /**
@@ -640,46 +640,6 @@ abstract contract SyncSynthVault is
             permitParams.r,
             permitParams.s
         );
-    }
-
-    /*
-     * #################################
-     * #  Permit 2 RELATED FUNCTIONS   #
-     * #################################
-    */
-
-    function depositWithPermit2(
-        uint160 assets,
-        address receiver,
-        IAllowanceTransfer.PermitSingle calldata permitSingle,
-        bytes calldata signature
-    )
-        external
-        whenClosed
-        whenNotPaused
-        returns (uint256)
-    {
-        execPermit2(permitSingle, signature);
-        PERMIT2.transferFrom(
-            _msgSender(), address(this), assets, address(_asset)
-        );
-
-        uint256 shares = _convertToShares(assets, Math.Rounding.Floor);
-        _mint(receiver, shares);
-        emit Deposit(_msgSender(), receiver, assets, shares);
-        return shares;
-    }
-
-    // Deposit some amount of an ERC20 token into this contract
-    // using Permit2.
-    function execPermit2(
-        IAllowanceTransfer.PermitSingle calldata permitSingle,
-        bytes calldata signature
-    )
-        internal
-    {
-        if (permitSingle.spender != address(this)) revert InvalidSpender();
-        PERMIT2.permit(_msgSender(), permitSingle, signature);
     }
 
     function open(uint256 assetReturned) external virtual;

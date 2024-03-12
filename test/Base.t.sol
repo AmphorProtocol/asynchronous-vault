@@ -560,13 +560,25 @@ contract TestBase is AssertionsRequest {
         }
         for (uint256 i = 0; i < userMax; i++) {
             deal(users[i].addr, type(uint256).max);
-            approveVault(vault, users[i]);
+            approveVault(vault, users[i].addr);
             _dealAsset(address(vault.asset()), users[i].addr, amount);
         }
     }
 
-    function approveVault(IERC4626 vault, VmSafe.Wallet memory user) internal {
-        vm.startPrank(user.addr);
+    // function addressDealApprove(
+    //     IERC4626 vault,
+    //     address user,
+    //     address amount
+    // )
+    //     internal
+    // {
+    //     deal(user, type(uint256).max);
+    //     approveVault(vault, user);
+    //     _dealAsset(address(vault.asset()), user, amount);
+    // }
+
+    function approveVault(IERC4626 vault, address user) internal {
+        vm.startPrank(user);
         IERC20 asset = IERC20(vault.asset());
         asset.approve(address(vault), type(uint256).max);
         vm.stopPrank();

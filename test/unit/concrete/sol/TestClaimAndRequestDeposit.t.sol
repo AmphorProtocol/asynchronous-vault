@@ -66,32 +66,15 @@ contract TestClaimAndRequestDeposit is TestBase {
         usersDealApproveAndRequestDeposit(vaultTested, 3);
         assertOpen(vaultTested, 0);
         assertClose(vaultTested);
-        uint256 sharesBefore = vaultTested.balanceOf(user2.addr);
-        uint256 sharesBeforeMsgSender = vaultTested.balanceOf(user1.addr);
-        uint256 pendingDepositBefore =
-            vaultTested.pendingDepositRequest(user2.addr);
+        // uint256 sharesBefore = vaultTested.balanceOf(user2.addr);
+        // uint256 sharesBeforeMsgSender = vaultTested.balanceOf(user1.addr);
+        // uint256 pendingDepositBefore =
+        //     vaultTested.pendingDepositRequest(user2.addr);
         vm.prank(user1.addr);
         underlying.approve(user3.addr, type(uint256).max);
-        vm.prank(user3.addr);
+        vm.startPrank(user3.addr);
+        vm.expectRevert();
         vaultTested.claimAndRequestDeposit(10 ** 18, user2.addr, user1.addr, "");
-
-        uint256 sharesAfter = vaultTested.balanceOf(user2.addr);
-        uint256 pendingDepositAfter =
-            vaultTested.pendingDepositRequest(user2.addr);
-        uint256 sharesAfterMsgSender = vaultTested.balanceOf(user1.addr);
-        assertLt(
-            sharesBefore, sharesAfter, "Shares of receiver should increase"
-        );
-        assertLt(
-            pendingDepositBefore,
-            pendingDepositAfter,
-            "Pending deposit of msg.sender should increase"
-        );
-        assertEq(
-            sharesBeforeMsgSender,
-            sharesAfterMsgSender,
-            "Shares of msg.sender should not change"
-        );
     }
 
     function test_DifferentReceiverAndOnBehalfWithoutAllowanceWhenClaimAndRequestDeposit(

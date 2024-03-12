@@ -72,6 +72,19 @@ struct EpochData {
     mapping(address => uint256) redeemRequestBalance;
 }
 
+struct SettleValues {
+    uint256 lastSavedBalance;
+    uint256 fees;
+    uint256 pendingRedeem;
+    uint256 sharesToMint;
+    uint256 pendingDeposit;
+    uint256 assetsToWithdraw;
+    uint256 totalAssetsSnapshotForDeposit;
+    uint256 totalSupplySnapshotForDeposit;
+    uint256 totalAssetsSnapshotForRedeem;
+    uint256 totalSupplySnapshotForRedeem;
+}
+
 uint256 constant BPS_DIVIDER = 10_000;
 uint16 constant MAX_FEES = 3000; // 30%
 
@@ -614,11 +627,15 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         external
         override
         onlyOwner
+        whenNotPaused
         whenClosed
     {
-        _open(assetReturned);
-        _execRequests();
-        epochId++;
+        // _open(assetReturned);
+        // _execRequests();
+        // epochId++;
+        (uint256 newBalance,) = _settle(assetReturned);
+        _asset.safeTransferFrom(owner(), address(this), newBalance);
+        vaultIsOpen = true;
     }
 
     function _checkMaxDrawdown(
@@ -649,82 +666,188 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
             unchecked {
                 profits = newSavedBalance - _lastSavedBalance;
             }
-            fees = (profits).mulDiv(feesInBps, BPS_DIVIDER, Math.Rounding.Ceil);
+            fees = (profits).mulDiv(feesInBps, BPS_DIVIDER, Math.Rounding.Floor);
         }
     }
 
-    function settle(uint256 newSavedBalance)
-        external
-        onlyOwner
-        whenNotPaused
-        whenClosed
+    function previewSettle(uint256 newSavedBalance)
+        public
+        view
+        returns (
+            uint256 assetsToOwner,
+            uint256 assetsToVault,
+            SettleValues memory settleValues
+        )
     {
-        address _owner = owner();
-        // calculate the fees between lastSavedBalance and newSavedBalance
         uint256 _lastSavedBalance = lastSavedBalance;
         _checkMaxDrawdown(_lastSavedBalance, newSavedBalance);
 
-        // taking fees if positive yield
+        // calculate the fees between lastSavedBalance and newSavedBalance
         uint256 fees = _computeFees(_lastSavedBalance, newSavedBalance);
+        uint256 totalSupply = totalSupply();
+
+        // taking fees if positive yield
+        _lastSavedBalance = newSavedBalance - fees;
+
+        address pendingSiloAddr = address(pendingSilo);
+        uint256 pendingRedeem = balanceOf(pendingSiloAddr);
+        uint256 pendingDeposit = _asset.balanceOf(pendingSiloAddr);
+        Math.Rounding redeemRounding = Math.Rounding.Floor;
+
+        uint256 sharesToMint = pendingDeposit.mulDiv(
+            totalSupply + 10 ** decimalsOffset,
+            _lastSavedBalance + 1,
+            Math.Rounding.Floor
+        );
+
+        uint256 totalAssetsSnapshotForDeposit = _lastSavedBalance + 1;
+        uint256 totalSupplySnapshotForDeposit =
+            totalSupply + 10 ** decimalsOffset;
+
+        uint256 assetsToWithdraw = pendingRedeem.mulDiv(
+            _lastSavedBalance + pendingDeposit + 1,
+            totalSupply + sharesToMint + 10 ** decimalsOffset,
+            redeemRounding // Math.Rounding.Ceil or Math.Rounding.Floor
+        );
+
+        uint256 totalAssetsSnapshotForRedeem =
+            _lastSavedBalance + pendingDeposit + 1;
+        uint256 totalSupplySnapshotForRedeem =
+            totalSupply + sharesToMint + 10 ** decimalsOffset;
+
+        settleValues = SettleValues({
+            lastSavedBalance: _lastSavedBalance + fees,
+            fees: fees,
+            pendingRedeem: pendingRedeem,
+            sharesToMint: sharesToMint,
+            pendingDeposit: pendingDeposit,
+            assetsToWithdraw: assetsToWithdraw,
+            totalAssetsSnapshotForDeposit: totalAssetsSnapshotForDeposit,
+            totalSupplySnapshotForDeposit: totalSupplySnapshotForDeposit,
+            totalAssetsSnapshotForRedeem: totalAssetsSnapshotForRedeem,
+            totalSupplySnapshotForRedeem: totalSupplySnapshotForRedeem
+        });
+
+        if (pendingDeposit > assetsToWithdraw) {
+            assetsToOwner = pendingDeposit - assetsToWithdraw;
+        } else if (pendingDeposit < assetsToWithdraw) {
+            assetsToVault = assetsToWithdraw - pendingDeposit;
+        }
+    }
+
+    function _settle(uint256 newSavedBalance)
+        internal
+        onlyOwner
+        whenNotPaused
+        whenClosed
+        returns (uint256, uint256)
+    {
+        uint256 assetsToOwner;
+        uint256 assetsToVault;
+        SettleValues memory settleValues;
+        (assetsToOwner, assetsToVault, settleValues) =
+            previewSettle(newSavedBalance);
 
         emit EpochEnd(
             block.timestamp,
-            _lastSavedBalance,
+            lastSavedBalance,
             newSavedBalance,
-            fees,
+            settleValues.fees,
             totalSupply()
         );
 
-        _lastSavedBalance = newSavedBalance - fees;
-        // if withdraw is higher than deposit -> transfer from owner the diff &&
-        // update lastSavedBalance = newSavedBalance - diff
-        // do the settlement of the requests
-        // if deposit is higher than withdraw -> transfer to owner the diff &&
-        // update lastSavedBalance = newSavedBalance + diff
-        // IERC20()
-        uint256 _pendingRedeem = balanceOf(address(pendingSilo));
-        uint256 assetsToWithdraw = previewRedeem(_pendingRedeem);
-        uint256 _pendingDeposit = _asset.balanceOf(address(pendingSilo));
-        uint256 sharesToMint = previewDeposit(_pendingDeposit);
-
         // Settle the shares balance
-        _burn(address(pendingSilo), _pendingRedeem);
-        _mint(address(claimableSilo), sharesToMint);
+        _burn(address(pendingSilo), settleValues.pendingRedeem);
+        _mint(address(claimableSilo), settleValues.sharesToMint);
 
-        // Settle assets balance
+        ///////////////////////////
+        // Settle assets balance //
+        ///////////////////////////
         // either there are more deposits than withdrawals
-        if (_pendingDeposit > assetsToWithdraw) {
+        if (settleValues.pendingDeposit > settleValues.assetsToWithdraw) {
             _asset.safeTransferFrom(
-                address(pendingSilo), _owner, _pendingDeposit - assetsToWithdraw
+                address(pendingSilo),
+                owner(),
+                settleValues.pendingDeposit - settleValues.assetsToWithdraw // change
+                    // thx to previewSettle
             );
+            if (settleValues.assetsToWithdraw > 0) {
+                _asset.safeTransferFrom(
+                    address(pendingSilo),
+                    address(claimableSilo),
+                    settleValues.assetsToWithdraw
+                );
+            }
+        } else if (settleValues.pendingDeposit < settleValues.assetsToWithdraw)
+        {
             _asset.safeTransferFrom(
-                address(pendingSilo), address(claimableSilo), assetsToWithdraw
-            );
-        } else {
-            _asset.safeTransferFrom(
-                _owner,
+                owner(),
                 address(claimableSilo),
-                assetsToWithdraw - _pendingDeposit
+                settleValues.assetsToWithdraw - settleValues.pendingDeposit // change
+                    // thx to previewSettle
             );
+            if (settleValues.pendingDeposit > 0) {
+                // then two transfers
+                _asset.safeTransferFrom(
+                    address(pendingSilo),
+                    address(claimableSilo),
+                    settleValues.pendingDeposit
+                );
+            }
+        } else if (settleValues.pendingDeposit > 0) {
+            // if _pendingDeposit == assetsToWithdraw AND _pendingDeposit > 0
+            // (and assetsToWithdraw > 0)
             _asset.safeTransferFrom(
-                address(pendingSilo), address(claimableSilo), _pendingDeposit
+                address(pendingSilo),
+                address(claimableSilo),
+                settleValues.assetsToWithdraw
             );
         }
 
-        // emit deposit + async deposit + withdraw + async withdraw
-        emit Deposit(_owner, _owner, _pendingDeposit, sharesToMint);
-        emit AsyncDeposit(epochId, _pendingDeposit, _pendingDeposit);
-        emit Withdraw(_owner, _owner, _owner, assetsToWithdraw, _pendingRedeem);
-        emit AsyncWithdraw(epochId, _pendingRedeem, _pendingRedeem);
+        emit Deposit(
+            address(pendingSilo),
+            address(claimableSilo),
+            settleValues.pendingDeposit,
+            settleValues.sharesToMint
+        );
+        emit AsyncDeposit(
+            epochId, settleValues.pendingDeposit, settleValues.pendingDeposit
+        );
+        emit Withdraw(
+            address(pendingSilo),
+            address(claimableSilo),
+            address(pendingSilo),
+            settleValues.assetsToWithdraw,
+            settleValues.pendingRedeem
+        );
+        emit AsyncWithdraw(
+            epochId, settleValues.pendingRedeem, settleValues.pendingRedeem
+        );
 
-        // epochs[epochId].totalSupplySnapshot = totalSupply();
-        // epochs[epochId].totalAssetsSnapshot =
-        // lastSavedBalance + _pendingDeposit - assetsToWithdraw;
+        settleValues.lastSavedBalance = settleValues.lastSavedBalance
+            - settleValues.fees + settleValues.pendingDeposit
+            - settleValues.assetsToWithdraw;
+        lastSavedBalance = settleValues.lastSavedBalance;
 
-        // if withdraw is higher than deposit -> transfer from owner the diff &&
-        // update lastSavedBalance = newSavedBalance - diff
-        // do the settlement of the requests
+        epochs[epochId].totalSupplySnapshotForDeposit =
+            settleValues.totalSupplySnapshotForDeposit;
+        epochs[epochId].totalAssetsSnapshotForDeposit =
+            settleValues.totalAssetsSnapshotForDeposit;
+        epochs[epochId].totalSupplySnapshotForRedeem =
+            settleValues.totalSupplySnapshotForRedeem;
+        epochs[epochId].totalAssetsSnapshotForRedeem =
+            settleValues.totalAssetsSnapshotForRedeem;
+
         epochId++;
+
+        return (settleValues.lastSavedBalance, totalSupply());
+    }
+
+    function settle(uint256 newSavedBalance) external {
+        (uint256 lastSavedBalance, uint256 totalSupply) =
+            _settle(newSavedBalance);
+        lastSavedBalance = 0;
+        emit EpochStart(block.timestamp, lastSavedBalance, totalSupply);
     }
 
     /**
@@ -785,8 +908,6 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         uint256 assetsToWithdraw = previewRedeem(_pendingRedeem); // 10 & 11
         epochs[epochId].totalSupplySnapshotForRedeem = totalSupply();
         epochs[epochId].totalAssetsSnapshotForRedeem = totalAssets();
-        console.log("pendingRedeem is ", _pendingRedeem);
-        console.log("assetsToWithdraw", assetsToWithdraw);
         _withdraw(
             address(pendingSilo), // to avoid a spending allowance
             address(claimableSilo),
@@ -794,14 +915,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
             assetsToWithdraw,
             _pendingRedeem
         );
-        // 9 & 10
         emit AsyncWithdraw(epochId, _pendingRedeem, _pendingRedeem);
-        console.log(
-            "previewRedeem after withdraw", previewRedeem(_pendingRedeem)
-        );
-
-        console.log("total supply snapshot", totalSupply());
-        console.log("total assets snapshot", totalAssets());
     }
 
     /*
@@ -835,29 +949,5 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
             execPermit(owner, address(this), permitParams);
         }
         return requestDeposit(assets, receiver, owner, data);
-    }
-
-    /*
-     * #################################
-     * #  Permit 2 RELATED FUNCTIONS   #
-     * #################################
-    */
-
-    function requestDepositWithPermit2(
-        uint160 assets,
-        address receiver,
-        bytes memory data,
-        IAllowanceTransfer.PermitSingle calldata permitSingle,
-        bytes calldata signature
-    )
-        external
-        whenClosed
-        whenNotPaused
-    {
-        address owner = _msgSender();
-        execPermit2(permitSingle, signature);
-        PERMIT2.transferFrom(owner, address(this), assets, address(_asset));
-
-        _createDepositRequest(assets, receiver, owner, data);
     }
 }
