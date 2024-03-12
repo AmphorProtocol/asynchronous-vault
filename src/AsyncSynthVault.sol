@@ -12,8 +12,6 @@ import { IERC20, SafeERC20, Math, PermitParams } from "./SyncSynthVault.sol";
 
 import { SyncSynthVault } from "./SyncSynthVault.sol";
 
-import "forge-std/console.sol"; //todo remove
-
 /**
  *         @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  *         @@@@@@@@@@@@@@@@@@@@%=::::::=%@@@@@@@@@@@@@@@@@@@@
@@ -177,7 +175,7 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() SyncSynthVault() {
-        //_disableInitializers();
+        _disableInitializers();
     }
 
     function initialize(
@@ -499,7 +497,6 @@ contract AsyncSynthVault is IERC7540, SyncSynthVault {
         }
 
         _update(owner, address(pendingSilo), shares);
-        console.log("shares to redeem", shares);
         // Create a new request
         _createRedeemRequest(shares, receiver, owner, data);
     }

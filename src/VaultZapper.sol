@@ -175,7 +175,6 @@ contract VaultZapper is Ownable2Step, Pausable {
       USER RELATED FUNCTIONS
      ########################
     */
-    // todo maybe remove minshares
     function zapAndDeposit(
         IERC20 tokenIn,
         IERC4626 vault,

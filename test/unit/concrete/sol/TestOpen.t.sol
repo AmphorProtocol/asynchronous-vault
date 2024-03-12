@@ -3,7 +3,7 @@ pragma solidity 0.8.21;
 
 import { TestBase } from "../../../Base.t.sol";
 import { SyncSynthVault } from "../../../../src/SyncSynthVault.sol";
-import "forge-std/console.sol"; //todo remove
+import "forge-std/console.sol";
 
 contract TestOpen is TestBase {
     function test_GivenVaultIsOpenWhenOpen() external {

@@ -22,8 +22,6 @@ import { ERC20Permit } from
 import { IERC4626 } from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
-import "forge-std/console.sol"; //todo remove
-
 /*
  *         @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  *         @@@@@@@@@@@@@@@@@@@@%=::::::=%@@@@@@@@@@@@@@@@@@@@
@@ -161,7 +159,7 @@ abstract contract SyncSynthVault is
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
-        // _disableInitializers(); // TODO uncomment
+        _disableInitializers();
     }
 
     function initialize(
