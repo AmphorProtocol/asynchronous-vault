@@ -4,12 +4,12 @@
 
 ### General overview:
 
-- The vault accept two main states: open and closed. When the vault is open, users can deposit and withdraw their funds. When the vault is closed, users can do request of deposit or request of redeem.
-- To help the management of the assets/shares waiting for a request and the ones that can be claimed, we used 2 extra contracts: the `PendingSilo` and the `ClaimableSilo`.
+- The vault accept two main states: open and closed. When the vault is open, users can deposit and withdraw their funds. When the vault is closed, funds are taken awy from the vault (farming in some positions) and users can only do request of deposit or request of redeem.
 - Those requests are processed when the owner of the vault calls the functions `settle` or `open`. When this functions are called, the vault will change epoch, open and process the requests by moving funds between the silos and closed the vault again for the settle function.
+- To help the management of the assets/shares waiting for a request and the ones that can be claimed, we used 2 extra contracts: the `PendingSilo` and the `ClaimableSilo`. These contracts are in the AsyncSyncVault.sol file.
 - Each vault will be bootstrapped in order to avoid the inflation attack.
 - AsyncSynthVault inherit from the abstract SyncSynthVault contract and implement the asynchronous deposit and redeem functions.
-- Zapper makes the swap of tokenB into tokenB and the deposit of this token B in a vault possible in one tx.
+- Zapper makes the swap of tokenA into tokenB and the deposit of this tokenB in a vault in one tx.
 
 
 ### Proxy pattern
