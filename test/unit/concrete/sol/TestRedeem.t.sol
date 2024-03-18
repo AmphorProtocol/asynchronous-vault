@@ -3,8 +3,8 @@ pragma solidity 0.8.21;
 
 import {
     TestBase,
-    AsyncSynthVault,
-    SyncSynthVault,
+    AsyncVault,
+    SyncVault,
     IERC20
 } from "../../../Base.t.sol";
 import { console } from "forge-std/console.sol";
@@ -25,7 +25,7 @@ contract TestRedeem is TestBase {
             user1,
             1,
             abi.encodeWithSelector(
-                SyncSynthVault.ERC4626ExceededMaxRedeem.selector,
+                SyncVault.ERC4626ExceededMaxRedeem.selector,
                 user1.addr,
                 1,
                 0
@@ -42,7 +42,7 @@ contract TestRedeem is TestBase {
             user1,
             1,
             abi.encodeWithSelector(
-                SyncSynthVault.ERC4626ExceededMaxRedeem.selector,
+                SyncVault.ERC4626ExceededMaxRedeem.selector,
                 user1.addr,
                 1,
                 0
@@ -67,7 +67,7 @@ contract TestRedeem is TestBase {
             user1,
             1,
             abi.encodeWithSelector(
-                SyncSynthVault.ERC4626ExceededMaxRedeem.selector,
+                SyncVault.ERC4626ExceededMaxRedeem.selector,
                 user1.addr,
                 1,
                 0
@@ -83,7 +83,7 @@ contract TestRedeem is TestBase {
             address0,
             1,
             abi.encodeWithSelector(
-                SyncSynthVault.ERC4626ExceededMaxRedeem.selector, 0x0, 1, 0
+                SyncVault.ERC4626ExceededMaxRedeem.selector, 0x0, 1, 0
             )
         );
     }
@@ -99,7 +99,7 @@ contract TestRedeem is TestBase {
             user1,
             vaultTested.convertToAssets(vaultTested.balanceOf(user1.addr)) + 1,
             abi.encodeWithSelector(
-                SyncSynthVault.ERC4626ExceededMaxRedeem.selector,
+                SyncVault.ERC4626ExceededMaxRedeem.selector,
                 user1.addr,
                 vaultTested.convertToAssets(vaultTested.balanceOf(user1.addr))
                     + 1,

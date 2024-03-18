@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
-import { TestBase, SyncSynthVault, AsyncSynthVault } from "../../../Base.t.sol";
+import { TestBase, SyncVault, AsyncVault } from "../../../Base.t.sol";
 import { PausableUpgradeable } from
     "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -9,7 +9,7 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 contract TestRequestDeposit is TestBase {
     function test_GivenVaultOpenWhenRequestDeposit() external {
         // it should revert VaultIsOpen
-        vm.expectRevert(SyncSynthVault.VaultIsOpen.selector);
+        vm.expectRevert(SyncVault.VaultIsOpen.selector);
         vaultTested.requestDeposit(1, address(this), address(this), "");
     }
 
@@ -41,7 +41,7 @@ contract TestRequestDeposit is TestBase {
         assertClose(vaultTested);
         vm.startPrank(user1.addr);
         vm.expectRevert(
-            AsyncSynthVault.ERC7540CantRequestDepositOnBehalfOf.selector
+            AsyncVault.ERC7540CantRequestDepositOnBehalfOf.selector
         );
         vaultTested.requestDeposit(1, user1.addr, user2.addr, "");
         vm.stopPrank();
@@ -63,7 +63,7 @@ contract TestRequestDeposit is TestBase {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                AsyncSynthVault.MustClaimFirst.selector, user1.addr
+                AsyncVault.MustClaimFirst.selector, user1.addr
             )
         );
         vaultTested.requestDeposit(1, user1.addr, user1.addr, "");

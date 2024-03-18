@@ -2,7 +2,7 @@
 pragma solidity 0.8.21;
 
 import { TestBase } from "../../../Base.t.sol";
-import { PermitParams, SyncSynthVault } from "@src/SyncSynthVault.sol";
+import { PermitParams, SyncVault } from "@src/SyncVault.sol";
 import { SigUtils } from "@test/utils/SigUtils.sol";
 import { ERC20Permit } from
     "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
@@ -52,7 +52,7 @@ contract SyntheticPermit is TestBase {
             PermitParams({ value: 1, deadline: _deadline, v: v, r: r, s: s });
         vm.expectRevert(
             abi.encodeWithSelector(
-                SyncSynthVault.ERC4626ExceededMaxDeposit.selector,
+                SyncVault.ERC4626ExceededMaxDeposit.selector,
                 user1.addr,
                 1,
                 0

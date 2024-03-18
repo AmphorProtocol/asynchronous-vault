@@ -2,7 +2,7 @@
 pragma solidity 0.8.21;
 
 import { TestBase } from "../../../Base.t.sol";
-import { SyncSynthVault } from "../../../../src/SyncSynthVault.sol";
+import { SyncVault } from "../../../../src/SyncVault.sol";
 import "forge-std/console.sol"; //todo remove
 
 contract TestClose is TestBase {
@@ -12,7 +12,7 @@ contract TestClose is TestBase {
         address owner = vaultTested.owner();
         vm.startPrank(owner);
         vaultTested.close();
-        vm.expectRevert(SyncSynthVault.VaultIsClosed.selector);
+        vm.expectRevert(SyncVault.VaultIsClosed.selector);
         vaultTested.close();
         vm.stopPrank();
     }
@@ -31,7 +31,7 @@ contract TestClose is TestBase {
         // it should revert with MaxDrawdownReached
         address owner = vaultTested.owner();
         vm.startPrank(owner);
-        vm.expectRevert(SyncSynthVault.VaultIsEmpty.selector);
+        vm.expectRevert(SyncVault.VaultIsEmpty.selector);
         vaultTested.close();
         vm.stopPrank();
     }

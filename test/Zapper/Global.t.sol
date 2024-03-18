@@ -3,7 +3,7 @@ pragma solidity 0.8.21;
 
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { IERC4626 } from "@openzeppelin/contracts/interfaces/IERC4626.sol";
-import { AsyncSynthVault } from "@src/AsyncSynthVault.sol";
+import { AsyncVault } from "@src/AsyncVault.sol";
 import { Test } from "forge-std/Test.sol";
 import { console } from "forge-std/console.sol";
 
@@ -19,7 +19,7 @@ abstract contract GlobalTest is Test {
 
     ERC20 internal _underlying;
 
-    AsyncSynthVault internal _vault;
+    AsyncVault internal _vault;
 
     uint256[] _usersPk = [
         0xA11CE,

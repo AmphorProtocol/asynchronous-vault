@@ -77,18 +77,10 @@ struct PermitParams {
     bytes32 s;
 }
 
-struct Permit2Params {
-    uint256 amount;
-    uint256 nonce;
-    uint256 deadline;
-    address token;
-    bytes signature;
-}
-
 uint256 constant BPS_DIVIDER = 10_000;
 uint16 constant MAX_FEES = 3000; // 30%
 
-abstract contract SyncSynthVault is
+abstract contract SyncVault is
     IERC4626,
     Ownable2StepUpgradeable,
     ERC20PermitUpgradeable,
