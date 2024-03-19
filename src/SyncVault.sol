@@ -95,10 +95,10 @@ abstract contract SyncVault is
     // @return Amount of the perf fees applied on the positive yield.
     uint16 public feesInBps;
     uint16 internal _maxDrawdown; // guardrail
+    uint8 private _underlyingDecimals;
     IERC20 internal _asset; // underlying asset
     bool public vaultIsOpen; // vault is open or closed
     uint256 public lastSavedBalance; // last saved balance
-    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
 
     /*
      * ##########
@@ -135,8 +135,6 @@ abstract contract SyncVault is
     error ERC4626ExceededMaxRedeem(address owner, uint256 shares, uint256 max);
     error VaultIsEmpty(); // We cannot start an epoch with an empty vault
     error MaxDrawdownReached();
-
-    uint8 private _underlyingDecimals;
 
     /*
      * ##############################

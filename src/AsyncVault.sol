@@ -251,22 +251,12 @@ contract AsyncVault is IERC7540, SyncVault {
     error MustClaimFirst(address owner);
     /**
      * @notice This error is emitted when the user try to make a new request
-     * without claiming the previous one.
+     * with an incorrect data.
      */
     error ReceiverFailed();
     /**
      * @notice This error is emitted when the user try to make a new request
-     * without claiming the previous one.
-     */
-    error NotOwner();
-    /**
-     * @notice This error is emitted when the user try to make a new request
-     * without claiming the previous one.
-     */
-    error NullRequest();
-    /**
-     * @notice This error is emitted when the user try to make a new request
-     * without claiming the previous one.
+     * on behalf of someone else.
      */
     error ERC7540CantRequestDepositOnBehalfOf();
     /*
