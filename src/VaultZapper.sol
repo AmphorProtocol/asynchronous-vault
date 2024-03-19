@@ -10,7 +10,7 @@ import { SafeERC20 } from
     "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { IERC7540, IERC4626 } from "./interfaces/IERC7540.sol";
-import { PermitParams, AsyncSynthVault } from "./AsyncSynthVault.sol";
+import { PermitParams, AsyncVault } from "./AsyncVault.sol";
 import { ERC20Permit } from
     "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
@@ -27,15 +27,33 @@ contract VaultZapper is Ownable2Step, Pausable {
      */
     using Address for address payable;
 
+    /**
+     * @notice The `authorizedVaults` mapping is used to check if a vault is
+     * authorized to interact with the `VaultZapper` contract.
+     */
     mapping(IERC4626 vault => bool isAuthorized) public authorizedVaults;
+
+    /**
+     * @notice The `authorizedRouters` mapping is used to check if a router is
+     * authorized to interact with the `VaultZapper` contract.
+     */
     mapping(address routerAddress => bool isAuthorized) public authorizedRouters;
 
+    /**
+     * @dev The `ZapAndDeposit` event is emitted when a user zaps in and deposits
+     * assets into a vault.
+    */
     event ZapAndRequestDeposit(
         IERC7540 indexed vault,
         address indexed router,
         IERC20 tokenIn,
         uint256 amount
     );
+
+    /**
+     * @dev The `ZapAndDeposit` event is emitted when a user zaps in and deposits
+     * assets into a vault.
+    */
     event ZapAndDeposit(
         IERC4626 indexed vault,
         address indexed router,
@@ -43,33 +61,87 @@ contract VaultZapper is Ownable2Step, Pausable {
         uint256 amount,
         uint256 shares
     );
+
+    /**
+     * @dev The `ClaimRedeemAndZap` event is emitted when a user claims, redeems
+     * and zaps assets into a vault.
+    */
     event ClaimRedeemAndZap(
         IERC7540 indexed vault,
         address indexed router,
         uint256 shares,
         uint256 assets
     );
+
+    /**
+     * @dev The `RouterApproved` event is emitted when a router is approved to
+     * interact with a token.
+    */
     event RouterApproved(address indexed router, IERC20 indexed token);
+    /**
+     * @dev The `RouterAuthorized` event is emitted when a router is authorized
+     * to interact with the `VaultZapper` contract.
+    */
     event RouterAuthorized(address indexed router, bool allowed);
+    /**
+     * @dev The `VaultAuthorized` event is emitted when a vault is authorized to
+     * interact with the `VaultZapper` contract.
+    */
     event VaultAuthorized(IERC4626 indexed vault, bool allowed);
 
+    /**
+     * @dev The `NotRouter` error is emitted when a router is not authorized to
+     * interact with the `VaultZapper` contract.
+    */
     error NotRouter(address router);
+    /**
+     * @dev The `NotVault` error is emitted when a vault is not authorized to
+     * interact with the `VaultZapper` contract.
+    */
     error NotVault(IERC4626 vault);
+    /**
+     * @dev The `SwapFailed` error is emitted when a swap fails.
+    */
     error SwapFailed(string reason);
+    /**
+     * @dev The `InconsistantSwapData` error is emitted when the swap data is
+     * inconsistant.
+    */
     error InconsistantSwapData(
         uint256 expectedTokenInBalance, uint256 actualTokenInBalance
     );
+    /**
+     * @dev The `NotEnoughSharesMinted` error is emitted when the amount of shares
+     * minted is not enough.
+    */
     error NotEnoughSharesMinted(uint256 sharesMinted, uint256 minSharesMinted);
+    /**
+     * @dev The `NotEnoughUnderlying` error is emitted when the amount of
+     * underlying assets is not enough.
+    */
     error NotEnoughUnderlying(
         uint256 previewedUnderlying, uint256 withdrawedUnderlying
     );
+
+    /**
+     * @dev The `NullMinShares` error is emitted when the minimum amount of shares
+     * to mint is null.
+    */
     error NullMinShares();
 
+    /**
+     * @dev The `onlyAllowedRouter` modifier is used to check if a router is
+     * authorized to interact with the `VaultZapper` contract.
+    */
     modifier onlyAllowedRouter(address router) {
         if (!authorizedRouters[router]) revert NotRouter(router);
         _;
     }
 
+    /**
+     * @dev The `onlyAllowedVault` modifier is used to check if a vault is
+     * authorized to interact with the `VaultZapper` contract.
+    */
     modifier onlyAllowedVault(IERC4626 vault) {
         if (!authorizedVaults[vault]) revert NotVault(vault);
         _;
@@ -78,24 +150,39 @@ contract VaultZapper is Ownable2Step, Pausable {
     constructor() Ownable(_msgSender()) { }
 
     /**
-     * @param token The IERC20 token to be claimed.
-     */
+     * @dev The `withdrawToken` function is used to withdraw tokens from the
+     *`VaultZapper` contract.
+    */
     function withdrawToken(IERC20 token) external onlyOwner {
         token.safeTransfer(_msgSender(), token.balanceOf(address(this)));
     }
 
+    /**
+     * @dev The `withdrawNativeToken` function is used to withdraw native tokens
+     * from the `VaultZapper` contract.
+    */
     function withdrawNativeToken() external onlyOwner {
         payable(_msgSender()).sendValue(address(this).balance);
     }
 
+    /**
+     * @dev The `pause` function is used to pause the `VaultZapper` contract.
+    */
     function pause() external onlyOwner {
         _pause();
     }
 
+    /**
+     * @dev The `unpause` function is used to unpause the `VaultZapper` contract.
+    */
     function unpause() external onlyOwner {
         _unpause();
     }
 
+    /**
+     * @dev The `approveTokenForRouter` function is used to approve a token for a
+     * router.
+    */
     function approveTokenForRouter(
         IERC20 token,
         address router
@@ -108,12 +195,20 @@ contract VaultZapper is Ownable2Step, Pausable {
         emit RouterApproved(router, token);
     }
 
+    /**
+     * @dev The `toggleRouterAuthorization` function is used to toggle the
+     * authorization of a router.
+    */
     function toggleRouterAuthorization(address router) public onlyOwner {
         bool authorized = !authorizedRouters[router];
         authorizedRouters[router] = authorized;
         emit RouterAuthorized(router, authorized);
     }
 
+    /**
+     * @dev The `toggleVaultAuthorization` function is used to toggle the
+     * authorization of a vault.
+    */
     function toggleVaultAuthorization(IERC7540 vault) public onlyOwner {
         bool authorized = !authorizedVaults[vault];
         IERC20(vault.asset()).forceApprove(
@@ -123,7 +218,9 @@ contract VaultZapper is Ownable2Step, Pausable {
         emit VaultAuthorized(vault, authorized);
     }
 
-    // internal function used only to execute the zap before request a deposit
+    /**
+     * @dev The `_zapIn` function is used to zap in assets into a vault.
+    */
     function _zapIn(
         IERC20 tokenIn,
         address router,
@@ -157,6 +254,10 @@ contract VaultZapper is Ownable2Step, Pausable {
         }
     }
 
+    /**
+     * @dev The `_transferTokenInAndApprove` function is used to transfer tokens
+     * into the `VaultZapper` contract and approve them for a router.
+    */
     function _transferTokenInAndApprove(
         address router,
         IERC20 tokenIn,
@@ -174,6 +275,11 @@ contract VaultZapper is Ownable2Step, Pausable {
      ########################
       USER RELATED FUNCTIONS
      ########################
+    */
+
+    /**
+     * @dev The `zapAndDeposit` function is used to zap in and deposit assets
+     * into a vault.
     */
     function zapAndDeposit(
         IERC20 tokenIn,
@@ -214,6 +320,10 @@ contract VaultZapper is Ownable2Step, Pausable {
         return shares;
     }
 
+    /**
+     * @dev The `zapAndRequestDeposit` function is used to zap in and request a
+     * deposit of assets into a vault.
+    */
     function zapAndRequestDeposit(
         IERC20 tokenIn,
         IERC7540 vault,
@@ -252,9 +362,13 @@ contract VaultZapper is Ownable2Step, Pausable {
         });
     }
 
+    /**
+     * @dev The `zapAndClaimAndRequestDeposit` function is used to zap in, claim
+     * and request a deposit of assets into a vault.
+    */
     function zapAndClaimAndRequestDeposit(
         IERC20 tokenIn,
-        AsyncSynthVault vault,
+        AsyncVault vault,
         address router,
         uint256 amountIn,
         bytes calldata data,
@@ -295,6 +409,10 @@ contract VaultZapper is Ownable2Step, Pausable {
      ##########################
     */
 
+    /**
+     * @dev The `zapAndDepositWithPermit` function is used to zap in and deposit
+     * assets into a vault with a permit.
+    */
     function zapAndDepositWithPermit(
         IERC20 tokenIn,
         IERC4626 vault,
@@ -312,6 +430,10 @@ contract VaultZapper is Ownable2Step, Pausable {
         return zapAndDeposit(tokenIn, vault, router, amount, swapData);
     }
 
+    /**
+     * @dev The `zapAndRequestDepositWithPermit` function is used to zap in and
+     * request a deposit of assets into a vault with a permit.
+    */
     function zapAndRequestDepositWithPermit(
         IERC20 tokenIn,
         IERC7540 vault,
@@ -329,9 +451,13 @@ contract VaultZapper is Ownable2Step, Pausable {
         zapAndRequestDeposit(tokenIn, vault, router, amount, data, swapData);
     }
 
+    /**
+     * @dev The `zapAndClaimAndRequestDepositWithPermit` function is used to zap
+     * in, claim and request a deposit of assets into a vault with a permit.
+    */
     function zapAndClaimAndRequestDepositWithPermit(
         IERC20 tokenIn,
-        AsyncSynthVault vault,
+        AsyncVault vault,
         address router,
         uint256 amount,
         bytes calldata data,
@@ -348,6 +474,9 @@ contract VaultZapper is Ownable2Step, Pausable {
         );
     }
 
+    /**
+     * @dev The `_executeZap` function is used to execute a zap.
+    */
     function _executeZap(
         address target,
         bytes memory data
@@ -364,6 +493,9 @@ contract VaultZapper is Ownable2Step, Pausable {
         return _data;
     }
 
+    /**
+     * @dev The `_executePermit` function is used to execute a permit.
+    */
     function _executePermit(
         IERC20 token,
         address owner,

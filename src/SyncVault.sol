@@ -77,18 +77,10 @@ struct PermitParams {
     bytes32 s;
 }
 
-struct Permit2Params {
-    uint256 amount;
-    uint256 nonce;
-    uint256 deadline;
-    address token;
-    bytes signature;
-}
-
 uint256 constant BPS_DIVIDER = 10_000;
 uint16 constant MAX_FEES = 3000; // 30%
 
-abstract contract SyncSynthVault is
+abstract contract SyncVault is
     IERC4626,
     Ownable2StepUpgradeable,
     ERC20PermitUpgradeable,
@@ -103,10 +95,10 @@ abstract contract SyncSynthVault is
     // @return Amount of the perf fees applied on the positive yield.
     uint16 public feesInBps;
     uint16 internal _maxDrawdown; // guardrail
+    uint8 private _underlyingDecimals;
     IERC20 internal _asset; // underlying asset
     bool public vaultIsOpen; // vault is open or closed
     uint256 public lastSavedBalance; // last saved balance
-    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
 
     /*
      * ##########
@@ -143,8 +135,6 @@ abstract contract SyncSynthVault is
     error ERC4626ExceededMaxRedeem(address owner, uint256 shares, uint256 max);
     error VaultIsEmpty(); // We cannot start an epoch with an empty vault
     error MaxDrawdownReached();
-
-    uint8 private _underlyingDecimals;
 
     /*
      * ##############################

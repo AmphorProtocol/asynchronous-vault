@@ -2,7 +2,7 @@
 pragma solidity 0.8.21;
 
 import { TestBase } from "../../../Base.t.sol";
-import { SyncSynthVault } from "../../../../src/SyncSynthVault.sol";
+import { SyncVault } from "../../../../src/SyncVault.sol";
 import "forge-std/console.sol";
 
 contract TestOpen is TestBase {
@@ -11,7 +11,7 @@ contract TestOpen is TestBase {
 
         address owner = vaultTested.owner();
         vm.prank(owner);
-        vm.expectRevert(SyncSynthVault.VaultIsOpen.selector);
+        vm.expectRevert(SyncVault.VaultIsOpen.selector);
         vaultTested.open(uint256(0));
     }
 
@@ -38,7 +38,7 @@ contract TestOpen is TestBase {
         address owner = vaultTested.owner();
         vm.startPrank(owner);
         vaultTested.close();
-        vm.expectRevert(SyncSynthVault.MaxDrawdownReached.selector);
+        vm.expectRevert(SyncVault.MaxDrawdownReached.selector);
         vaultTested.open(uint256(0));
     }
 
@@ -51,7 +51,7 @@ contract TestOpen is TestBase {
         address owner = vaultTested.owner();
         vm.startPrank(owner);
         vaultTested.close();
-        vm.expectRevert(SyncSynthVault.MaxDrawdownReached.selector);
+        vm.expectRevert(SyncVault.MaxDrawdownReached.selector);
         vaultTested.open(uint256(1));
     }
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
-import { TestBase, SyncSynthVault, IERC20 } from "../../../Base.t.sol";
+import { TestBase, SyncVault, IERC20 } from "../../../Base.t.sol";
 import { PausableUpgradeable } from
     "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 
@@ -11,7 +11,7 @@ contract TestClaimAndRequestDeposit is TestBase {
         assertClose(vaultTested);
         usersDealApproveAndRequestDeposit(vaultTested, 1);
         assertOpen(vaultTested, 0);
-        //vm.expectRevert(SyncSynthVault.VaultIsOpen.selector);
+        //vm.expectRevert(SyncVault.VaultIsOpen.selector);
         //decreaseDepositRequest(vaultTested, user1, 1);
         assertClose(vaultTested);
         uint256 sharesBefore = vaultTested.balanceOf(user1.addr);

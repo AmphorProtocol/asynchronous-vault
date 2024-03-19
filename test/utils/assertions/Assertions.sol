@@ -3,10 +3,10 @@ pragma solidity 0.8.21;
 
 import { IERC4626 } from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {
-    AsyncSynthVault,
+    AsyncVault,
     PermitParams,
-    SyncSynthVault
-} from "../../../src/AsyncSynthVault.sol";
+    SyncVault
+} from "../../../src/AsyncVault.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { VmSafe } from "forge-std/Vm.sol";
 
@@ -15,7 +15,7 @@ import { SafeERC20 } from
 
 import { EventsAssertions } from "./EventsAssertions.sol";
 import { Constants } from "../Constants.sol";
-import { AsyncSynthVault } from "../../../src/AsyncSynthVault.sol";
+import { AsyncVault } from "../../../src/AsyncVault.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { console } from "forge-std/console.sol";
 import { SigUtils } from "@test/utils/SigUtils.sol";
@@ -133,7 +133,7 @@ abstract contract Assertions is EventsAssertions {
     }
 
     function assertDepositWithPermit(
-        SyncSynthVault vault,
+        SyncVault vault,
         address owner,
         address receiver,
         uint256 assets,
@@ -492,7 +492,7 @@ abstract contract Assertions is EventsAssertions {
         });
     }
 
-    function getVaultState(AsyncSynthVault vault)
+    function getVaultState(AsyncVault vault)
         public
         view
         returns (VaultState memory)
@@ -564,7 +564,7 @@ abstract contract Assertions is EventsAssertions {
         );
     }
 
-    function assertClose(AsyncSynthVault vault) public {
+    function assertClose(AsyncVault vault) public {
         uint256 totalAssetsBefore = vault.totalAssets();
         uint256 totalSupplyBefore = vault.totalSupply();
         vm.prank(vault.owner());
@@ -579,7 +579,7 @@ abstract contract Assertions is EventsAssertions {
     }
 
     function assertOpen(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         int256 performanceInBps
     )
         public
@@ -588,7 +588,7 @@ abstract contract Assertions is EventsAssertions {
     }
 
     function assertOpen(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         int256 performanceInBps,
         bool shouldRevert
     )
@@ -755,7 +755,7 @@ abstract contract Assertions is EventsAssertions {
     }
 
     function assertClaimDeposit(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         address owner,
         address receiver,
         uint256 assetsDeposited
@@ -785,7 +785,7 @@ abstract contract Assertions is EventsAssertions {
     }
 
     function assertClaimRedeem(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         address owner,
         address receiver,
         uint256 sharesRedeemed
@@ -891,7 +891,7 @@ abstract contract Assertions is EventsAssertions {
         return uint256(toSendBack);
     }
 
-    function open(AsyncSynthVault vault, int256 performanceInBips, bool shouldRevert) public {
+    function open(AsyncVault vault, int256 performanceInBips, bool shouldRevert) public {
         vm.assume(performanceInBips > -10_000 && performanceInBips < 10_000);
         uint256 lastSavedBalance = vault.totalAssets();
         uint256 toSendBack = uint256(
@@ -909,7 +909,7 @@ abstract contract Assertions is EventsAssertions {
         }
     }
 
-    function settle(AsyncSynthVault vault, uint256 assetReturned) public {
+    function settle(AsyncVault vault, uint256 assetReturned) public {
         address owner = vault.owner();
         deal(owner, type(uint256).max);
         vm.prank(owner);
@@ -1114,7 +1114,7 @@ abstract contract Assertions is EventsAssertions {
     }
 
     function assertDecreaseDeposit(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         address sender
     )
         internal
@@ -1148,7 +1148,7 @@ abstract contract Assertions is EventsAssertions {
     }
 
     function assertDecreaseRedeem(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         address sender
     )
         internal
@@ -1182,7 +1182,7 @@ abstract contract Assertions is EventsAssertions {
     }
 
     function assertSettle(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         int256 performanceInBps
     )
         internal
@@ -1253,7 +1253,7 @@ abstract contract Assertions is EventsAssertions {
     }
 
     function assertSettleEvents(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         VaultState memory stateBefore,
         uint256 expectedSharesToMint,
         uint256 expectedSharesToRedeem,
@@ -1322,7 +1322,7 @@ abstract contract Assertions is EventsAssertions {
     }
 
     function assertValues(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         VaultState memory stateBefore,
         uint256 expectedSharesToMint,
         uint256 expectedAssetsToRedeem,

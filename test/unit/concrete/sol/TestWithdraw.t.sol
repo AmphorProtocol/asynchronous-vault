@@ -3,8 +3,8 @@ pragma solidity 0.8.21;
 
 import {
     TestBase,
-    AsyncSynthVault,
-    SyncSynthVault,
+    AsyncVault,
+    SyncVault,
     IERC20
 } from "../../../Base.t.sol";
 import { console } from "forge-std/console.sol";
@@ -25,7 +25,7 @@ contract TestWithdraw is TestBase {
             user1,
             1,
             abi.encodeWithSelector(
-                SyncSynthVault.ERC4626ExceededMaxWithdraw.selector,
+                SyncVault.ERC4626ExceededMaxWithdraw.selector,
                 user1.addr,
                 1,
                 0
@@ -43,7 +43,7 @@ contract TestWithdraw is TestBase {
             user1,
             1,
             abi.encodeWithSelector(
-                SyncSynthVault.ERC4626ExceededMaxWithdraw.selector,
+                SyncVault.ERC4626ExceededMaxWithdraw.selector,
                 user1.addr,
                 1,
                 0
@@ -68,7 +68,7 @@ contract TestWithdraw is TestBase {
             user1,
             1,
             abi.encodeWithSelector(
-                SyncSynthVault.ERC4626ExceededMaxWithdraw.selector,
+                SyncVault.ERC4626ExceededMaxWithdraw.selector,
                 user1.addr,
                 1,
                 0
@@ -84,7 +84,7 @@ contract TestWithdraw is TestBase {
             address0,
             1,
             abi.encodeWithSelector(
-                SyncSynthVault.ERC4626ExceededMaxWithdraw.selector, 0x0, 1, 0
+                SyncVault.ERC4626ExceededMaxWithdraw.selector, 0x0, 1, 0
             )
         );
     }
@@ -100,7 +100,7 @@ contract TestWithdraw is TestBase {
             user1,
             vaultTested.convertToAssets(vaultTested.balanceOf(user1.addr)) + 1,
             abi.encodeWithSelector(
-                SyncSynthVault.ERC4626ExceededMaxWithdraw.selector,
+                SyncVault.ERC4626ExceededMaxWithdraw.selector,
                 user1.addr,
                 vaultTested.convertToAssets(vaultTested.balanceOf(user1.addr))
                     + 1,

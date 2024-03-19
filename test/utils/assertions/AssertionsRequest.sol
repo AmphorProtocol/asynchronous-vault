@@ -11,7 +11,7 @@ import { VmSafe } from "forge-std/Vm.sol";
 import { Assertions } from "./Assertions.sol";
 import { Constants } from "../Constants.sol";
 
-import { AsyncSynthVault } from "../../../src/AsyncSynthVault.sol";
+import { AsyncVault } from "../../../src/AsyncVault.sol";
 import { console } from "forge-std/console.sol";
 
 abstract contract AssertionsRequest is Assertions {
@@ -34,7 +34,7 @@ abstract contract AssertionsRequest is Assertions {
     }
 
     function assertRequestDeposit(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         address sender,
         address owner,
         address receiver,
@@ -55,7 +55,7 @@ abstract contract AssertionsRequest is Assertions {
 
         // pending deposits data before deposit
         PendingDepositsData memory pendingDepositsBefore = getPendingDepositData(
-            AsyncSynthVault(address(vault)), sender, owner, receiver
+            AsyncVault(address(vault)), sender, owner, receiver
         );
 
         // assertions on events
@@ -104,7 +104,7 @@ abstract contract AssertionsRequest is Assertions {
     }
 
     function assertRequestRedeem(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         address sender,
         address owner,
         address receiver,
@@ -125,7 +125,7 @@ abstract contract AssertionsRequest is Assertions {
 
         // pending deposits data before deposit
         PendingRedeemsData memory pendingRedeemsBefore = getPendingRedeemData(
-            AsyncSynthVault(address(vault)), sender, owner, receiver
+            AsyncVault(address(vault)), sender, owner, receiver
         );
 
         // assertions on events
@@ -197,7 +197,7 @@ abstract contract AssertionsRequest is Assertions {
     }
 
     function assertTotalPendingDeposits(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         uint256 expected
     )
         public
@@ -212,7 +212,7 @@ abstract contract AssertionsRequest is Assertions {
     }
 
     function assertTotalPendingRedeems(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         uint256 expected
     )
         public
@@ -249,7 +249,7 @@ abstract contract AssertionsRequest is Assertions {
     }
 
     function getPendingDepositData(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         address sender,
         address owner,
         address receiver
@@ -267,7 +267,7 @@ abstract contract AssertionsRequest is Assertions {
     }
 
     function getPendingRedeemData(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         address sender,
         address owner,
         address receiver
