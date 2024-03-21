@@ -12,7 +12,7 @@ remappings = [
     "@src/=src/",
     "@test/=test/",
 ]
-build_info = true
+# build_info = true
 extra_output = ["storageLayout"]
 
 [profile.production]

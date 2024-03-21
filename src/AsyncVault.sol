@@ -125,7 +125,7 @@ contract AsyncVault is IERC7540, SyncVault {
     Silo public pendingSilo;
     /**
      * @notice The claimableSilo is used to hold the assets/shares of the users
-     * that requested a deposit/redeem. 
+     * that requested a deposit/redeem.
      */
     Silo public claimableSilo;
     /**
@@ -137,7 +137,8 @@ contract AsyncVault is IERC7540, SyncVault {
      */
     mapping(uint256 epochId => EpochData epoch) public epochs;
     /**
-     * @notice The lastDepositRequestId is used to keep track of the last deposit
+     * @notice The lastDepositRequestId is used to keep track of the last
+     * deposit
      * request made by the user. It is used to let the user claim their request
      * after we processed those.
      */
@@ -288,53 +289,10 @@ contract AsyncVault is IERC7540, SyncVault {
         claimableSilo = new Silo(underlying);
     }
 
-    /*
-     
-    */
-    /**
-     * @dev This function is used to claim the pending deposit and request a new
-     * one in one transaction.
-     * @notice Since we only allow one claimable request at a time, users must
-     * claim their request before making a new one. This function let users claim
-     * and request a deposit in one transaction.
-     * @param assets The amount of assets requested by the user.
-     * @param receiver The address of the user that requested the deposit.
-     * @param data The data to be sent to the receiver.
-     */
-    function claimAndRequestDeposit(
-        uint256 assets,
-        address receiver,
-        bytes memory data
-    )
-        external
-    {
-        _claimDeposit(receiver, receiver);
-        requestDeposit(assets, receiver, _msgSender(), data);
-    }
-
-    /**
-     * @dev This function is used to claim the pending redeem and request a new
-     * one in one transaction.
-     * @notice Since we only allow one claimable request at a time, users must
-     * claim their request before making a new one. This function let users claim
-     * and request a redeem in one transaction.
-     * @param shares The amount of shares requested by the user.
-     * @param data The data to be sent to the receiver.
-     */
-    function claimAndRequestRedeem(
-        uint256 shares,
-        bytes memory data
-    )
-        external
-    {
-        address owner = _msgSender();
-        _claimRedeem(owner, owner);
-        requestRedeem(shares, owner, owner, data);
-    }
-
     /**
      * @dev This function is used to decrease the amount of assets requested to
-     * deposit by the user. It can only be called by the user who made the request.
+     * deposit by the user. It can only be called by the user who made the
+     * request.
      * @param assets The amount of assets requested by the user.
      */
     function decreaseDepositRequest(uint256 assets)
@@ -357,7 +315,8 @@ contract AsyncVault is IERC7540, SyncVault {
 
     /**
      * @dev This function is used to decrease the amount of shares requested to
-     * redeem by the user. It can only be called by the user who made the request.
+     * redeem by the user. It can only be called by the user who made the
+     * request.
      * @param shares The amount of shares requested by the user.
      */
     function decreaseRedeemRequest(uint256 shares)
@@ -427,27 +386,6 @@ contract AsyncVault is IERC7540, SyncVault {
      * #   Permit RELATED FUNCTIONS    #
      * #################################
     */
-
-    /* This function is used to claim the pending deposit and request a new one
-    in one transaction using permit signatures */
-    /**
-     * @dev claimAndRequestDepositWithPermit is used to claim the pending deposit
-     * and request a new one in one transaction using permit signatures.
-     * @param assets The amount of assets requested by the user.
-     * @param data The data to be sent to the receiver.
-     * @param permitParams The permit signature.
-     */
-    function claimAndRequestDepositWithPermit(
-        uint256 assets,
-        bytes memory data,
-        PermitParams calldata permitParams
-    )
-        external
-    {
-        address msgSender = _msgSender();
-        _claimDeposit(msgSender, msgSender);
-        requestDepositWithPermit(assets, msgSender, data, permitParams);
-    }
 
     /**
      * @dev The `settle` function is used to settle the vault.
@@ -587,7 +525,8 @@ contract AsyncVault is IERC7540, SyncVault {
             revert ERC7540CantRequestDepositOnBehalfOf();
         }
         if (previewClaimDeposit(receiver) > 0) {
-            revert MustClaimFirst(receiver);
+            _claimDeposit(receiver, receiver);
+            // revert MustClaimFirst(receiver);
         }
 
         if (assets > maxDepositRequest(owner)) {
@@ -626,7 +565,7 @@ contract AsyncVault is IERC7540, SyncVault {
             _spendAllowance(owner, _msgSender(), shares);
         }
         if (previewClaimRedeem(receiver) > 0) {
-            revert MustClaimFirst(receiver);
+            _claimRedeem(receiver, receiver);
         }
         if (shares > maxRedeemRequest(owner)) {
             revert ExceededMaxRedeemRequest(
@@ -778,7 +717,8 @@ contract AsyncVault is IERC7540, SyncVault {
      * @dev This function claimableDepositBalanceInAsset is used to know if the
      * owner will have to send money to the claimableSilo (for users who want to
      * leave the vault) or if he will receive money from it.
-     * @notice Using this the owner can know if he will have to send money to the
+     * @notice Using this the owner can know if he will have to send money to
+     * the
      * claimableSilo (for users who want to leave the vault) or if he will
      * receive money from it.
      * @param owner The address of the user that requested the deposit.
