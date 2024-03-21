@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
-import { TestBase, SyncSynthVault, AsyncSynthVault } from "../../../Base.t.sol";
+import { TestBase, SyncVault, AsyncVault } from "../../../Base.t.sol";
 import { PausableUpgradeable } from
     "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -9,7 +9,7 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 contract TestRequestRedeem is TestBase {
     function test_GivenVaultOpenWhenRequestRedeem() external {
         // it should revert VaultIsOpen
-        vm.expectRevert(SyncSynthVault.VaultIsOpen.selector);
+        vm.expectRevert(SyncVault.VaultIsOpen.selector);
         vaultTested.requestRedeem(1, address(this), address(this), "");
     }
 
@@ -64,7 +64,7 @@ contract TestRequestRedeem is TestBase {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                AsyncSynthVault.MustClaimFirst.selector, user1.addr
+                AsyncVault.MustClaimFirst.selector, user1.addr
             )
         );
         vaultTested.requestRedeem(5, user1.addr, user1.addr, "");

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
-import { TestBase, SyncSynthVault, IERC20 } from "../../../Base.t.sol";
+import { TestBase, SyncVault, IERC20 } from "../../../Base.t.sol";
 import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
 import { IERC20Metadata } from
     "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
@@ -15,9 +15,9 @@ contract TestMintPure is TestBase {
             vaultTested,
             user1,
             1,
-            // SyncSynthVault.ERC4626ExceededMaxDeposit.selector
+            // SyncVault.ERC4626ExceededMaxDeposit.selector
             abi.encodeWithSelector(
-                SyncSynthVault.ERC4626ExceededMaxMint.selector, user1.addr, 1, 0
+                SyncVault.ERC4626ExceededMaxMint.selector, user1.addr, 1, 0
             )
         );
     }

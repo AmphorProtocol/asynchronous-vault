@@ -3,7 +3,7 @@ pragma solidity 0.8.21;
 
 import { AssertionsRequest } from "./utils/assertions/AssertionsRequest.sol";
 import { console } from "forge-std/console.sol";
-import { AsyncSynthVault, SyncSynthVault } from "../src/AsyncSynthVault.sol";
+import { AsyncVault, SyncVault } from "../src/AsyncVault.sol";
 import { VmSafe } from "forge-std/Vm.sol";
 import { IERC4626 } from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -20,13 +20,13 @@ import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 contract TestBase is AssertionsRequest {
     // OWNER ACTIONS //
 
-    function close(AsyncSynthVault vault) internal {
+    function close(AsyncVault vault) internal {
         address owner = vault.owner();
         vm.prank(owner);
         vault.close();
     }
 
-    function closeRevertUnauthorized(AsyncSynthVault vault) internal {
+    function closeRevertUnauthorized(AsyncVault vault) internal {
         address user = users[0].addr;
         vm.startPrank(user);
         vm.expectRevert(
@@ -36,13 +36,13 @@ contract TestBase is AssertionsRequest {
         vm.stopPrank();
     }
 
-    function pause(AsyncSynthVault vault) internal {
+    function pause(AsyncVault vault) internal {
         address owner = vault.owner();
         vm.prank(owner);
         vault.pause();
     }
 
-    function unpause(AsyncSynthVault vault) internal {
+    function unpause(AsyncVault vault) internal {
         address owner = vault.owner();
         vm.prank(owner);
         vault.unpause();
@@ -50,12 +50,12 @@ contract TestBase is AssertionsRequest {
 
     // USERS ACTIONS //
 
-    function mint(AsyncSynthVault vault, VmSafe.Wallet memory user) internal {
+    function mint(AsyncVault vault, VmSafe.Wallet memory user) internal {
         mint(vault, user, USDC.balanceOf(user.addr));
     }
 
     function deposit(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         VmSafe.Wallet memory user
     )
         internal
@@ -64,7 +64,7 @@ contract TestBase is AssertionsRequest {
     }
 
     function depositRevert(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         VmSafe.Wallet memory user,
         bytes4 selector
     )
@@ -74,7 +74,7 @@ contract TestBase is AssertionsRequest {
     }
 
     function depositRevert(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         VmSafe.Wallet memory user,
         bytes memory revertData
     )
@@ -84,7 +84,7 @@ contract TestBase is AssertionsRequest {
     }
 
     function depositRevert(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         VmSafe.Wallet memory user,
         uint256 amount,
         bytes4 selector
@@ -97,7 +97,7 @@ contract TestBase is AssertionsRequest {
     }
 
     function depositRevert(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         VmSafe.Wallet memory user,
         uint256 amount
     )
@@ -109,7 +109,7 @@ contract TestBase is AssertionsRequest {
     }
 
     function depositRevert(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         VmSafe.Wallet memory user,
         uint256 amount,
         bytes memory revertData
@@ -122,7 +122,7 @@ contract TestBase is AssertionsRequest {
     }
 
     function mintRevert(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         VmSafe.Wallet memory user,
         uint256 amount,
         bytes4 selector
@@ -135,7 +135,7 @@ contract TestBase is AssertionsRequest {
     }
 
     function mintRevert(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         VmSafe.Wallet memory user,
         uint256 amount
     )
@@ -147,7 +147,7 @@ contract TestBase is AssertionsRequest {
     }
 
     function mintRevert(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         VmSafe.Wallet memory user,
         uint256 amount,
         bytes memory revertData
@@ -160,7 +160,7 @@ contract TestBase is AssertionsRequest {
     }
 
     function redeem(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         VmSafe.Wallet memory user
     )
         internal
@@ -169,7 +169,7 @@ contract TestBase is AssertionsRequest {
     }
 
     function mint(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         VmSafe.Wallet memory user,
         uint256 amount
     )
@@ -180,7 +180,7 @@ contract TestBase is AssertionsRequest {
     }
 
     function deposit(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         VmSafe.Wallet memory user,
         uint256 amount
     )
@@ -191,7 +191,7 @@ contract TestBase is AssertionsRequest {
     }
 
     function withdraw(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         VmSafe.Wallet memory user,
         uint256 amount
     )
@@ -202,7 +202,7 @@ contract TestBase is AssertionsRequest {
     }
 
     function withdraw(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         VmSafe.Wallet memory user
     )
         internal
@@ -211,7 +211,7 @@ contract TestBase is AssertionsRequest {
     }
 
     function withdrawRevert(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         VmSafe.Wallet memory user,
         bytes4 selector
     )
@@ -221,7 +221,7 @@ contract TestBase is AssertionsRequest {
     }
 
     function withdrawRevert(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         VmSafe.Wallet memory user
     )
         internal
@@ -230,7 +230,7 @@ contract TestBase is AssertionsRequest {
     }
 
     function withdrawRevert(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         VmSafe.Wallet memory user,
         bytes memory revertData
     )
@@ -240,7 +240,7 @@ contract TestBase is AssertionsRequest {
     }
 
     function withdrawRevert(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         VmSafe.Wallet memory owner,
         VmSafe.Wallet memory sender,
         uint256 amount,
@@ -254,7 +254,7 @@ contract TestBase is AssertionsRequest {
     }
 
     function withdrawRevert(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         VmSafe.Wallet memory owner,
         VmSafe.Wallet memory sender,
         uint256 amount,
@@ -268,7 +268,7 @@ contract TestBase is AssertionsRequest {
     }
 
     function withdrawRevert(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         VmSafe.Wallet memory user,
         uint256 amount,
         bytes4 selector
@@ -281,7 +281,7 @@ contract TestBase is AssertionsRequest {
     }
 
     function withdrawRevert(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         VmSafe.Wallet memory user,
         uint256 amount,
         bytes memory revertData
@@ -294,7 +294,7 @@ contract TestBase is AssertionsRequest {
     }
 
     function withdrawRevert(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         VmSafe.Wallet memory user,
         uint256 amount
     )
@@ -306,7 +306,7 @@ contract TestBase is AssertionsRequest {
     }
 
     function redeemRevert(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         VmSafe.Wallet memory user,
         uint256 shares,
         bytes memory revertData
@@ -319,7 +319,7 @@ contract TestBase is AssertionsRequest {
     }
 
     function redeemRevert(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         VmSafe.Wallet memory receiver,
         VmSafe.Wallet memory owner,
         uint256 shares,
@@ -333,7 +333,7 @@ contract TestBase is AssertionsRequest {
     }
 
     function redeemRevert(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         VmSafe.Wallet memory user,
         uint256 amount,
         bytes4 selector
@@ -346,7 +346,7 @@ contract TestBase is AssertionsRequest {
     }
 
     function redeem(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         VmSafe.Wallet memory user,
         uint256 shares
     )
@@ -357,7 +357,7 @@ contract TestBase is AssertionsRequest {
     }
 
     function requestDeposit(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         VmSafe.Wallet memory user,
         uint256 amount,
         bytes memory data
@@ -369,7 +369,7 @@ contract TestBase is AssertionsRequest {
     }
 
     function requestRedeem(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         VmSafe.Wallet memory user,
         uint256 amount,
         bytes memory data
@@ -381,7 +381,7 @@ contract TestBase is AssertionsRequest {
     }
 
     function decreaseDepositRequest(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         VmSafe.Wallet memory user,
         uint256 amount
     )
@@ -405,7 +405,7 @@ contract TestBase is AssertionsRequest {
     }
 
     function usersDealApproveAndRequestDeposit(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         uint256 userMax
     )
         internal
@@ -416,7 +416,7 @@ contract TestBase is AssertionsRequest {
     }
 
     function usersDealApproveAndRequestDeposit(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         uint256 userMax,
         bytes memory data
     )
@@ -428,7 +428,7 @@ contract TestBase is AssertionsRequest {
     }
 
     function usersDealApproveAndRequestRedeem(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         uint256 userMax
     )
         internal
@@ -439,7 +439,7 @@ contract TestBase is AssertionsRequest {
     }
 
     function usersDealApproveAndRequestRedeem(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         uint256 userMax,
         bytes memory data
     )
@@ -458,7 +458,7 @@ contract TestBase is AssertionsRequest {
     }
 
     function usersRequestWithdraw(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         uint256 userMax,
         bytes memory data
     )
@@ -471,7 +471,7 @@ contract TestBase is AssertionsRequest {
     }
 
     function usersRequestDeposit(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         uint256 userMax,
         bytes memory data
     )
@@ -484,7 +484,7 @@ contract TestBase is AssertionsRequest {
     }
 
     function usersRequestRedeem(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         uint256 userMax
     )
         internal
@@ -496,7 +496,7 @@ contract TestBase is AssertionsRequest {
     }
 
     function usersRequestRedeem(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         uint256 userMax,
         bytes memory data
     )
@@ -571,7 +571,7 @@ contract TestBase is AssertionsRequest {
     }
 
     function _requestDepositInVaults(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         address owner
     )
         internal
@@ -584,7 +584,7 @@ contract TestBase is AssertionsRequest {
     }
 
     function _requestDepositInVaults(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         address owner,
         bytes memory data
     )
@@ -597,7 +597,7 @@ contract TestBase is AssertionsRequest {
     }
 
     function _requestRedeemInVaults(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         address owner,
         bytes memory data
     )
@@ -609,7 +609,7 @@ contract TestBase is AssertionsRequest {
     }
 
     function _requestRedeemInVault(
-        AsyncSynthVault vault,
+        AsyncVault vault,
         address owner
     )
         internal

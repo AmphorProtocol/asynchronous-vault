@@ -115,7 +115,7 @@ abstract contract VaultZapperManagement is OffChainCalls {
     }
 
     function _setUpVaultAndZapper(IERC20 tokenOut) public {
-        _vault = new AsyncSynthVault();
+        _vault = new AsyncVault();
 
         _vault.initialize(10, _amphorLabs, ERC20(address(tokenOut)), "", "");
         if (!zapper.authorizedRouters(_router)) {

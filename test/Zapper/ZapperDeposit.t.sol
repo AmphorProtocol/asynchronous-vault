@@ -2,7 +2,7 @@
 pragma solidity 0.8.21;
 
 import "../../src/VaultZapper.sol";
-import { AsyncSynthVault } from "../../src/AsyncSynthVault.sol";
+import { AsyncVault } from "../../src/AsyncVault.sol";
 import "./OffChainCalls.t.sol";
 
 contract VaultZapperDeposit is OffChainCalls {
@@ -363,7 +363,7 @@ contract VaultZapperDeposit is OffChainCalls {
     }
 
     function _setUpVaultAndZapper(IERC20 asset) public {
-        _vault = new AsyncSynthVault();
+        _vault = new AsyncVault();
 
         _vault.initialize(10, _amphorLabs, ERC20(address(asset)), "", "");
         if (!zapper.authorizedRouters(_router)) {

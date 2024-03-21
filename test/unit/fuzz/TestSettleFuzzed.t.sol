@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
-import { TestBase, SyncSynthVault, AsyncSynthVault } from "../../Base.t.sol";
+import { TestBase, SyncVault, AsyncVault } from "../../Base.t.sol";
 import "forge-std/console.sol";
 
 contract TestSettleFuzzed is TestBase {

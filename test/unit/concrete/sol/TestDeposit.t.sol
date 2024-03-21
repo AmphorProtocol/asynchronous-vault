@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
-import { TestBase, SyncSynthVault, IERC20 } from "../../../Base.t.sol";
+import { TestBase, SyncVault, IERC20 } from "../../../Base.t.sol";
 import { console } from "forge-std/console.sol";
 import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
 
@@ -16,7 +16,7 @@ contract TestDeposit is TestBase {
             user1,
             1,
             abi.encodeWithSelector(
-                SyncSynthVault.ERC4626ExceededMaxDeposit.selector,
+                SyncVault.ERC4626ExceededMaxDeposit.selector,
                 user1.addr,
                 1,
                 0

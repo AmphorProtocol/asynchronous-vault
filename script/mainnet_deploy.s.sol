@@ -2,7 +2,7 @@
 pragma solidity 0.8.21;
 
 import { Script, console } from "forge-std/Script.sol";
-import { AsyncSynthVault } from "../src/AsyncSynthVault.sol";
+import { AsyncVault } from "../src/AsyncVault.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Upgrades, Options } from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import { IPermit2 } from "permit2/src/interfaces/IPermit2.sol";
@@ -27,7 +27,7 @@ contract GOERLI_DeployAmphorSynthetic is Script {
         Options memory deploy;
         deploy.constructorData = abi.encode(permit2);
         UpgradeableBeacon beacon = UpgradeableBeacon(
-            Upgrades.deployBeacon("AsyncSynthVault.sol", owner, deploy)
+            Upgrades.deployBeacon("AsyncVault.sol", owner, deploy)
         );
 
         BeaconProxy proxy = BeaconProxy(
@@ -35,7 +35,7 @@ contract GOERLI_DeployAmphorSynthetic is Script {
                 Upgrades.deployBeaconProxy(
                     address(beacon),
                     abi.encodeCall(
-                        AsyncSynthVault.initialize,
+                        AsyncVault.initialize,
                         (
                             fees,
                             owner,

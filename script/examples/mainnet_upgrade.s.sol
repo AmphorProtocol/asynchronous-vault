@@ -2,7 +2,7 @@
 pragma solidity 0.8.21;
 
 import { Script, console } from "forge-std/Script.sol";
-import { AsyncSynthVault } from "../../src/AsyncSynthVault.sol";
+import { AsyncVault } from "../../src/AsyncVault.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Upgrades, Options } from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import { IPermit2 } from "permit2/src/interfaces/IPermit2.sol";
@@ -36,7 +36,7 @@ contract GOERLI_DeployAmphorSynthetic is Script {
                 Upgrades.deployBeaconProxy(
                     address(beacon),
                     abi.encodeCall(
-                        AsyncSynthVault.initialize,
+                        AsyncVault.initialize,
                         (
                             fees,
                             owner,
@@ -60,13 +60,13 @@ contract GOERLI_DeployAmphorSynthetic is Script {
         upgrade.referenceContract = "SynthVault2.sol";
         upgrade.constructorData = abi.encode(permit2);
         Upgrades.upgradeBeacon(address(beacon), "SynthVault2.sol", upgrade);
-        // AsyncSynthVault(address(proxy)).initialize(42); // TODO
+        // AsyncVault(address(proxy)).initialize(42); // TODO
 
         address newImplInBeacon = UpgradeableBeacon(beacon).implementation();
-        // uint256 variable = AsyncSynthVault(address(proxy)).newVariable(); //
+        // uint256 variable = AsyncVault(address(proxy)).newVariable(); //
         // TODO
         // uint256 variableInImpl =// TODO
-        //     AsyncSynthVault(address(newImplInBeacon)).newVariable();// TODO
+        //     AsyncVault(address(newImplInBeacon)).newVariable();// TODO
 
         // console.log("Synthetic vault USDC new variable in proxy: ",
         // variable); // TODO

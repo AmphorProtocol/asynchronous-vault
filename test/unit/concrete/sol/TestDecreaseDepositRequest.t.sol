@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
-import { TestBase, SyncSynthVault, IERC20 } from "../../../Base.t.sol";
+import { TestBase, SyncVault, IERC20 } from "../../../Base.t.sol";
 import { PausableUpgradeable } from
     "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 
 contract TestDecreaseDepositRequest is TestBase {
     function test_GivenVaultOpenWhenDecreaseDepositRequest() external {
         // it should revert with `VaultOpen`
-        vm.expectRevert(SyncSynthVault.VaultIsOpen.selector);
+        vm.expectRevert(SyncVault.VaultIsOpen.selector);
         decreaseDepositRequest(vaultTested, user1, 1);
     }
 
