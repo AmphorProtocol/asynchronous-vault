@@ -225,6 +225,7 @@ contract AsyncVault is IERC7540, SyncVault {
      * # ERRORS #
      * ##########
      */
+
     /**
      * @notice This error is emitted when the user request more shares than the
      * maximum allowed.
@@ -234,6 +235,7 @@ contract AsyncVault is IERC7540, SyncVault {
     error ExceededMaxRedeemRequest(
         address receiver, uint256 shares, uint256 maxShares
     );
+
     /**
      * @notice This error is emitted when the user request more assets than the
      * maximum allowed.
@@ -244,12 +246,7 @@ contract AsyncVault is IERC7540, SyncVault {
     error ExceededMaxDepositRequest(
         address receiver, uint256 assets, uint256 maxDeposit
     );
-    /**
-     * @notice This error is emitted when the user try to make a new request
-     * without claiming the previous one.
-     * @param owner The address of the user that requested the deposit.
-     */
-    error MustClaimFirst(address owner);
+
     /**
      * @notice This error is emitted when the user try to make a new request
      * with an incorrect data.
@@ -526,7 +523,6 @@ contract AsyncVault is IERC7540, SyncVault {
         }
         if (previewClaimDeposit(receiver) > 0) {
             _claimDeposit(receiver, receiver);
-            // revert MustClaimFirst(receiver);
         }
 
         if (assets > maxDepositRequest(owner)) {
