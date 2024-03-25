@@ -107,9 +107,18 @@ struct SettleValues {
  * requested a deposit/redeem. It is used to simplify the logic of the vault.
  */
 contract Silo {
+
+    // TODO: uncomment or remove this fix
+    // address public vault;
+
     constructor(IERC20 underlying) {
+        // vault = msg.sender;
         underlying.forceApprove(msg.sender, type(uint256).max);
     }
+
+    // function approveToken(IERC20 underlying) external {
+    //     underlying.forceApprove(vault, type(uint256).max);
+    // }
 }
 
 contract AsyncVault is IERC7540, SyncVault {
