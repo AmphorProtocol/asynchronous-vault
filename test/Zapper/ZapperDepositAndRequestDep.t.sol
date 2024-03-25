@@ -115,7 +115,7 @@ contract VaultZapperRequestDeposit is OffChainCalls {
         uint256 beforeDep = vault.pendingDepositRequest(address(this));
         uint256 beforeDepShares = vault.balanceOf(address(this));
         if (keccak256(swapData) == keccak256(hex"")) vm.expectRevert();
-        zapper.zapAndClaimAndRequestDeposit(
+        zapper.zapAndRequestDeposit(
             params.tokenIn, vault, params.router, params.amount, "", swapData
         );
         uint256 afterDep = vault.pendingDepositRequest(address(this));
@@ -166,7 +166,7 @@ contract VaultZapperRequestDeposit is OffChainCalls {
         bytes memory swapData =
             _getSwapData(address(zapper), address(zapper), params);
         vm.prank(user);
-        zapper.zapAndClaimAndRequestDepositWithPermit(
+        zapper.zapAndRequestDepositWithPermit(
             params.tokenIn,
             _vault,
             params.router,

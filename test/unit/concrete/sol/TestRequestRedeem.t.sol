@@ -48,28 +48,6 @@ contract TestRequestRedeem is TestBase {
         usersDealApprove(vaultTested, 1);
     }
 
-    function test_GivenReceiverHasClaimableBalanceWhenRequestRedeem()
-        external
-    {
-        // it should revert with maxDepositRequest
-        usersDealApproveAndDeposit(vaultTested, 1);
-
-        assertClose(vaultTested);
-        vm.prank(user1.addr);
-        vaultTested.requestRedeem(10, user1.addr, user1.addr, "");
-        assertOpen(vaultTested, 0);
-        assertClose(vaultTested);
-        usersDealApprove(vaultTested, 1);
-        vm.startPrank(user1.addr);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                AsyncVault.MustClaimFirst.selector, user1.addr
-            )
-        );
-        vaultTested.requestRedeem(5, user1.addr, user1.addr, "");
-    }
-
     function test_WhenRequestRedeemSucceed() external {
         usersDealApproveAndDeposit(vaultTested, 1);
         assertClose(vaultTested);
