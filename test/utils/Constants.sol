@@ -69,6 +69,11 @@ abstract contract Constants is Test {
     // Zapper
     //AsyncVaultZapper immutable zapper = new AsyncVaultZapper(permit2);
 
+    // Bootsrap
+    uint256 bootstrapUSDC = vm.envUint("BOOTSTRAP_AMOUNT_SYNTHETIC_USDC");
+    uint256 bootstrapWETH = vm.envUint("BOOTSTRAP_AMOUNT_SYNTHETIC_WETH");
+    uint256 bootstrapWBTC = vm.envUint("BOOTSTRAP_AMOUNT_SYNTHETIC_WBTC");
+
     // Users
     VmSafe.Wallet user1 = vm.createWallet("user1");
     VmSafe.Wallet user2 = vm.createWallet("user2");
@@ -133,13 +138,13 @@ abstract contract Constants is Test {
     
         if (proxy) {
             vaultUSDC = _proxyDeploy(
-                beacon, amphorLabs, USDC, vaultNameUSDC, vaultSymbolUSDC
+                beacon, amphorLabs, USDC, bootstrapUSDC, vaultNameUSDC, vaultSymbolUSDC
             );
         } else {
             vm.startPrank(amphorLabs);
             vaultUSDC = new AsyncVault();
             vaultUSDC.initialize(
-                fees, amphorLabs, USDC, vaultNameUSDC, vaultSymbolUSDC
+                fees, amphorLabs, USDC, bootstrapUSDC, vaultNameUSDC, vaultSymbolUSDC
             );
             vm.stopPrank();
         }
@@ -149,13 +154,13 @@ abstract contract Constants is Test {
 
         if (proxy) {
             vaultWSTETH = _proxyDeploy(
-                        beacon, amphorLabs, WSTETH, vaultNameWSTETH, vaultSymbolWSTETH
+                        beacon, amphorLabs, WSTETH, bootstrapWETH, vaultNameWSTETH, vaultSymbolWSTETH
             );
         } else {
             vm.startPrank(amphorLabs);
             vaultWSTETH = new AsyncVault();
             vaultWSTETH.initialize(
-                fees, amphorLabs, WSTETH, vaultNameWSTETH, vaultSymbolWSTETH
+                fees, amphorLabs, WSTETH, bootstrapWETH, vaultNameWSTETH, vaultSymbolWSTETH
             );
             vm.stopPrank();
         }
@@ -169,13 +174,13 @@ abstract contract Constants is Test {
 
         if (proxy) {
             vaultWBTC = _proxyDeploy(
-                beacon, amphorLabs, WBTC, vaultNameWBTC, vaultSymbolWBTC
+                beacon, amphorLabs, WBTC, bootstrapWBTC, vaultNameWBTC, vaultSymbolWBTC
             );
         } else {
             vm.startPrank(amphorLabs);
             vaultWBTC = new AsyncVault();
             vaultWBTC.initialize(
-                fees, amphorLabs, WBTC, vaultNameWBTC, vaultSymbolWBTC
+                fees, amphorLabs, WBTC, bootstrapWBTC, vaultNameWBTC, vaultSymbolWBTC
             );
             vm.stopPrank();
         }
@@ -211,6 +216,7 @@ abstract contract Constants is Test {
         UpgradeableBeacon beacon,
         address owner,
         ERC20 _underlying,
+        uint256 bootstrap,
         string memory vaultName,
         string memory vaultSymbol
     )
@@ -223,7 +229,7 @@ abstract contract Constants is Test {
                     address(beacon),
                     abi.encodeCall(
                         AsyncVault.initialize,
-                        (fees, owner, _underlying, vaultName, vaultSymbol)
+                        (fees, owner, _underlying, bootstrap, vaultName, vaultSymbol)
                     )
                 )
             )

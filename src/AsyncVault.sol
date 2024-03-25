@@ -10,7 +10,7 @@ import {
 import { ERC7540Receiver } from "./interfaces/ERC7540Receiver.sol";
 import { IERC20, SafeERC20, Math, PermitParams } from "./SyncVault.sol";
 
-import { SyncVault, BPS_DIVIDER } from "./SyncVault.sol";
+import { SyncVault } from "./SyncVault.sol";
 
 /**
  *         @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -50,6 +50,13 @@ import { SyncVault, BPS_DIVIDER } from "./SyncVault.sol";
  *                                888
  *                                888
  */
+
+
+/**
+ * @dev This constant is used to divide the fees by 10_000 to get the percentage
+ * of the fees.
+ */
+uint256 constant BPS_DIVIDER = 10_000;
 
 /*
  * ########
@@ -257,6 +264,12 @@ contract AsyncVault is IERC7540, SyncVault {
      * on behalf of someone else.
      */
     error ERC7540CantRequestDepositOnBehalfOf();
+    /**
+     * @notice This error is emitted when the user try to make a request
+     * when there is no claimable request available.
+     */
+    error NoClaimAvailable(address owner);
+
     /*
      * ##############################
      * # AMPHOR SYNTHETIC FUNCTIONS #
@@ -265,13 +278,14 @@ contract AsyncVault is IERC7540, SyncVault {
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() SyncVault() {
-        //_disableInitializers();
+        _disableInitializers();
     }
 
     function initialize(
         uint16 fees,
         address owner,
         IERC20 underlying,
+        uint256 bootstrapAmount,
         string memory name,
         string memory symbol
     )
@@ -280,7 +294,7 @@ contract AsyncVault is IERC7540, SyncVault {
         override
         initializer
     {
-        super.initialize(fees, owner, underlying, name, symbol);
+        super.initialize(fees, owner, underlying, bootstrapAmount, name, symbol);
         epochId = 1;
         pendingSilo = new Silo(underlying);
         claimableSilo = new Silo(underlying);
@@ -615,11 +629,10 @@ contract AsyncVault is IERC7540, SyncVault {
     )
         public
     {
-        address msgSender = _msgSender();
-        if (_asset.allowance(msgSender, address(this)) < assets) {
-            execPermit(msgSender, address(this), permitParams);
-        }
-        return requestDeposit(assets, receiver, msgSender, data);
+        address _msgSender = _msgSender();
+        if (_asset.allowance(_msgSender, address(this)) < assets)
+            execPermit(_msgSender, address(this), permitParams);
+        return requestDeposit(assets, receiver, _msgSender, data);
     }
 
     /**
@@ -830,9 +843,8 @@ contract AsyncVault is IERC7540, SyncVault {
         internal
     {
         epochs[epochId].depositRequestBalance[receiver] += assets;
-        if (lastDepositRequestId[receiver] != epochId) {
+        if (lastDepositRequestId[receiver] != epochId)
             lastDepositRequestId[receiver] = epochId;
-        }
 
         if (
             data.length > 0
@@ -862,7 +874,8 @@ contract AsyncVault is IERC7540, SyncVault {
         internal
     {
         epochs[epochId].redeemRequestBalance[receiver] += shares;
-        lastRedeemRequestId[owner] = epochId;
+        if (lastRedeemRequestId[receiver] != epochId)
+            lastRedeemRequestId[receiver] = epochId;
 
         if (
             data.length > 0
@@ -888,6 +901,7 @@ contract AsyncVault is IERC7540, SyncVault {
         returns (uint256 shares)
     {
         shares = previewClaimDeposit(owner);
+        if (shares == 0) revert NoClaimAvailable(owner);
 
         uint256 lastRequestId = lastDepositRequestId[owner];
         uint256 assets = epochs[lastRequestId].depositRequestBalance[owner];
@@ -912,11 +926,12 @@ contract AsyncVault is IERC7540, SyncVault {
         returns (uint256 assets)
     {
         assets = previewClaimRedeem(owner);
+        if (assets == 0) revert NoClaimAvailable(owner);
+
         uint256 lastRequestId = lastRedeemRequestId[owner];
         uint256 shares = epochs[lastRequestId].redeemRequestBalance[owner];
         epochs[lastRequestId].redeemRequestBalance[owner] = 0;
-        _asset.safeTransferFrom(address(claimableSilo), address(this), assets);
-        _asset.transfer(receiver, assets);
+        _asset.safeTransferFrom(address(claimableSilo), receiver, assets);
         emit ClaimRedeem(lastRequestId, owner, receiver, assets, shares);
     }
 
