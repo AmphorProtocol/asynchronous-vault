@@ -10,7 +10,7 @@ import {
 import { ERC7540Receiver } from "./interfaces/ERC7540Receiver.sol";
 import { IERC20, SafeERC20, Math, PermitParams } from "./SyncVault.sol";
 
-import { SyncVault, BPS_DIVIDER } from "./SyncVault.sol";
+import { SyncVault } from "./SyncVault.sol";
 
 /**
  *         @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -50,6 +50,13 @@ import { SyncVault, BPS_DIVIDER } from "./SyncVault.sol";
  *                                888
  *                                888
  */
+
+
+/**
+ * @dev This constant is used to divide the fees by 10_000 to get the percentage
+ * of the fees.
+ */
+uint256 constant BPS_DIVIDER = 10_000;
 
 /*
  * ########
@@ -267,13 +274,14 @@ contract AsyncVault is IERC7540, SyncVault {
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() SyncVault() {
-        //_disableInitializers();
+        _disableInitializers();
     }
 
     function initialize(
         uint16 fees,
         address owner,
         IERC20 underlying,
+        uint256 bootstrapAmount,
         string memory name,
         string memory symbol
     )
@@ -282,15 +290,12 @@ contract AsyncVault is IERC7540, SyncVault {
         override
         initializer
     {
-        super.initialize(fees, owner, underlying, name, symbol);
+        super.initialize(fees, owner, underlying, bootstrapAmount, name, symbol);
         epochId = 1;
         pendingSilo = new Silo(underlying);
         claimableSilo = new Silo(underlying);
     }
 
-    /*
-     
-    */
     /**
      * @dev This function is used to claim the pending deposit and request a new
      * one in one transaction.

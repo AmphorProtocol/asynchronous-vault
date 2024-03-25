@@ -77,7 +77,6 @@ struct PermitParams {
     bytes32 s;
 }
 
-uint256 constant BPS_DIVIDER = 10_000;
 uint16 constant MAX_FEES = 3000; // 30%
 
 abstract contract SyncVault is
@@ -148,13 +147,14 @@ abstract contract SyncVault is
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
-        //_disableInitializers();
+        _disableInitializers();
     }
 
     function initialize(
         uint16 fees,
         address owner,
         IERC20 underlying,
+        uint256 bootstrapAmount,
         string memory name,
         string memory symbol
     )
@@ -173,6 +173,7 @@ abstract contract SyncVault is
         __Ownable_init(owner);
         __ERC20Permit_init(name);
         __ERC20Pausable_init();
+        _mint(owner, bootstrapAmount); // mint the owner the bootstrap amount
     }
 
     /**
