@@ -209,7 +209,27 @@ contract VaultZapperRequestDeposit is OffChainCalls {
     function _setUpVaultAndZapper(IERC20 asset) public {
         _vault = new AsyncVault();
 
-        _vault.initialize(10, _amphorLabs, ERC20(address(asset)), "", "");
+        address usdc = vm.envAddress("USDC_MAINNET");
+        address weth = vm.envAddress("WETH_MAINNET");
+        address wbtc = vm.envAddress("WBTC_MAINNET");
+        uint256 _bootstrapAmount;
+        
+        if (address(asset) == usdc)
+            _bootstrapAmount = vm.envUint("BOOTSTRAP_AMOUNT_SYNTHETIC_USDC");
+        else if (address(asset) == weth)
+            _bootstrapAmount = vm.envUint("BOOTSTRAP_AMOUNT_SYNTHETIC_WETH");
+        else if (address(asset) == wbtc)
+            _bootstrapAmount = vm.envUint("BOOTSTRAP_AMOUNT_SYNTHETIC_WBTC");
+
+        _vault.initialize(
+            10,
+            _amphorLabs,
+            ERC20(address(asset)),
+            _bootstrapAmount,
+            "",
+            ""
+        );
+
         if (!zapper.authorizedRouters(_router)) {
             zapper.toggleRouterAuthorization(_router);
         }
