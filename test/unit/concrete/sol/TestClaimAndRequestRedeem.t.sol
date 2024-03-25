@@ -18,7 +18,7 @@ contract TestClaimAndRequestRedeem is TestBase {
         uint256 pendingRedeemBefore =
             vaultTested.pendingRedeemRequest(user1.addr);
         vm.prank(user1.addr);
-        vaultTested.claimAndRequestRedeem(10 ** 18, "");
+        vaultTested.requestRedeem(sharesBefore / 2, user1.addr, user1.addr, "");
 
         uint256 sharesAfter = vaultTested.balanceOf(user1.addr);
         uint256 assetsAfter = underlying.balanceOf(user1.addr);
@@ -46,7 +46,7 @@ contract TestClaimAndRequestRedeem is TestBase {
         uint256 pendingRedeemBefore =
             vaultTested.pendingRedeemRequest(user1.addr);
         vm.prank(user1.addr);
-        vaultTested.claimAndRequestRedeem(10 ** 18, "");
+        vaultTested.requestRedeem(sharesBefore / 2, user1.addr, user1.addr, "");
 
         uint256 sharesAfter = vaultTested.balanceOf(user1.addr);
         uint256 assetsAfter = underlying.balanceOf(user1.addr);
