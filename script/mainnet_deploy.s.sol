@@ -11,22 +11,33 @@ import { UpgradeableBeacon } from
 import { BeaconProxy } from
     "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
-contract GOERLI_DeployAmphorSynthetic is Script {
+contract MAINNET_DeployAmphorSynthetic is Script {
+
+    uint256 privateKey;
+    uint16 fees;
+    string vaultName;
+    string vaultSymbol;
+    address owner;
+    address underlying;
+    address permit2;
+    uint256 bootstrap;
+    uint256 nonce; // beacon deployment + approve
+    Options deploy;
+
     function run() external {
         // if you want to deploy a vault with a seed phrase instead of a pk,
         // uncomment the following line
-        uint256 privateKey = vm.envUint("PRIVATE_KEY");
-        uint16 fees = uint16(vm.envUint("INITIAL_FEES_AMOUNT"));
-        string memory vaultName = vm.envString("SYNTHETIC_USDC_V1_NAME");
-        string memory vaultSymbol = vm.envString("SYNTHETIC_USDC_V1_SYMBOL");
-        address owner = vm.envAddress("AMPHORLABS_ADDRESS");
-        address underlying = vm.envAddress("USDC_MAINNET");
-        address permit2 = vm.envAddress("PERMIT2");
-        uint256 bootstrap = vm.envUint("BOOTSTRAP_AMOUNT_SYNTHETIC_USDC");
+        privateKey = vm.envUint("PRIVATE_KEY");
+        fees = uint16(vm.envUint("INITIAL_FEES_AMOUNT"));
+        vaultName = vm.envString("SYNTHETIC_USDC_V1_NAME");
+        vaultSymbol = vm.envString("SYNTHETIC_USDC_V1_SYMBOL");
+        owner = vm.envAddress("AMPHORLABS_ADDRESS");
+        underlying = vm.envAddress("USDC_MAINNET");
+        permit2 = vm.envAddress("PERMIT2");
+        bootstrap = vm.envUint("BOOTSTRAP_AMOUNT_SYNTHETIC_USDC");
+
         vm.startBroadcast(privateKey);
 
-        Options memory deploy;
-        deploy.constructorData = abi.encode(permit2);
         UpgradeableBeacon beacon = UpgradeableBeacon(
             Upgrades.deployBeacon("AsyncVault.sol", owner, deploy)
         );
@@ -56,6 +67,8 @@ contract GOERLI_DeployAmphorSynthetic is Script {
         console.log(
             "Synthetic vault USDC implementation address: ", implementation
         );
+
+        IERC20(underlying).transfer(address(proxy), bootstrap);
 
         vm.stopBroadcast();
 

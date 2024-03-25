@@ -273,8 +273,9 @@ abstract contract SyncVault is
         external
         returns (uint256)
     {
-        if (_asset.allowance(msg.sender, address(this)) < assets) {
-            execPermit(_msgSender(), address(this), permitParams);
+        address _msgSender = _msgSender();
+        if (_asset.allowance(_msgSender, address(this)) < assets) {
+            execPermit(_msgSender, address(this), permitParams);
         }
         return deposit(assets, receiver);
     }
@@ -346,7 +347,6 @@ abstract contract SyncVault is
      * @return Amount of underlying assets received in exchange of the specified
      * amount of shares.
      */
-    // tree done
     function redeem(
         uint256 shares,
         address receiver,
