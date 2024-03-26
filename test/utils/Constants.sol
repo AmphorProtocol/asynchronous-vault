@@ -146,6 +146,8 @@ abstract contract Constants is Test {
             vaultUSDC.initialize(
                 fees, amphorLabs, USDC, bootstrapUSDC, vaultNameUSDC, vaultSymbolUSDC
             );
+            uint256 bootstrapAmount = vm.envUint("BOOTSTRAP_AMOUNT_SYNTHETIC_USDC");
+            _dealAsset(address(USDC), address(vaultUSDC), bootstrapAmount);
             vm.stopPrank();
         }
         vm.label(address(vaultUSDC), "vaultUSDC");
@@ -162,6 +164,8 @@ abstract contract Constants is Test {
             vaultWSTETH.initialize(
                 fees, amphorLabs, WSTETH, bootstrapWETH, vaultNameWSTETH, vaultSymbolWSTETH
             );
+            uint256 bootstrapAmount = vm.envUint("BOOTSTRAP_AMOUNT_SYNTHETIC_WETH");
+            deal(address(WSTETH), address(vaultWSTETH), bootstrapAmount);
             vm.stopPrank();
         }
         
@@ -182,6 +186,8 @@ abstract contract Constants is Test {
             vaultWBTC.initialize(
                 fees, amphorLabs, WBTC, bootstrapWBTC, vaultNameWBTC, vaultSymbolWBTC
             );
+            uint256 bootstrapAmount = vm.envUint("BOOTSTRAP_AMOUNT_SYNTHETIC_WBTC");
+            deal(address(WBTC), address(vaultWBTC), bootstrapAmount);
             vm.stopPrank();
         }
         vm.label(address(vaultWBTC), "vaultWBTC");
@@ -235,6 +241,24 @@ abstract contract Constants is Test {
             )
         );
 
+        vm.startPrank(amphorLabs);
+        if (address(_underlying) == address(USDC))
+            _dealAsset(address(USDC), amphorLabs, bootstrap);
+        else
+            deal(address(_underlying), amphorLabs, bootstrap);
+        _underlying.transfer(address(proxy), bootstrap);
+        vm.stopPrank();
+
         return AsyncVault(address(proxy));
+    }
+
+    function _dealAsset(address asset, address owner, uint256 amount) public  {
+        if (asset == address(USDC)) {
+            vm.startPrank(USDC_WHALE);
+            USDC.transfer(owner, amount);
+            vm.stopPrank();
+        } else {
+            deal(asset, owner, amount);
+        }
     }
 }

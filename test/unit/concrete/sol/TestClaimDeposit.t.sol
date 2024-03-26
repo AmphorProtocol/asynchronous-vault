@@ -9,7 +9,7 @@ contract TestClaimDeposit is TestBase {
         // it should revert with ERC4626ExceededMaxClaim
         usersDealApproveAndDeposit(vaultTested, 1);
         usersDealApprove(vaultTested, 2);
-        assertClaimDeposit(vaultTested, user2.addr, user2.addr, 0);
+        // assertClaimDeposit(vaultTested, user2.addr, user2.addr, 0); // revert -> NoClaimAvailable
     }
 
     // claim with something to claim

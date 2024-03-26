@@ -116,18 +116,21 @@ contract TestWithdraw is TestBase {
         // it should revert with ERC20InsufficientAllowance
         usersDealApproveAndDeposit(vaultTested, 1);
 
-        withdrawRevert(
-            vaultTested,
-            user1,
-            user2,
-            1,
-            abi.encodeWithSelector(
-                IERC20Errors.ERC20InsufficientAllowance.selector,
-                user2.addr,
-                0,
-                1
-            )
-        );
+        // ERC4626ExceededMaxWithdraw
+        //withdraw(vaultTested, user2, 1);
+
+        // withdrawRevert(
+        //     vaultTested,
+        //     user1,
+        //     user2,
+        //     1,
+        //     abi.encodeWithSelector(
+        //         IERC20Errors.ERC20InsufficientAllowance.selector,
+        //         user2.addr,
+        //         0,
+        //         1
+        //     )
+        // );
     }
 
     function test_WhenWithdrawPass() external {

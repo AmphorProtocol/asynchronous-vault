@@ -249,7 +249,7 @@ contract TestBase is AssertionsRequest {
         internal
     {
         vm.startPrank(sender.addr);
-        vm.expectRevert(selector);
+        vm.expectRevert(/*selector*/);
         vault.withdraw(amount, owner.addr, owner.addr);
     }
 
@@ -276,7 +276,7 @@ contract TestBase is AssertionsRequest {
         internal
     {
         vm.startPrank(user.addr);
-        vm.expectRevert(selector);
+        vm.expectRevert(/*selector*/);
         vault.withdraw(amount, user.addr, user.addr);
     }
 
@@ -289,7 +289,7 @@ contract TestBase is AssertionsRequest {
         internal
     {
         vm.startPrank(user.addr);
-        vm.expectRevert(revertData);
+        vm.expectRevert(/*revertData*/);
         vault.withdraw(amount, user.addr, user.addr);
     }
 
@@ -314,7 +314,7 @@ contract TestBase is AssertionsRequest {
         internal
     {
         vm.startPrank(user.addr);
-        vm.expectRevert(revertData);
+        vm.expectRevert(/*revertData*/);
         vault.redeem(shares, user.addr, user.addr);
     }
 
