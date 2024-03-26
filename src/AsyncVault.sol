@@ -278,7 +278,7 @@ contract AsyncVault is IERC7540, SyncVault {
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() SyncVault() {
-        _disableInitializers();
+        // _disableInitializers();
     }
 
     function initialize(
@@ -782,8 +782,8 @@ contract AsyncVault is IERC7540, SyncVault {
             totalSupply + 1, _lastSavedBalance + 1, Math.Rounding.Floor
         );
 
-        uint256 totalAssetsSnapshotForDeposit = _lastSavedBalance + 1;
-        uint256 totalSupplySnapshotForDeposit = totalSupply + 1;
+        uint256 totalAssetsSnapshotForDeposit = _lastSavedBalance;
+        uint256 totalSupplySnapshotForDeposit = totalSupply;
 
         uint256 assetsToWithdraw = pendingRedeem.mulDiv(
             _lastSavedBalance + pendingDeposit + 1,
@@ -792,8 +792,8 @@ contract AsyncVault is IERC7540, SyncVault {
         );
 
         uint256 totalAssetsSnapshotForRedeem =
-            _lastSavedBalance + pendingDeposit + 1;
-        uint256 totalSupplySnapshotForRedeem = totalSupply + sharesToMint + 1;
+            _lastSavedBalance + pendingDeposit;
+        uint256 totalSupplySnapshotForRedeem = totalSupply + sharesToMint;
 
         settleValues = SettleValues({
             lastSavedBalance: _lastSavedBalance + fees,
@@ -900,10 +900,11 @@ contract AsyncVault is IERC7540, SyncVault {
         internal
         returns (uint256 shares)
     {
-        shares = previewClaimDeposit(owner);
-        if (shares == 0) revert NoClaimAvailable(owner);
-
         uint256 lastRequestId = lastDepositRequestId[owner];
+        if (lastRequestId == epochId) revert NoClaimAvailable(owner);
+
+        shares = previewClaimDeposit(owner);
+
         uint256 assets = epochs[lastRequestId].depositRequestBalance[owner];
         epochs[lastRequestId].depositRequestBalance[owner] = 0;
         _update(address(claimableSilo), receiver, shares);
@@ -925,10 +926,11 @@ contract AsyncVault is IERC7540, SyncVault {
         whenNotPaused
         returns (uint256 assets)
     {
-        assets = previewClaimRedeem(owner);
-        if (assets == 0) revert NoClaimAvailable(owner);
-
         uint256 lastRequestId = lastRedeemRequestId[owner];
+        if (lastRequestId == epochId) revert NoClaimAvailable(owner);
+
+        assets = previewClaimRedeem(owner);
+
         uint256 shares = epochs[lastRequestId].redeemRequestBalance[owner];
         epochs[lastRequestId].redeemRequestBalance[owner] = 0;
         _asset.safeTransferFrom(address(claimableSilo), receiver, assets);
@@ -1062,13 +1064,11 @@ contract AsyncVault is IERC7540, SyncVault {
         view
         returns (uint256)
     {
-        if (isCurrentEpoch(requestId)) {
-            return 0;
-        }
-        uint256 totalAssets =
-            epochs[requestId].totalAssetsSnapshotForDeposit + 1;
-        uint256 totalSupply =
-            epochs[requestId].totalSupplySnapshotForDeposit + 1;
+        uint256 totalAssets = epochs[requestId].totalAssetsSnapshotForDeposit + 1;
+
+        if (isCurrentEpoch(requestId)) return 0;
+
+        uint256 totalSupply = epochs[requestId].totalSupplySnapshotForDeposit + 1;
 
         return assets.mulDiv(totalSupply, totalAssets, rounding);
     }
@@ -1089,11 +1089,11 @@ contract AsyncVault is IERC7540, SyncVault {
         view
         returns (uint256)
     {
-        if (isCurrentEpoch(requestId)) {
-            return 0;
-        }
-        uint256 totalAssets = epochs[requestId].totalAssetsSnapshotForRedeem + 1;
         uint256 totalSupply = epochs[requestId].totalSupplySnapshotForRedeem + 1;
+
+        if (isCurrentEpoch(requestId)) return 0;
+
+        uint256 totalAssets = epochs[requestId].totalAssetsSnapshotForRedeem + 1;
 
         return shares.mulDiv(totalAssets, totalSupply, rounding);
     }
