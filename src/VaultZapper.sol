@@ -40,9 +40,10 @@ contract VaultZapper is Ownable2Step, Pausable {
     mapping(address routerAddress => bool isAuthorized) public authorizedRouters;
 
     /**
-     * @dev The `ZapAndDeposit` event is emitted when a user zaps in and deposits
+     * @dev The `ZapAndDeposit` event is emitted when a user zaps in and
+     * deposits
      * assets into a vault.
-    */
+     */
     event ZapAndRequestDeposit(
         IERC7540 indexed vault,
         address indexed router,
@@ -51,9 +52,10 @@ contract VaultZapper is Ownable2Step, Pausable {
     );
 
     /**
-     * @dev The `ZapAndDeposit` event is emitted when a user zaps in and deposits
+     * @dev The `ZapAndDeposit` event is emitted when a user zaps in and
+     * deposits
      * assets into a vault.
-    */
+     */
     event ZapAndDeposit(
         IERC4626 indexed vault,
         address indexed router,
@@ -65,7 +67,7 @@ contract VaultZapper is Ownable2Step, Pausable {
     /**
      * @dev The `ClaimRedeemAndZap` event is emitted when a user claims, redeems
      * and zaps assets into a vault.
-    */
+     */
     event ClaimRedeemAndZap(
         IERC7540 indexed vault,
         address indexed router,
@@ -76,63 +78,65 @@ contract VaultZapper is Ownable2Step, Pausable {
     /**
      * @dev The `RouterApproved` event is emitted when a router is approved to
      * interact with a token.
-    */
+     */
     event RouterApproved(address indexed router, IERC20 indexed token);
     /**
      * @dev The `RouterAuthorized` event is emitted when a router is authorized
      * to interact with the `VaultZapper` contract.
-    */
+     */
     event RouterAuthorized(address indexed router, bool allowed);
     /**
      * @dev The `VaultAuthorized` event is emitted when a vault is authorized to
      * interact with the `VaultZapper` contract.
-    */
+     */
     event VaultAuthorized(IERC4626 indexed vault, bool allowed);
 
     /**
      * @dev The `NotRouter` error is emitted when a router is not authorized to
      * interact with the `VaultZapper` contract.
-    */
+     */
     error NotRouter(address router);
     /**
      * @dev The `NotVault` error is emitted when a vault is not authorized to
      * interact with the `VaultZapper` contract.
-    */
+     */
     error NotVault(IERC4626 vault);
     /**
      * @dev The `SwapFailed` error is emitted when a swap fails.
-    */
+     */
     error SwapFailed(string reason);
     /**
      * @dev The `InconsistantSwapData` error is emitted when the swap data is
      * inconsistant.
-    */
+     */
     error InconsistantSwapData(
         uint256 expectedTokenInBalance, uint256 actualTokenInBalance
     );
     /**
-     * @dev The `NotEnoughSharesMinted` error is emitted when the amount of shares
+     * @dev The `NotEnoughSharesMinted` error is emitted when the amount of
+     * shares
      * minted is not enough.
-    */
+     */
     error NotEnoughSharesMinted(uint256 sharesMinted, uint256 minSharesMinted);
     /**
      * @dev The `NotEnoughUnderlying` error is emitted when the amount of
      * underlying assets is not enough.
-    */
+     */
     error NotEnoughUnderlying(
         uint256 previewedUnderlying, uint256 withdrawedUnderlying
     );
 
     /**
-     * @dev The `NullMinShares` error is emitted when the minimum amount of shares
+     * @dev The `NullMinShares` error is emitted when the minimum amount of
+     * shares
      * to mint is null.
-    */
+     */
     error NullMinShares();
 
     /**
      * @dev The `onlyAllowedRouter` modifier is used to check if a router is
      * authorized to interact with the `VaultZapper` contract.
-    */
+     */
     modifier onlyAllowedRouter(address router) {
         if (!authorizedRouters[router]) revert NotRouter(router);
         _;
@@ -141,7 +145,7 @@ contract VaultZapper is Ownable2Step, Pausable {
     /**
      * @dev The `onlyAllowedVault` modifier is used to check if a vault is
      * authorized to interact with the `VaultZapper` contract.
-    */
+     */
     modifier onlyAllowedVault(IERC4626 vault) {
         if (!authorizedVaults[vault]) revert NotVault(vault);
         _;
@@ -151,8 +155,8 @@ contract VaultZapper is Ownable2Step, Pausable {
 
     /**
      * @dev The `withdrawToken` function is used to withdraw tokens from the
-     *`VaultZapper` contract.
-    */
+     * `VaultZapper` contract.
+     */
     function withdrawToken(IERC20 token) external onlyOwner {
         token.safeTransfer(_msgSender(), token.balanceOf(address(this)));
     }
@@ -160,29 +164,31 @@ contract VaultZapper is Ownable2Step, Pausable {
     /**
      * @dev The `withdrawNativeToken` function is used to withdraw native tokens
      * from the `VaultZapper` contract.
-    */
+     */
     function withdrawNativeToken() external onlyOwner {
         payable(_msgSender()).sendValue(address(this).balance);
     }
 
     /**
      * @dev The `pause` function is used to pause the `VaultZapper` contract.
-    */
+     */
     function pause() external onlyOwner {
         _pause();
     }
 
     /**
-     * @dev The `unpause` function is used to unpause the `VaultZapper` contract.
-    */
+     * @dev The `unpause` function is used to unpause the `VaultZapper`
+     * contract.
+     */
     function unpause() external onlyOwner {
         _unpause();
     }
 
     /**
-     * @dev The `approveTokenForRouter` function is used to approve a token for a
+     * @dev The `approveTokenForRouter` function is used to approve a token for
+     * a
      * router.
-    */
+     */
     function approveTokenForRouter(
         IERC20 token,
         address router
@@ -198,7 +204,7 @@ contract VaultZapper is Ownable2Step, Pausable {
     /**
      * @dev The `toggleRouterAuthorization` function is used to toggle the
      * authorization of a router.
-    */
+     */
     function toggleRouterAuthorization(address router) public onlyOwner {
         bool authorized = !authorizedRouters[router];
         authorizedRouters[router] = authorized;
@@ -208,7 +214,7 @@ contract VaultZapper is Ownable2Step, Pausable {
     /**
      * @dev The `toggleVaultAuthorization` function is used to toggle the
      * authorization of a vault.
-    */
+     */
     function toggleVaultAuthorization(IERC7540 vault) public onlyOwner {
         bool authorized = !authorizedVaults[vault];
         IERC20(vault.asset()).forceApprove(
@@ -220,7 +226,7 @@ contract VaultZapper is Ownable2Step, Pausable {
 
     /**
      * @dev The `_zapIn` function is used to zap in assets into a vault.
-    */
+     */
     function _zapIn(
         IERC20 tokenIn,
         address router,
@@ -257,7 +263,7 @@ contract VaultZapper is Ownable2Step, Pausable {
     /**
      * @dev The `_transferTokenInAndApprove` function is used to transfer tokens
      * into the `VaultZapper` contract and approve them for a router.
-    */
+     */
     function _transferTokenInAndApprove(
         address router,
         IERC20 tokenIn,
@@ -266,7 +272,7 @@ contract VaultZapper is Ownable2Step, Pausable {
         internal
     {
         tokenIn.safeTransferFrom(_msgSender(), address(this), amount);
-        if (tokenIn.allowance(_msgSender(), router) < amount) {
+        if (tokenIn.allowance(address(this), router) < amount) {
             tokenIn.forceApprove(router, amount);
         }
     }
@@ -280,7 +286,7 @@ contract VaultZapper is Ownable2Step, Pausable {
     /**
      * @dev The `zapAndDeposit` function is used to zap in and deposit assets
      * into a vault.
-    */
+     */
     function zapAndDeposit(
         IERC20 tokenIn,
         IERC4626 vault,
@@ -323,7 +329,7 @@ contract VaultZapper is Ownable2Step, Pausable {
     /**
      * @dev The `zapAndRequestDeposit` function is used to zap in and request a
      * deposit of assets into a vault.
-    */
+     */
     function zapAndRequestDeposit(
         IERC20 tokenIn,
         IERC7540 vault,
@@ -362,47 +368,6 @@ contract VaultZapper is Ownable2Step, Pausable {
         });
     }
 
-    /**
-     * @dev The `zapAndClaimAndRequestDeposit` function is used to zap in, claim
-     * and request a deposit of assets into a vault.
-    */
-    function zapAndClaimAndRequestDeposit(
-        IERC20 tokenIn,
-        AsyncVault vault,
-        address router,
-        uint256 amountIn,
-        bytes calldata data,
-        bytes calldata swapData
-    )
-        public
-        payable
-        onlyAllowedRouter(router)
-        onlyAllowedVault(vault)
-        whenNotPaused
-    {
-        uint256 initialTokenOutBalance =
-            IERC20(vault.asset()).balanceOf(address(this)); // tokenOut balance to
-            // deposit, not final value
-
-        // Zap
-        _zapIn(tokenIn, router, amountIn, swapData);
-
-        // Claim for the user and request deposit
-        vault.claimAndRequestDeposit(
-            IERC20(vault.asset()).balanceOf(address(this))
-                - initialTokenOutBalance,
-            _msgSender(),
-            data
-        );
-
-        emit ZapAndRequestDeposit({
-            vault: vault,
-            router: router,
-            tokenIn: tokenIn,
-            amount: amountIn
-        });
-    }
-
     /*
      ##########################
       PERMIT RELATED FUNCTIONS
@@ -412,7 +377,7 @@ contract VaultZapper is Ownable2Step, Pausable {
     /**
      * @dev The `zapAndDepositWithPermit` function is used to zap in and deposit
      * assets into a vault with a permit.
-    */
+     */
     function zapAndDepositWithPermit(
         IERC20 tokenIn,
         IERC4626 vault,
@@ -433,7 +398,7 @@ contract VaultZapper is Ownable2Step, Pausable {
     /**
      * @dev The `zapAndRequestDepositWithPermit` function is used to zap in and
      * request a deposit of assets into a vault with a permit.
-    */
+     */
     function zapAndRequestDepositWithPermit(
         IERC20 tokenIn,
         IERC7540 vault,
@@ -452,31 +417,8 @@ contract VaultZapper is Ownable2Step, Pausable {
     }
 
     /**
-     * @dev The `zapAndClaimAndRequestDepositWithPermit` function is used to zap
-     * in, claim and request a deposit of assets into a vault with a permit.
-    */
-    function zapAndClaimAndRequestDepositWithPermit(
-        IERC20 tokenIn,
-        AsyncVault vault,
-        address router,
-        uint256 amount,
-        bytes calldata data,
-        bytes calldata swapData,
-        PermitParams calldata permitParams
-    )
-        public
-    {
-        if (tokenIn.allowance(_msgSender(), address(this)) < amount) {
-            _executePermit(tokenIn, _msgSender(), address(this), permitParams);
-        }
-        zapAndClaimAndRequestDeposit(
-            tokenIn, vault, router, amount, data, swapData
-        );
-    }
-
-    /**
      * @dev The `_executeZap` function is used to execute a zap.
-    */
+     */
     function _executeZap(
         address target,
         bytes memory data
@@ -495,7 +437,7 @@ contract VaultZapper is Ownable2Step, Pausable {
 
     /**
      * @dev The `_executePermit` function is used to execute a permit.
-    */
+     */
     function _executePermit(
         IERC20 token,
         address owner,

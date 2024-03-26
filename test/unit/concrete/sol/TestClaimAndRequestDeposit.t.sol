@@ -18,7 +18,7 @@ contract TestClaimAndRequestDeposit is TestBase {
         uint256 pendingDepositBefore =
             vaultTested.pendingDepositRequest(user1.addr);
         vm.prank(user1.addr);
-        vaultTested.claimAndRequestDeposit(10 ** 18, user1.addr, "");
+        vaultTested.requestDeposit(10 ** 18, user1.addr, user1.addr, "");
 
         uint256 sharesAfter = vaultTested.balanceOf(user1.addr);
         uint256 pendingDepositAfter =
@@ -41,7 +41,7 @@ contract TestClaimAndRequestDeposit is TestBase {
         uint256 pendingDepositBefore =
             vaultTested.pendingDepositRequest(user1.addr);
         vm.prank(user1.addr);
-        vaultTested.claimAndRequestDeposit(10 ** 18, user1.addr, "");
+        vaultTested.requestDeposit(10 ** 18, user1.addr, user1.addr, "");
 
         uint256 sharesAfter = vaultTested.balanceOf(user1.addr);
         uint256 assetsAfter = underlying.balanceOf(user1.addr);

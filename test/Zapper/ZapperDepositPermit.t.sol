@@ -139,7 +139,27 @@ contract SyntheticZapperPermitTest is OffChainCalls {
     function _setUpVaultAndZapper(IERC20 tokenOut) public {
         _vault = new AsyncVault();
 
-        _vault.initialize(10, _amphorLabs, ERC20(address(tokenOut)), "", "");
+        address usdc = vm.envAddress("USDC_MAINNET");
+        address weth = vm.envAddress("WETH_MAINNET");
+        address wbtc = vm.envAddress("WBTC_MAINNET");
+        uint256 _bootstrapAmount;
+        
+        if (address(tokenOut) == usdc)
+            _bootstrapAmount = vm.envUint("BOOTSTRAP_AMOUNT_SYNTHETIC_USDC");
+        else if (address(tokenOut) == weth)
+            _bootstrapAmount = vm.envUint("BOOTSTRAP_AMOUNT_SYNTHETIC_WETH");
+        else if (address(tokenOut) == wbtc)
+            _bootstrapAmount = vm.envUint("BOOTSTRAP_AMOUNT_SYNTHETIC_WBTC");
+
+        _vault.initialize(
+            10,
+            _amphorLabs,
+            ERC20(address(tokenOut)),
+            _bootstrapAmount,
+            "",
+            ""
+        );
+
         if (!zapper.authorizedRouters(_router)) {
             zapper.toggleRouterAuthorization(_router);
         }

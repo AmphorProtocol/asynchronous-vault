@@ -23,6 +23,7 @@ contract GOERLI_DeployAmphorSynthetic is Script {
         string memory vaultSymbol = vm.envString("SYNTHETIC_USDC_V1_SYMBOL");
         address underlying = vm.envAddress("USDC_MAINNET");
         address permit2 = vm.envAddress("PERMIT2");
+        uint256 bootstrap = vm.envUint("BOOTSTRAP_AMOUNT_SYNTHETIC_USDC");
         vm.startBroadcast(privateKey);
 
         Options memory deploy;
@@ -41,6 +42,7 @@ contract GOERLI_DeployAmphorSynthetic is Script {
                             fees,
                             owner,
                             IERC20(underlying),
+                            bootstrap,
                             vaultName,
                             vaultSymbol
                         )

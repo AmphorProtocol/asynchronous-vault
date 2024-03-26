@@ -916,16 +916,6 @@ abstract contract Assertions is EventsAssertions {
         vault.settle(assetReturned);
     }
 
-    function _dealAsset(address asset, address owner, uint256 amount) public {
-        if (asset == address(USDC)) {
-            vm.startPrank(USDC_WHALE);
-            USDC.transfer(owner, amount);
-            vm.stopPrank();
-        } else {
-            deal(asset, owner, amount);
-        }
-    }
-
     // it should verify totalAssets == totalsAssetsBefore - assetsToRedeem +
     // pendingDeposit
     // it should verify totalSupply == totalSupplyBefore +

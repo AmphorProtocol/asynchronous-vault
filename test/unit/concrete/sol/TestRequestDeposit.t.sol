@@ -40,33 +40,9 @@ contract TestRequestDeposit is TestBase {
         vm.stopPrank();
         assertClose(vaultTested);
         vm.startPrank(user1.addr);
-        vm.expectRevert(
-            AsyncVault.ERC7540CantRequestDepositOnBehalfOf.selector
-        );
+        vm.expectRevert(AsyncVault.ERC7540CantRequestDepositOnBehalfOf.selector);
         vaultTested.requestDeposit(1, user1.addr, user2.addr, "");
         vm.stopPrank();
-    }
-
-    function test_GivenReceiverHasClaimableBalanceWhenRequestDeposit()
-        external
-    {
-        // it should revert with maxDepositRequest
-        usersDealApproveAndDeposit(vaultTested, 1);
-
-        assertClose(vaultTested);
-        vm.prank(user1.addr);
-        vaultTested.requestDeposit(1, user1.addr, user1.addr, "");
-        assertOpen(vaultTested, 0);
-        assertClose(vaultTested);
-        usersDealApprove(vaultTested, 1);
-        vm.startPrank(user1.addr);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                AsyncVault.MustClaimFirst.selector, user1.addr
-            )
-        );
-        vaultTested.requestDeposit(1, user1.addr, user1.addr, "");
     }
 
     function test_WhenRequestDepositSucceed() external {
