@@ -175,7 +175,7 @@ abstract contract SyncVault is
         __Ownable_init(owner);
         __ERC20Permit_init(name);
         __ERC20Pausable_init();
-        _mint(owner, bootstrapAmount); // mint the owner the bootstrap amount
+        deposit(bootstrapAmount, owner);
     }
 
     /**
