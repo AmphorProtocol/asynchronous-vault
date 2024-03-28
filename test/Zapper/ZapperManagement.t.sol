@@ -121,19 +121,21 @@ abstract contract VaultZapperManagement is OffChainCalls {
         address weth = vm.envAddress("WETH_MAINNET");
         address wbtc = vm.envAddress("WBTC_MAINNET");
         uint256 _bootstrapAmount;
-        
-        if (address(tokenOut) == usdc)
+
+        if (address(tokenOut) == usdc) {
             _bootstrapAmount = vm.envUint("BOOTSTRAP_AMOUNT_SYNTHETIC_USDC");
-        else if (address(tokenOut) == weth)
+        } else if (address(tokenOut) == weth) {
             _bootstrapAmount = vm.envUint("BOOTSTRAP_AMOUNT_SYNTHETIC_WETH");
-        else if (address(tokenOut) == wbtc)
+        } else if (address(tokenOut) == wbtc) {
             _bootstrapAmount = vm.envUint("BOOTSTRAP_AMOUNT_SYNTHETIC_WBTC");
-        
+        }
+
         _vault.initialize(
             10,
             _amphorLabs,
+            _amphorLabs,
             ERC20(address(tokenOut)),
-            _bootstrapAmount, 
+            _bootstrapAmount,
             "",
             ""
         );

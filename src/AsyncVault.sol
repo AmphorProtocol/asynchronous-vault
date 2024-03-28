@@ -369,7 +369,8 @@ contract AsyncVault is IERC7540, SyncVault {
 
     /**
      * @dev The `setTreasury` function is used to set the treasury address.
-     * It can only be called by the owner of the contract (`onlyOwner` modifier).
+     * It can only be called by the owner of the contract (`onlyOwner`
+     * modifier).
      * @param _treasury The address of the treasury.
      */
     function setTreasury(address _treasury) public onlyOwner {
