@@ -125,6 +125,15 @@ contract AsyncVault is IERC7540, SyncVault {
      */
     uint256 public epochId;
     /**
+     * @notice The treasury is used to store the address of the treasury.
+     * The treasury is used to store the fees taken from the vault.
+     * The treasury can be the owner of the contract or a specific address.
+     * The treasury can be changed by the owner of the contract.
+     * The treasury can be used to store the fees taken from the vault.
+     * The treasury can be the owner of the contract or a specific address.
+     */
+    address public treasury;
+    /**
      * @notice The lastSavedBalance is used to keep track of the assets in the
      * vault at the time of the last `settle` call.
      */
@@ -268,6 +277,11 @@ contract AsyncVault is IERC7540, SyncVault {
      * when there is no claimable request available.
      */
     error NoClaimAvailable(address owner);
+    /**
+     * @notice This error is emitted when the user try to make a request
+     * when the vault is open.
+     */
+    error InvalidTreasury();
 
     /*
      * ##############################
@@ -283,18 +297,18 @@ contract AsyncVault is IERC7540, SyncVault {
     function initialize(
         uint16 fees,
         address owner,
+        address _treasury,
         IERC20 underlying,
         uint256 bootstrapAmount,
         string memory name,
         string memory symbol
     )
         public
-        virtual
-        override
         initializer
     {
         super.initialize(fees, owner, underlying, bootstrapAmount, name, symbol);
         epochId = 1;
+        setTreasury(_treasury);
         pendingSilo = new Silo(underlying);
         claimableSilo = new Silo(underlying);
     }
@@ -352,6 +366,16 @@ contract AsyncVault is IERC7540, SyncVault {
      * # AMPHOR SYNTHETIC RELATED FUNCTIONS #
      * ######################################
     */
+
+    /**
+     * @dev The `setTreasury` function is used to set the treasury address.
+     * It can only be called by the owner of the contract (`onlyOwner` modifier).
+     * @param _treasury The address of the treasury.
+     */
+    function setTreasury(address _treasury) public onlyOwner {
+        if (_treasury == address(0)) revert InvalidTreasury();
+        treasury = _treasury;
+    }
 
     /**
      * @dev The `close` function is used to close the vault.
@@ -757,6 +781,8 @@ contract AsyncVault is IERC7540, SyncVault {
      * user will get if they claim their redeem request.
      * @return assetsToVault The amount of assets the user will get if
      * they claim their redeem request.
+     * @return expectedAssetFromOwner The amount of assets that will be taken
+     * from the owner.
      * @return settleValues The settle values.
      */
     function previewSettle(uint256 newSavedBalance)
@@ -765,6 +791,7 @@ contract AsyncVault is IERC7540, SyncVault {
         returns (
             uint256 assetsToOwner,
             uint256 assetsToVault,
+            uint256 expectedAssetFromOwner,
             SettleValues memory settleValues
         )
     {
@@ -817,6 +844,7 @@ contract AsyncVault is IERC7540, SyncVault {
         } else if (pendingDeposit < assetsToWithdraw) {
             assetsToVault = assetsToWithdraw - pendingDeposit;
         }
+        expectedAssetFromOwner = fees + assetsToVault;
     }
 
     /**
@@ -957,6 +985,7 @@ contract AsyncVault is IERC7540, SyncVault {
         (
             uint256 assetsToOwner,
             uint256 assetsToVault,
+            ,
             SettleValues memory settleValues
         ) = previewSettle(newSavedBalance);
 
@@ -967,6 +996,8 @@ contract AsyncVault is IERC7540, SyncVault {
             settleValues.fees,
             totalSupply()
         );
+
+        _asset.safeTransferFrom(owner(), treasury, settleValues.fees);
 
         // Settle the shares balance
         _burn(address(pendingSilo), settleValues.pendingRedeem);
