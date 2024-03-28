@@ -51,6 +51,7 @@ contract MAINNET_DeployAmphorSynthetic is Script {
                         (
                             fees,
                             owner,
+                            owner,
                             IERC20(underlying),
                             bootstrap,
                             vaultName,
