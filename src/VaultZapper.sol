@@ -65,17 +65,6 @@ contract VaultZapper is Ownable2Step, Pausable {
     );
 
     /**
-     * @dev The `ClaimRedeemAndZap` event is emitted when a user claims, redeems
-     * and zaps assets into a vault.
-     */
-    event ClaimRedeemAndZap(
-        IERC7540 indexed vault,
-        address indexed router,
-        uint256 shares,
-        uint256 assets
-    );
-
-    /**
      * @dev The `RouterApproved` event is emitted when a router is approved to
      * interact with a token.
      */
