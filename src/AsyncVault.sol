@@ -278,7 +278,7 @@ contract AsyncVault is IERC7540, SyncVault {
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() SyncVault() {
-        // _disableInitializers();
+        _disableInitializers();
     }
 
     function initialize(
@@ -413,10 +413,9 @@ contract AsyncVault is IERC7540, SyncVault {
      * the vault.
      */
     function settle(uint256 newSavedBalance) external {
-        (uint256 lastSavedBalance, uint256 totalSupply) =
+        (uint256 _lastSavedBalance, uint256 totalSupply) =
             _settle(newSavedBalance);
-        lastSavedBalance = 0;
-        emit EpochStart(block.timestamp, lastSavedBalance, totalSupply);
+        emit EpochStart(block.timestamp, _lastSavedBalance, totalSupply);
     }
 
     /**

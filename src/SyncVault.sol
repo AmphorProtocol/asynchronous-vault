@@ -149,7 +149,7 @@ abstract contract SyncVault is
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
-        // _disableInitializers();
+        _disableInitializers();
     }
 
     function initialize(
