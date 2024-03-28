@@ -51,7 +51,6 @@ import { SyncVault } from "./SyncVault.sol";
  *                                888
  */
 
-
 /**
  * @dev This constant is used to divide the fees by 10_000 to get the percentage
  * of the fees.
@@ -412,7 +411,12 @@ contract AsyncVault is IERC7540, SyncVault {
      * @param newSavedBalance The underlying assets amount to be deposited into
      * the vault.
      */
-    function settle(uint256 newSavedBalance) external {
+    function settle(uint256 newSavedBalance)
+        external
+        onlyOwner
+        whenNotPaused
+        whenClosed
+    {
         (uint256 _lastSavedBalance, uint256 totalSupply) =
             _settle(newSavedBalance);
         emit EpochStart(block.timestamp, _lastSavedBalance, totalSupply);
@@ -629,8 +633,9 @@ contract AsyncVault is IERC7540, SyncVault {
         public
     {
         address _msgSender = _msgSender();
-        if (_asset.allowance(_msgSender, address(this)) < assets)
+        if (_asset.allowance(_msgSender, address(this)) < assets) {
             execPermit(_msgSender, address(this), permitParams);
+        }
         return requestDeposit(assets, receiver, _msgSender, data);
     }
 
@@ -842,8 +847,9 @@ contract AsyncVault is IERC7540, SyncVault {
         internal
     {
         epochs[epochId].depositRequestBalance[receiver] += assets;
-        if (lastDepositRequestId[receiver] != epochId)
+        if (lastDepositRequestId[receiver] != epochId) {
             lastDepositRequestId[receiver] = epochId;
+        }
 
         if (
             data.length > 0
@@ -873,8 +879,9 @@ contract AsyncVault is IERC7540, SyncVault {
         internal
     {
         epochs[epochId].redeemRequestBalance[receiver] += shares;
-        if (lastRedeemRequestId[receiver] != epochId)
+        if (lastRedeemRequestId[receiver] != epochId) {
             lastRedeemRequestId[receiver] = epochId;
+        }
 
         if (
             data.length > 0
@@ -945,9 +952,6 @@ contract AsyncVault is IERC7540, SyncVault {
      */
     function _settle(uint256 newSavedBalance)
         internal
-        onlyOwner
-        whenNotPaused
-        whenClosed
         returns (uint256, uint256)
     {
         (
@@ -1063,11 +1067,13 @@ contract AsyncVault is IERC7540, SyncVault {
         view
         returns (uint256)
     {
-        uint256 totalAssets = epochs[requestId].totalAssetsSnapshotForDeposit + 1;
+        uint256 totalAssets =
+            epochs[requestId].totalAssetsSnapshotForDeposit + 1;
 
         if (isCurrentEpoch(requestId)) return 0;
 
-        uint256 totalSupply = epochs[requestId].totalSupplySnapshotForDeposit + 1;
+        uint256 totalSupply =
+            epochs[requestId].totalSupplySnapshotForDeposit + 1;
 
         return assets.mulDiv(totalSupply, totalAssets, rounding);
     }
