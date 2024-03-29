@@ -11,7 +11,7 @@ import { UpgradeableBeacon } from
 import { BeaconProxy } from
     "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
-contract MAINNET_DeployAmphorSynthetic is Script {
+contract Local_deploy is Script {
     uint256 privateKey;
     uint16 fees;
     string vaultName;
@@ -34,47 +34,31 @@ contract MAINNET_DeployAmphorSynthetic is Script {
         vaultSymbol = vm.envString("SYNTHETIC_WETH_V1_SYMBOL");
         underlying = vm.envAddress("WETH_MAINNET");
         bootstrap = 1e17;
-        // vm.envUint("BOOTSTRAP_AMOUNT_SYNTHETIC_USDC");
         nonce = vm.getNonce(owner);
-        address nextProxyAddress = vm.computeCreateAddress(owner, nonce + 3);
+        // address nextProxyAddress = vm.computeCreateAddress(owner, nonce + 1);
         vm.startBroadcast(privateKey);
 
-        IERC20(underlying).approve(nextProxyAddress, UINT256_MAX);
-        UpgradeableBeacon beacon = UpgradeableBeacon(
-            Upgrades.deployBeacon("AsyncVault.sol:AsyncVault", owner, deploy)
+        AsyncVault asyncVault = new AsyncVault();
+        IERC20(underlying).approve(address(asyncVault), UINT256_MAX);
+
+        asyncVault.initialize(
+            fees,
+            owner,
+            owner,
+            IERC20(underlying),
+            bootstrap,
+            vaultName,
+            vaultSymbol
         );
-
-        BeaconProxy proxy = BeaconProxy(
-            payable(
-                Upgrades.deployBeaconProxy(
-                    address(beacon),
-                    abi.encodeCall(
-                        AsyncVault.initialize,
-                        (
-                            fees,
-                            owner,
-                            owner,
-                            IERC20(underlying),
-                            bootstrap,
-                            vaultName,
-                            vaultSymbol
-                        )
-                    )
-                )
-            )
-        );
-
-        address implementation = UpgradeableBeacon(beacon).implementation();
-        console.log("Synthetic vault USDC proxy address: ", address(proxy));
-
-        console.log("Synthetic vault USDC beacon address: ", address(beacon));
-        console.log(
-            "Synthetic vault USDC implementation address: ", implementation
-        );
-
-        // IERC20(underlying).transfer(address(proxy), bootstrap);
 
         vm.stopBroadcast();
+        console.log("Synthetic vault address: ", address(asyncVault));
+        // uint256 ownerUnderlyingBalance = IERC20(underlying).balanceOf(owner);
+        // uint256 ownerVaultBalance =
+        // IERC20(address(asyncVault)).balanceOf(owner);
+        // uint256 totalAssets = asyncVault.totalAssets();
+        // console.log("Owner underlying balance: ", ownerUnderlyingBalance);
+        // console.log("Owner vault balance: ", ownerVaultBalance);
 
         //forge script script/goerli_deploy.s.sol:GOERLI_DeployAmphorSynthetic
         // --verifier-url ${VERIFIER_URL_GOERLI} --verify --broadcast
