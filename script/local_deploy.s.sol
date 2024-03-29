@@ -10,6 +10,7 @@ import { UpgradeableBeacon } from
     "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 import { BeaconProxy } from
     "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
+import { VaultZapper } from "../src/VaultZapper.sol";
 
 contract Local_deploy is Script {
     uint256 privateKey;
@@ -18,6 +19,7 @@ contract Local_deploy is Script {
     string vaultSymbol;
     address owner;
     address underlying;
+    address router;
     uint256 bootstrap;
     uint256 nonce; // beacon deployment + approve
     Options deploy;
@@ -28,12 +30,13 @@ contract Local_deploy is Script {
         privateKey = vm.envUint("PRIVATE_KEY");
 
         owner = vm.envAddress("AMPHORLABS_ADDRESS");
+        router = vm.envAddress("ONE_INCH_ROUTER_V5");
         owner = vm.addr(privateKey);
         fees = uint16(vm.envUint("INITIAL_FEES_AMOUNT"));
         vaultName = vm.envString("SYNTHETIC_WETH_V1_NAME");
         vaultSymbol = vm.envString("SYNTHETIC_WETH_V1_SYMBOL");
         underlying = vm.envAddress("WETH_MAINNET");
-        bootstrap = 1e17;
+        bootstrap = 0;
         nonce = vm.getNonce(owner);
         // address nextProxyAddress = vm.computeCreateAddress(owner, nonce + 1);
         vm.startBroadcast(privateKey);
@@ -51,8 +54,13 @@ contract Local_deploy is Script {
             vaultSymbol
         );
 
+        VaultZapper vaultZapper = new VaultZapper();
+        vaultZapper.toggleVaultAuthorization(asyncVault);
+        vaultZapper.toggleRouterAuthorization(router);
+
         vm.stopBroadcast();
         console.log("Synthetic vault address: ", address(asyncVault));
+        console.log("Vault zapper address: ", address(vaultZapper));
         // uint256 ownerUnderlyingBalance = IERC20(underlying).balanceOf(owner);
         // uint256 ownerVaultBalance =
         // IERC20(address(asyncVault)).balanceOf(owner);
