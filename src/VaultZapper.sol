@@ -330,8 +330,8 @@ contract VaultZapper is Ownable2Step, Pausable {
         IERC7540 vault,
         address router,
         uint256 amountIn,
-        bytes calldata data,
-        bytes calldata swapData
+        bytes calldata swapData,
+        bytes calldata callback7540Data
     )
         public
         payable
@@ -352,7 +352,7 @@ contract VaultZapper is Ownable2Step, Pausable {
                 - initialTokenOutBalance,
             _msgSender(),
             address(this),
-            data
+            callback7540Data
         );
 
         emit ZapAndRequestDeposit({
@@ -399,16 +399,18 @@ contract VaultZapper is Ownable2Step, Pausable {
         IERC7540 vault,
         address router,
         uint256 amount,
-        bytes calldata data,
         bytes calldata swapData,
-        PermitParams calldata permitParams
+        PermitParams calldata permitParams,
+        bytes calldata callback7540Data
     )
         public
     {
         if (tokenIn.allowance(_msgSender(), address(this)) < amount) {
             _execPermit(tokenIn, _msgSender(), address(this), permitParams);
         }
-        zapAndRequestDeposit(tokenIn, vault, router, amount, data, swapData);
+        zapAndRequestDeposit(
+            tokenIn, vault, router, amount, swapData, callback7540Data
+        );
     }
 
     /**

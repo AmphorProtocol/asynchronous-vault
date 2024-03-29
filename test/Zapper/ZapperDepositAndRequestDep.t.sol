@@ -94,7 +94,7 @@ contract VaultZapperRequestDeposit is OffChainCalls {
         uint256 beforeDep = vault.pendingDepositRequest(address(this));
         if (keccak256(swapData) == keccak256(hex"")) vm.expectRevert();
         zapper.zapAndRequestDeposit(
-            params.tokenIn, vault, params.router, params.amount, "", swapData
+            params.tokenIn, vault, params.router, params.amount, swapData, ""
         );
         uint256 afterDep = vault.pendingDepositRequest(address(this));
         if (keccak256(swapData) != keccak256(hex"")) {
@@ -116,7 +116,7 @@ contract VaultZapperRequestDeposit is OffChainCalls {
         uint256 beforeDepShares = vault.balanceOf(address(this));
         if (keccak256(swapData) == keccak256(hex"")) vm.expectRevert();
         zapper.zapAndRequestDeposit(
-            params.tokenIn, vault, params.router, params.amount, "", swapData
+            params.tokenIn, vault, params.router, params.amount, swapData, ""
         );
         uint256 afterDep = vault.pendingDepositRequest(address(this));
         uint256 afterDepShares = vault.balanceOf(address(this));
@@ -171,9 +171,9 @@ contract VaultZapperRequestDeposit is OffChainCalls {
             _vault,
             params.router,
             params.amount,
-            "",
             swapData,
-            permitParams
+            permitParams,
+            ""
         );
 
         uint256 afterDep = (IERC20(address(_vault)).balanceOf(user));
