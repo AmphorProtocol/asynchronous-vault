@@ -12,6 +12,8 @@ remappings = [
     "@src/=src/",
     "@test/=test/",
 ]
+ffi = true
+ast = true
 # build_info = true
 extra_output = ["storageLayout"]
 

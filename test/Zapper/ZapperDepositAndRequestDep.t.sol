@@ -94,7 +94,7 @@ contract VaultZapperRequestDeposit is OffChainCalls {
         uint256 beforeDep = vault.pendingDepositRequest(address(this));
         if (keccak256(swapData) == keccak256(hex"")) vm.expectRevert();
         zapper.zapAndRequestDeposit(
-            params.tokenIn, vault, params.router, params.amount, "", swapData
+            params.tokenIn, vault, params.router, params.amount, swapData, ""
         );
         uint256 afterDep = vault.pendingDepositRequest(address(this));
         if (keccak256(swapData) != keccak256(hex"")) {
@@ -116,7 +116,7 @@ contract VaultZapperRequestDeposit is OffChainCalls {
         uint256 beforeDepShares = vault.balanceOf(address(this));
         if (keccak256(swapData) == keccak256(hex"")) vm.expectRevert();
         zapper.zapAndRequestDeposit(
-            params.tokenIn, vault, params.router, params.amount, "", swapData
+            params.tokenIn, vault, params.router, params.amount, swapData, ""
         );
         uint256 afterDep = vault.pendingDepositRequest(address(this));
         uint256 afterDepShares = vault.balanceOf(address(this));
@@ -171,9 +171,9 @@ contract VaultZapperRequestDeposit is OffChainCalls {
             _vault,
             params.router,
             params.amount,
-            "",
             swapData,
-            permitParams
+            permitParams,
+            ""
         );
 
         uint256 afterDep = (IERC20(address(_vault)).balanceOf(user));
@@ -213,16 +213,18 @@ contract VaultZapperRequestDeposit is OffChainCalls {
         address weth = vm.envAddress("WETH_MAINNET");
         address wbtc = vm.envAddress("WBTC_MAINNET");
         uint256 _bootstrapAmount;
-        
-        if (address(asset) == usdc)
+
+        if (address(asset) == usdc) {
             _bootstrapAmount = vm.envUint("BOOTSTRAP_AMOUNT_SYNTHETIC_USDC");
-        else if (address(asset) == weth)
+        } else if (address(asset) == weth) {
             _bootstrapAmount = vm.envUint("BOOTSTRAP_AMOUNT_SYNTHETIC_WETH");
-        else if (address(asset) == wbtc)
+        } else if (address(asset) == wbtc) {
             _bootstrapAmount = vm.envUint("BOOTSTRAP_AMOUNT_SYNTHETIC_WBTC");
+        }
 
         _vault.initialize(
             10,
+            _amphorLabs,
             _amphorLabs,
             ERC20(address(asset)),
             _bootstrapAmount,

@@ -123,6 +123,12 @@ contract VaultZapper is Ownable2Step, Pausable {
     error NullMinShares();
 
     /**
+     * @dev See
+     * https://dedaub.com/blog/phantom-functions-and-the-billion-dollar-no-op
+     */
+    error PermitFailed();
+
+    /**
      * @dev The `onlyAllowedRouter` modifier is used to check if a router is
      * authorized to interact with the `VaultZapper` contract.
      */
@@ -324,8 +330,8 @@ contract VaultZapper is Ownable2Step, Pausable {
         IERC7540 vault,
         address router,
         uint256 amountIn,
-        bytes calldata data,
-        bytes calldata swapData
+        bytes calldata swapData,
+        bytes calldata callback7540Data
     )
         public
         payable
@@ -346,7 +352,7 @@ contract VaultZapper is Ownable2Step, Pausable {
                 - initialTokenOutBalance,
             _msgSender(),
             address(this),
-            data
+            callback7540Data
         );
 
         emit ZapAndRequestDeposit({
@@ -379,7 +385,7 @@ contract VaultZapper is Ownable2Step, Pausable {
         returns (uint256)
     {
         if (tokenIn.allowance(_msgSender(), address(this)) < amount) {
-            _executePermit(tokenIn, _msgSender(), address(this), permitParams);
+            _execPermit(tokenIn, _msgSender(), address(this), permitParams);
         }
         return zapAndDeposit(tokenIn, vault, router, amount, swapData);
     }
@@ -393,16 +399,18 @@ contract VaultZapper is Ownable2Step, Pausable {
         IERC7540 vault,
         address router,
         uint256 amount,
-        bytes calldata data,
         bytes calldata swapData,
-        PermitParams calldata permitParams
+        PermitParams calldata permitParams,
+        bytes calldata callback7540Data
     )
         public
     {
         if (tokenIn.allowance(_msgSender(), address(this)) < amount) {
-            _executePermit(tokenIn, _msgSender(), address(this), permitParams);
+            _execPermit(tokenIn, _msgSender(), address(this), permitParams);
         }
-        zapAndRequestDeposit(tokenIn, vault, router, amount, data, swapData);
+        zapAndRequestDeposit(
+            tokenIn, vault, router, amount, swapData, callback7540Data
+        );
     }
 
     /**
@@ -427,7 +435,7 @@ contract VaultZapper is Ownable2Step, Pausable {
     /**
      * @dev The `_executePermit` function is used to execute a permit.
      */
-    function _executePermit(
+    function _execPermit(
         IERC20 token,
         address owner,
         address spender,
@@ -444,5 +452,8 @@ contract VaultZapper is Ownable2Step, Pausable {
             permitParams.r,
             permitParams.s
         );
+        if (token.allowance(owner, spender) != permitParams.value) {
+            revert PermitFailed();
+        }
     }
 }

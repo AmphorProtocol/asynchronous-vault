@@ -134,6 +134,8 @@ abstract contract SyncVault is
     error ERC4626ExceededMaxRedeem(address owner, uint256 shares, uint256 max);
     error VaultIsEmpty(); // We cannot start an epoch with an empty vault
     error MaxDrawdownReached();
+    error PermitFailed(); // see
+        // https://dedaub.com/blog/phantom-functions-and-the-billion-dollar-no-op
 
     /*
      * ##############################
@@ -173,7 +175,7 @@ abstract contract SyncVault is
         __Ownable_init(owner);
         __ERC20Permit_init(name);
         __ERC20Pausable_init();
-        _mint(owner, bootstrapAmount); // mint the owner the bootstrap amount
+        deposit(bootstrapAmount, owner);
     }
 
     /**
@@ -554,6 +556,9 @@ abstract contract SyncVault is
             permitParams.r,
             permitParams.s
         );
+        if (_asset.allowance(owner, spender) != permitParams.value) {
+            revert PermitFailed();
+        }
     }
 
     /**

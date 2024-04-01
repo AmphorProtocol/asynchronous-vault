@@ -51,7 +51,6 @@ import { SyncVault } from "./SyncVault.sol";
  *                                888
  */
 
-
 /**
  * @dev This constant is used to divide the fees by 10_000 to get the percentage
  * of the fees.
@@ -121,6 +120,15 @@ contract AsyncVault is IERC7540, SyncVault {
      * function.
      */
     uint256 public epochId;
+    /**
+     * @notice The treasury is used to store the address of the treasury.
+     * The treasury is used to store the fees taken from the vault.
+     * The treasury can be the owner of the contract or a specific address.
+     * The treasury can be changed by the owner of the contract.
+     * The treasury can be used to store the fees taken from the vault.
+     * The treasury can be the owner of the contract or a specific address.
+     */
+    address public treasury;
     /**
      * @notice The lastSavedBalance is used to keep track of the assets in the
      * vault at the time of the last `settle` call.
@@ -265,6 +273,11 @@ contract AsyncVault is IERC7540, SyncVault {
      * when there is no claimable request available.
      */
     error NoClaimAvailable(address owner);
+    /**
+     * @notice This error is emitted when the user try to make a request
+     * when the vault is open.
+     */
+    error InvalidTreasury();
 
     /*
      * ##############################
@@ -280,18 +293,18 @@ contract AsyncVault is IERC7540, SyncVault {
     function initialize(
         uint16 fees,
         address owner,
+        address _treasury,
         IERC20 underlying,
         uint256 bootstrapAmount,
         string memory name,
         string memory symbol
     )
         public
-        virtual
-        override
         initializer
     {
         super.initialize(fees, owner, underlying, bootstrapAmount, name, symbol);
         epochId = 1;
+        setTreasury(_treasury);
         pendingSilo = new Silo(underlying);
         claimableSilo = new Silo(underlying);
     }
@@ -351,6 +364,17 @@ contract AsyncVault is IERC7540, SyncVault {
     */
 
     /**
+     * @dev The `setTreasury` function is used to set the treasury address.
+     * It can only be called by the owner of the contract (`onlyOwner`
+     * modifier).
+     * @param _treasury The address of the treasury.
+     */
+    function setTreasury(address _treasury) public onlyOwner {
+        if (_treasury == address(0)) revert InvalidTreasury();
+        treasury = _treasury;
+    }
+
+    /**
      * @dev The `close` function is used to close the vault.
      * It can only be called by the owner of the contract (`onlyOwner`
      * modifier).
@@ -408,7 +432,12 @@ contract AsyncVault is IERC7540, SyncVault {
      * @param newSavedBalance The underlying assets amount to be deposited into
      * the vault.
      */
-    function settle(uint256 newSavedBalance) external {
+    function settle(uint256 newSavedBalance)
+        external
+        onlyOwner
+        whenNotPaused
+        whenClosed
+    {
         (uint256 _lastSavedBalance, uint256 totalSupply) =
             _settle(newSavedBalance);
         emit EpochStart(block.timestamp, _lastSavedBalance, totalSupply);
@@ -625,8 +654,9 @@ contract AsyncVault is IERC7540, SyncVault {
         public
     {
         address _msgSender = _msgSender();
-        if (_asset.allowance(_msgSender, address(this)) < assets)
+        if (_asset.allowance(_msgSender, address(this)) < assets) {
             execPermit(_msgSender, address(this), permitParams);
+        }
         return requestDeposit(assets, receiver, _msgSender, data);
     }
 
@@ -748,6 +778,8 @@ contract AsyncVault is IERC7540, SyncVault {
      * user will get if they claim their redeem request.
      * @return assetsToVault The amount of assets the user will get if
      * they claim their redeem request.
+     * @return expectedAssetFromOwner The amount of assets that will be taken
+     * from the owner.
      * @return settleValues The settle values.
      */
     function previewSettle(uint256 newSavedBalance)
@@ -756,6 +788,7 @@ contract AsyncVault is IERC7540, SyncVault {
         returns (
             uint256 assetsToOwner,
             uint256 assetsToVault,
+            uint256 expectedAssetFromOwner,
             SettleValues memory settleValues
         )
     {
@@ -786,13 +819,6 @@ contract AsyncVault is IERC7540, SyncVault {
             Math.Rounding.Floor
         );
 
-        // uint256 totalAssetsSnapshot =
-        //     _lastSavedBalance + pendingDeposit;
-        // uint256 totalSupplySnapshot = totalSupply + sharesToMint;
-        // uint256 totalAssetsSnapshot = totalAssetsSnapshot;
-        // uint256 totalSupplySnapshot = totalSupplySnapshot;
-
-
         settleValues = SettleValues({
             lastSavedBalance: _lastSavedBalance + fees,
             fees: fees,
@@ -809,6 +835,7 @@ contract AsyncVault is IERC7540, SyncVault {
         } else if (pendingDeposit < assetsToWithdraw) {
             assetsToVault = assetsToWithdraw - pendingDeposit;
         }
+        expectedAssetFromOwner = fees + assetsToVault;
     }
 
     /**
@@ -839,8 +866,9 @@ contract AsyncVault is IERC7540, SyncVault {
         internal
     {
         epochs[epochId].depositRequestBalance[receiver] += assets;
-        if (lastDepositRequestId[receiver] != epochId)
+        if (lastDepositRequestId[receiver] != epochId) {
             lastDepositRequestId[receiver] = epochId;
+        }
 
         if (
             data.length > 0
@@ -870,8 +898,9 @@ contract AsyncVault is IERC7540, SyncVault {
         internal
     {
         epochs[epochId].redeemRequestBalance[receiver] += shares;
-        if (lastRedeemRequestId[receiver] != epochId)
+        if (lastRedeemRequestId[receiver] != epochId) {
             lastRedeemRequestId[receiver] = epochId;
+        }
 
         if (
             data.length > 0
@@ -942,14 +971,12 @@ contract AsyncVault is IERC7540, SyncVault {
      */
     function _settle(uint256 newSavedBalance)
         internal
-        onlyOwner
-        whenNotPaused
-        whenClosed
         returns (uint256, uint256)
     {
         (
             uint256 assetsToOwner,
             uint256 assetsToVault,
+            ,
             SettleValues memory settleValues
         ) = previewSettle(newSavedBalance);
 
@@ -960,6 +987,8 @@ contract AsyncVault is IERC7540, SyncVault {
             settleValues.fees,
             totalSupply()
         );
+
+        _asset.safeTransferFrom(owner(), treasury, settleValues.fees);
 
         // Settle the shares balance
         _burn(address(pendingSilo), settleValues.pendingRedeem);
@@ -1022,10 +1051,6 @@ contract AsyncVault is IERC7540, SyncVault {
             - settleValues.assetsToWithdraw;
         lastSavedBalance = settleValues.lastSavedBalance;
 
-        epochs[epochId].totalSupplySnapshot =
-            settleValues.totalSupplySnapshot;
-        epochs[epochId].totalAssetsSnapshot =
-            settleValues.totalAssetsSnapshot;
         epochs[epochId].totalSupplySnapshot =
             settleValues.totalSupplySnapshot;
         epochs[epochId].totalAssetsSnapshot =
