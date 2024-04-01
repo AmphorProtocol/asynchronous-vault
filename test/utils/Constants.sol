@@ -141,13 +141,19 @@ abstract contract Constants is Test {
                 beacon, amphorLabs, amphorLabs, USDC, bootstrapUSDC, vaultNameUSDC, vaultSymbolUSDC
             );
         } else {
+            _dealAsset(address(USDC), address(amphorLabs), bootstrapUSDC);
             vm.startPrank(amphorLabs);
             vaultUSDC = new AsyncVault();
+            USDC.approve(address(vaultUSDC), bootstrapUSDC);
             vaultUSDC.initialize(
-                fees, amphorLabs, amphorLabs, USDC, bootstrapUSDC, vaultNameUSDC, vaultSymbolUSDC
+                fees,
+                amphorLabs,
+                amphorLabs,
+                USDC,
+                bootstrapUSDC,
+                vaultNameUSDC,
+                vaultSymbolUSDC
             );
-            uint256 bootstrapAmount = vm.envUint("BOOTSTRAP_AMOUNT_SYNTHETIC_USDC");
-            _dealAsset(address(USDC), address(vaultUSDC), bootstrapAmount);
             vm.stopPrank();
         }
         vm.label(address(vaultUSDC), "vaultUSDC");
@@ -159,13 +165,13 @@ abstract contract Constants is Test {
                         beacon, amphorLabs, amphorLabs, WSTETH, bootstrapWETH, vaultNameWSTETH, vaultSymbolWSTETH
             );
         } else {
+            deal(address(WSTETH), address(amphorLabs), bootstrapWETH);
             vm.startPrank(amphorLabs);
             vaultWSTETH = new AsyncVault();
+            WSTETH.approve(address(vaultWSTETH), bootstrapWETH);
             vaultWSTETH.initialize(
                 fees, amphorLabs, amphorLabs, WSTETH, bootstrapWETH, vaultNameWSTETH, vaultSymbolWSTETH
             );
-            uint256 bootstrapAmount = vm.envUint("BOOTSTRAP_AMOUNT_SYNTHETIC_WETH");
-            deal(address(WSTETH), address(vaultWSTETH), bootstrapAmount);
             vm.stopPrank();
         }
         
@@ -181,13 +187,13 @@ abstract contract Constants is Test {
                 beacon, amphorLabs, amphorLabs, WBTC, bootstrapWBTC, vaultNameWBTC, vaultSymbolWBTC
             );
         } else {
+            deal(address(WBTC), address(amphorLabs), bootstrapWBTC);
             vm.startPrank(amphorLabs);
             vaultWBTC = new AsyncVault();
+            WBTC.approve(address(vaultWBTC), bootstrapWBTC);
             vaultWBTC.initialize(
                 fees, amphorLabs, amphorLabs, WBTC, bootstrapWBTC, vaultNameWBTC, vaultSymbolWBTC
             );
-            uint256 bootstrapAmount = vm.envUint("BOOTSTRAP_AMOUNT_SYNTHETIC_WBTC");
-            deal(address(WBTC), address(vaultWBTC), bootstrapAmount);
             vm.stopPrank();
         }
         vm.label(address(vaultWBTC), "vaultWBTC");

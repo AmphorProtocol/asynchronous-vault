@@ -287,7 +287,7 @@ contract AsyncVault is IERC7540, SyncVault {
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() SyncVault() {
-        // _disableInitializers();
+        _disableInitializers();
     }
 
     function initialize(
