@@ -14,11 +14,15 @@ import { BeaconProxy } from
 contract MAINNET_DeployAmphorSynthetic is Script {
     uint256 privateKey;
     uint16 fees;
-    string vaultName;
-    string vaultSymbol;
+    string vaultNameUSDC;
+    string vaultNameWETH;
+    string vaultSymbolUSDC;
+    string vaultSymbolWETH;
     address owner;
-    address underlying;
-    uint256 bootstrap;
+    address usdcAddr;
+    address wethAddr;
+    uint256 bootstrapUSDC;
+    uint256 bootstrapWETH;
     uint256 nonce; // beacon deployment + approve
     Options deploy;
 
@@ -30,21 +34,27 @@ contract MAINNET_DeployAmphorSynthetic is Script {
         owner = vm.envAddress("AMPHORLABS_ADDRESS");
         owner = vm.addr(privateKey);
         fees = uint16(vm.envUint("INITIAL_FEES_AMOUNT"));
-        vaultName = vm.envString("SYNTHETIC_WETH_V1_NAME");
-        vaultSymbol = vm.envString("SYNTHETIC_WETH_V1_SYMBOL");
-        underlying = vm.envAddress("WETH_MAINNET");
-        bootstrap = 1e17;
-        // vm.envUint("BOOTSTRAP_AMOUNT_SYNTHETIC_USDC");
+        vaultNameUSDC = vm.envString("SYNTHETIC_USDC_V1_NAME");
+        vaultSymbolUSDC = vm.envString("SYNTHETIC_USDC_V1_SYMBOL");
+        usdcAddr = vm.envAddress("USDC_MAINNET");
+        bootstrapUSDC = vm.envUint("BOOTSTRAP_AMOUNT_SYNTHETIC_WETH");
+        vaultNameWETH = vm.envString("SYNTHETIC_WETH_V1_NAME");
+        vaultSymbolWETH = vm.envString("SYNTHETIC_WETH_V1_SYMBOL");
+        wethAddr = vm.envAddress("WETH_MAINNET");
+        bootstrapWETH = vm.envUint("BOOTSTRAP_AMOUNT_SYNTHETIC_WETH");
         nonce = vm.getNonce(owner);
-        address nextProxyAddress = vm.computeCreateAddress(owner, nonce + 3);
+        address usdcProxyAddress = vm.computeCreateAddress(owner, nonce + 4);
+        address wethProxyAddress = vm.computeCreateAddress(owner, nonce + 5);
         vm.startBroadcast(privateKey);
 
-        IERC20(underlying).approve(nextProxyAddress, UINT256_MAX);
+        IERC20(usdcAddr).approve(usdcProxyAddress, UINT256_MAX);
+        IERC20(wethAddr).approve(wethProxyAddress, UINT256_MAX);
+
         UpgradeableBeacon beacon = UpgradeableBeacon(
             Upgrades.deployBeacon("AsyncVault.sol:AsyncVault", owner, deploy)
         );
 
-        BeaconProxy proxy = BeaconProxy(
+        BeaconProxy proxyUSDC = BeaconProxy(
             payable(
                 Upgrades.deployBeaconProxy(
                     address(beacon),
@@ -54,10 +64,30 @@ contract MAINNET_DeployAmphorSynthetic is Script {
                             fees,
                             owner,
                             owner,
-                            IERC20(underlying),
-                            bootstrap,
-                            vaultName,
-                            vaultSymbol
+                            IERC20(usdcAddr),
+                            bootstrapUSDC,
+                            vaultNameUSDC,
+                            vaultSymbolUSDC
+                        )
+                    )
+                )
+            )
+        );
+
+        BeaconProxy proxyWETH = BeaconProxy(
+            payable(
+                Upgrades.deployBeaconProxy(
+                    address(beacon),
+                    abi.encodeCall(
+                        AsyncVault.initialize,
+                        (
+                            fees,
+                            owner,
+                            owner,
+                            IERC20(wethAddr),
+                            bootstrapWETH,
+                            vaultNameWETH,
+                            vaultSymbolWETH
                         )
                     )
                 )
@@ -65,14 +95,13 @@ contract MAINNET_DeployAmphorSynthetic is Script {
         );
 
         address implementation = UpgradeableBeacon(beacon).implementation();
-        console.log("Synthetic vault USDC proxy address: ", address(proxy));
+        console.log("Vault USDC proxy address: ", address(proxyUSDC));
+        console.log("Vault WETH proxy address: ", address(proxyWETH));
 
-        console.log("Synthetic vault USDC beacon address: ", address(beacon));
+        console.log("Vault beacon address: ", address(beacon));
         console.log(
-            "Synthetic vault USDC implementation address: ", implementation
+            "Vault implementation address: ", implementation
         );
-
-        // IERC20(underlying).transfer(address(proxy), bootstrap);
 
         vm.stopBroadcast();
 

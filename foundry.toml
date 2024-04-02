@@ -14,7 +14,8 @@ remappings = [
 ]
 ffi = true
 ast = true
-# build_info = true
+build_info = true
+optimizer-runs = 10_000_000
 extra_output = ["storageLayout"]
 
 [profile.production]
