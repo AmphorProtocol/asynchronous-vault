@@ -74,10 +74,8 @@ using SafeERC20 for IERC20; // `safeTransfer` and `safeTransferFrom`
  * user.
  */
 struct EpochData {
-    uint256 totalSupplySnapshotForRedeem;
-    uint256 totalAssetsSnapshotForRedeem;
-    uint256 totalSupplySnapshotForDeposit;
-    uint256 totalAssetsSnapshotForDeposit;
+    uint256 totalSupplySnapshot;
+    uint256 totalAssetsSnapshot;
     mapping(address => uint256) depositRequestBalance;
     mapping(address => uint256) redeemRequestBalance;
 }
@@ -94,10 +92,8 @@ struct SettleValues {
     uint256 sharesToMint;
     uint256 pendingDeposit;
     uint256 assetsToWithdraw;
-    uint256 totalAssetsSnapshotForDeposit;
-    uint256 totalSupplySnapshotForDeposit;
-    uint256 totalAssetsSnapshotForRedeem;
-    uint256 totalSupplySnapshotForRedeem;
+    uint256 totalAssetsSnapshot;
+    uint256 totalSupplySnapshot;
 }
 
 /**
@@ -814,18 +810,14 @@ contract AsyncVault is IERC7540, SyncVault {
             totalSupply + 1, _lastSavedBalance + 1, Math.Rounding.Floor
         );
 
-        uint256 totalAssetsSnapshotForDeposit = _lastSavedBalance;
-        uint256 totalSupplySnapshotForDeposit = totalSupply;
+        uint256 totalAssetsSnapshot = _lastSavedBalance;
+        uint256 totalSupplySnapshot = totalSupply;
 
         uint256 assetsToWithdraw = pendingRedeem.mulDiv(
             _lastSavedBalance + pendingDeposit + 1,
             totalSupply + sharesToMint + 1,
             Math.Rounding.Floor
         );
-
-        uint256 totalAssetsSnapshotForRedeem =
-            _lastSavedBalance + pendingDeposit;
-        uint256 totalSupplySnapshotForRedeem = totalSupply + sharesToMint;
 
         settleValues = SettleValues({
             lastSavedBalance: _lastSavedBalance + fees,
@@ -834,10 +826,8 @@ contract AsyncVault is IERC7540, SyncVault {
             sharesToMint: sharesToMint,
             pendingDeposit: pendingDeposit,
             assetsToWithdraw: assetsToWithdraw,
-            totalAssetsSnapshotForDeposit: totalAssetsSnapshotForDeposit,
-            totalSupplySnapshotForDeposit: totalSupplySnapshotForDeposit,
-            totalAssetsSnapshotForRedeem: totalAssetsSnapshotForRedeem,
-            totalSupplySnapshotForRedeem: totalSupplySnapshotForRedeem
+            totalAssetsSnapshot: totalAssetsSnapshot,
+            totalSupplySnapshot: totalSupplySnapshot
         });
 
         if (pendingDeposit > assetsToWithdraw) {
@@ -883,7 +873,7 @@ contract AsyncVault is IERC7540, SyncVault {
         if (
             data.length > 0
                 && ERC7540Receiver(receiver).onERC7540DepositReceived(
-                    _msgSender(), owner, epochId, data
+                    _msgSender(), owner, epochId, assets, data
                 ) != ERC7540Receiver.onERC7540DepositReceived.selector
         ) revert ReceiverFailed();
 
@@ -915,7 +905,7 @@ contract AsyncVault is IERC7540, SyncVault {
         if (
             data.length > 0
                 && ERC7540Receiver(receiver).onERC7540RedeemReceived(
-                    _msgSender(), owner, epochId, data
+                    _msgSender(), owner, epochId, shares, data
                 ) != ERC7540Receiver.onERC7540RedeemReceived.selector
         ) revert ReceiverFailed();
 
@@ -1061,14 +1051,10 @@ contract AsyncVault is IERC7540, SyncVault {
             - settleValues.assetsToWithdraw;
         lastSavedBalance = settleValues.lastSavedBalance;
 
-        epochs[epochId].totalSupplySnapshotForDeposit =
-            settleValues.totalSupplySnapshotForDeposit;
-        epochs[epochId].totalAssetsSnapshotForDeposit =
-            settleValues.totalAssetsSnapshotForDeposit;
-        epochs[epochId].totalSupplySnapshotForRedeem =
-            settleValues.totalSupplySnapshotForRedeem;
-        epochs[epochId].totalAssetsSnapshotForRedeem =
-            settleValues.totalAssetsSnapshotForRedeem;
+        epochs[epochId].totalSupplySnapshot =
+            settleValues.totalSupplySnapshot;
+        epochs[epochId].totalAssetsSnapshot =
+            settleValues.totalAssetsSnapshot;
 
         epochId++;
 
@@ -1099,13 +1085,10 @@ contract AsyncVault is IERC7540, SyncVault {
         view
         returns (uint256)
     {
-        uint256 totalAssets =
-            epochs[requestId].totalAssetsSnapshotForDeposit + 1;
-
         if (isCurrentEpoch(requestId)) return 0;
 
-        uint256 totalSupply =
-            epochs[requestId].totalSupplySnapshotForDeposit + 1;
+        uint256 totalAssets = epochs[requestId].totalAssetsSnapshot + 1;
+        uint256 totalSupply = epochs[requestId].totalSupplySnapshot + 1;
 
         return assets.mulDiv(totalSupply, totalAssets, rounding);
     }
@@ -1126,11 +1109,10 @@ contract AsyncVault is IERC7540, SyncVault {
         view
         returns (uint256)
     {
-        uint256 totalSupply = epochs[requestId].totalSupplySnapshotForRedeem + 1;
-
         if (isCurrentEpoch(requestId)) return 0;
 
-        uint256 totalAssets = epochs[requestId].totalAssetsSnapshotForRedeem + 1;
+        uint256 totalSupply = epochs[requestId].totalSupplySnapshot + 1;
+        uint256 totalAssets = epochs[requestId].totalAssetsSnapshot + 1;
 
         return shares.mulDiv(totalAssets, totalSupply, rounding);
     }
