@@ -5,7 +5,6 @@ import { Script, console } from "forge-std/Script.sol";
 import { AsyncVault } from "../src/AsyncVault.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Upgrades, Options } from "openzeppelin-foundry-upgrades/Upgrades.sol";
-import { IPermit2 } from "permit2/src/interfaces/IPermit2.sol";
 import { UpgradeableBeacon } from
     "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 import { BeaconProxy } from
@@ -34,12 +33,12 @@ contract MAINNET_DeployAmphorSynthetic is Script {
         owner = vm.envAddress("AMPHORLABS_ADDRESS");
         owner = vm.addr(privateKey);
         fees = uint16(vm.envUint("INITIAL_FEES_AMOUNT"));
-        vaultNameUSDC = vm.envString("SYNTHETIC_USDC_V1_NAME");
-        vaultSymbolUSDC = vm.envString("SYNTHETIC_USDC_V1_SYMBOL");
+        vaultNameUSDC = vm.envString("USDC_V1_NAME");
+        vaultSymbolUSDC = vm.envString("USDC_V1_SYMBOL");
         usdcAddr = vm.envAddress("USDC_MAINNET");
-        bootstrapUSDC = vm.envUint("BOOTSTRAP_AMOUNT_SYNTHETIC_WETH");
-        vaultNameWETH = vm.envString("SYNTHETIC_WETH_V1_NAME");
-        vaultSymbolWETH = vm.envString("SYNTHETIC_WETH_V1_SYMBOL");
+        bootstrapUSDC = vm.envUint("BOOTSTRAP_AMOUNT_SYNTHETIC_USDC");
+        vaultNameWETH = vm.envString("WETH_V1_NAME");
+        vaultSymbolWETH = vm.envString("WETH_V1_SYMBOL");
         wethAddr = vm.envAddress("WETH_MAINNET");
         bootstrapWETH = vm.envUint("BOOTSTRAP_AMOUNT_SYNTHETIC_WETH");
         nonce = vm.getNonce(owner);
@@ -105,7 +104,9 @@ contract MAINNET_DeployAmphorSynthetic is Script {
 
         vm.stopBroadcast();
 
-        //forge script script/goerli_deploy.s.sol:GOERLI_DeployAmphorSynthetic
-        // --verifier-url ${VERIFIER_URL_GOERLI} --verify --broadcast
+        // Mainnet 
+        // source .env && forge clean && forge script script/mainnet_deploy.s.sol:MAINNET_DeployAmphorSynthetic --ffi --chain-id 1 --optimizer-runs 10000 --verifier-url ${VERIFIER_URL} --etherscan-api-key ${ETHERSCAN_API_KEY} --verify #--broadcast
+        // Sepolia
+        // source .env && forge clean && forge script script/mainnet_deploy.s.sol:MAINNET_DeployAmphorSynthetic --ffi --chain-id 534351 --optimizer-runs 10000 --verifier-url ${VERIFIER_URL_SEPOLIA} --etherscan-api-key ${ETHERSCAN_API_KEY} --verify #--broadcast
     }
 }
