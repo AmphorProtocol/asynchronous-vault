@@ -30,7 +30,6 @@ contract MAINNET_DeployAmphor is Script {
         // if you want to deploy a vault with a seed phrase instead of a pk,
         // uncomment the following line
         privateKey = vm.envUint("PRIVATE_KEY");
-
         amphor = vm.envAddress("AMPHORLABS_ADDRESS");
         owner = vm.addr(privateKey);
         fees = uint16(vm.envUint("INITIAL_FEES_AMOUNT"));
@@ -93,6 +92,9 @@ contract MAINNET_DeployAmphor is Script {
                 )
             )
         );
+
+        AsyncVault(address(proxyUSDC)).transferOwnership(amphor);
+        AsyncVault(address(proxyWETH)).transferOwnership(amphor);
 
         address implementation = UpgradeableBeacon(beacon).implementation();
         console.log("Vault USDC proxy address: ", address(proxyUSDC));
