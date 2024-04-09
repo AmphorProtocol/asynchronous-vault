@@ -1,0 +1,8 @@
+TestClaimableDepositRequest
+├── given an owner who has not interacted with the vault when claimableDepositRequest
+│   └── it should return 0
+├── given an owner with a pending request when claimableDepositRequest
+│   └── it should return 0
+└── given an owner with a claimable request when claimableDepositRequest
+    ├── it should return the amount of the claimable request
+    └── it should not revert

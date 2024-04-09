@@ -14,14 +14,11 @@ interface IERC4626 is IERC20, IERC20Metadata {
     event Deposit(address indexed sender, address indexed owner, uint256 assets, uint256 shares);
 
     event Withdraw(
-        address indexed sender,
-        address indexed receiver,
-        address indexed owner,
-        uint256 assets,
-        uint256 shares
+        address indexed sender, address indexed receiver, address indexed owner, uint256 assets, uint256 shares
     );
 
     /**
+     *
      * @dev Returns the address of the underlying token used for the Vault for accounting, depositing, and withdrawing.
      *
      * - MUST be an ERC-20 token contract.

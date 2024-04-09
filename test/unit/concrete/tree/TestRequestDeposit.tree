@@ -1,0 +1,26 @@
+TestRequestDeposit
+├── given vault open and not paused when requestDeposit
+│   └── it should revert VaultIsOpen
+├── given vault closed and paused when requestDeposit
+│   └── it should revert EnforcedPause
+├── given vault open and paused when requestDeposit
+│   └── it should revert EnforcedPause
+├── given msgSender not equal owner when requestDeposit
+│   └── it should revert NotOwner
+├── given receiver has claimable balance when requestDeposit
+│   └── it should revert with maxDepositRequest
+├── when requestDeposit succeed
+│   ├── it should decrease the owner underlying balance by the specified value
+│   ├── it should increase the vault underlying balance by the specified value
+│   ├── it should increase pendingDepositRequest balance of receiver by the specified value
+│   ├── it should not modify the owner pendingDepositRequest balance
+│   └── it should emit DepositRequest event
+├── given owner has claimable balance but not receiver when requestDeposit
+│   └── it should succeed
+├── given owner have not enough approval balance when requestDeposit
+│   └── it should revert with ERC20InsufficientAllowance
+├── given owner have not enough assets balance when requestDeposit
+│   └── it should revert with ERC20InsufficientBalance
+└── given data param submitted and invalid selector when requestDeposit
+    ├── it should revert with ReceiverFailed
+    └── it todo check ERC7540Receiver (and ReceiverFailed)

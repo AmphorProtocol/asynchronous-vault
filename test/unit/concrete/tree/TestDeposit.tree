@@ -1,0 +1,29 @@
+TestDeposit
+├── given vaultClosed when deposit
+│   └── it should revert with ERC4626ExceededMaxDeposit
+├── given amount higher than owner allowance to the vault when deposit
+│   └── it should revert with ERC20InsufficientAllowance
+├── given amount higher than owner balance when deposit
+│   └── it should revert with ERC20InsufficientBalance
+├── given vault open given vault paused when deposit
+│   └── it should revert with EnforcedPause
+├── given vault closed given paused when deposit
+│   └── it should revert with ERC4626ExceededMaxDeposit
+├── given receiver is address 0 when deposit
+│   └── it should revert with ERC20InvalidReceiver
+├── given amount is 0 when deposit
+│   └── it should revert with ERC20ZeroAmount (maybe)
+├── given amount is n when deposit
+│   ├── it should decrease underlying balance of the owner by n
+│   ├── it should emit a Deposit event
+│   ├── it should increase the balance of shares of the receiver by previewDeposit(assets) returned value
+│   ├── it should return the same value as the minted shares amount
+│   ├── it should return the same value as the increase of receiver shares balance
+│   ├── it should increase the total supply of shares by the previewDeposit(assetsAmount) returned value
+│   └── it should return the same value as the one returned by previewDeposit(assets)
+├── given vault open given receiver not equal owner when deposit
+│   └── it should pass the like as above
+├── given vault open given vault empty when deposit
+│   └── it should pass the like as above
+└── given vault open given deposit amount equal 0 when deposit
+│   └── it should pass the like as above

@@ -1,0 +1,27 @@
+TestOpen
+├── given vault is open when open
+│   └── it should revert with VaultIsOpen
+├── given msgSender is not owner when open
+│   └── it should revert with OwnableUnauthorizedAccount(msg.sender)
+├── given assetReturned is 0 and totalsAssets is not 0 and maxDrawdown is not 0 when open
+│   └── it should revert with MaxDrawdownReached
+├── given assetReturned is 1 and totalsAssets is over assetsReturned and maxDrawdown is not 0 when open
+│   └── it should revert with MaxDrawdownReached
+├── when open succeed
+│   ├── it should set isOpen to true
+│   ├── it should emit EpochEnd(block.timestamp, _totalAssets, assetReturned, fees, totalSupply())
+│   ├── it should _mint previewDeposit(pendingDeposit)
+│   ├── it should emit Deposit(address(this), address(this), pendingDeposit, previewDeposit(pendingDeposit))
+│   ├── it should _deposit the pendingDeposit value to the vault
+│   ├── it should emit Deposit(address(this), msg.sender, pendingDeposit, previewDeposit(pendingDeposit))
+│   ├── it should increase the total claimableShares of previewDeposit(pendingDeposit)
+│   ├── it should redeem pendingRedeem value from the vault
+│   ├── it should emit Withdraw(address(this), msg.sender, pendingRedeem, previewRedeem(pendingRedeem))
+│   ├── it should verify totalAssets == totalsAssetsBefore - assetsToRedeem + pendingDeposit
+│   └── it should verify totalSupply == totalSupplyBefore + previewDeposit(pendingDeposit) - pendingRedeem
+├── given period is in profit when open
+│   ├── it should transfer assetsReturned - ((totalAssets - assetReturned) * fees / 10 000) from msg.sender to the vault
+│   └── it should pass when open succeed
+└── given period is in loss when open
+    ├── it should transfer assetsReturned from msg.sender to the vault
+    └── it should pass when open succeed

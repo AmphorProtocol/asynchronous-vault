@@ -6,6 +6,7 @@ interface ERC7540Receiver {
         address operator,
         address owner,
         uint256 requestId,
+        uint256 assets,
         bytes memory data
     )
         external
@@ -15,6 +16,7 @@ interface ERC7540Receiver {
         address operator,
         address owner,
         uint256 requestId,
+        uint256 shares,
         bytes memory data
     )
         external

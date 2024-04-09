@@ -1,0 +1,12 @@
+TestClose
+├── given vault is closed when close
+│   └── it should revert with VaultIsClosed
+├── given msgSender is not owner when close
+│   └── it should revert with OwnableUnauthorizedAccount(msg.sender)
+├── given totalsAssets is x when open
+│   └── it should increase owner's underlying balance by x
+└── when close succeed
+    ├── it should set isOpen to false
+    ├── it should emit EpochStart(block.timestamp, _totalAssets, totalSupply())
+    ├── it should verify totalAssets == totalsAssetsBefore
+    └── it should verify totalSupply == totalSupplyBefore
