@@ -5,20 +5,24 @@ import { Script, console } from "forge-std/Script.sol";
 import { AsyncVault } from "../src/AsyncVault.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Upgrades, Options } from "openzeppelin-foundry-upgrades/Upgrades.sol";
-import { IPermit2 } from "permit2/src/interfaces/IPermit2.sol";
 import { UpgradeableBeacon } from
     "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 import { BeaconProxy } from
     "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
-contract MAINNET_DeployAmphorSynthetic is Script {
+contract MAINNET_DeployAmphor is Script {
     uint256 privateKey;
     uint16 fees;
-    string vaultName;
-    string vaultSymbol;
+    string vaultNameUSDC;
+    string vaultNameWETH;
+    string vaultSymbolUSDC;
+    string vaultSymbolWETH;
     address owner;
-    address underlying;
-    uint256 bootstrap;
+    address usdcAddr;
+    address wethAddr;
+    address amphor;
+    uint256 bootstrapUSDC;
+    uint256 bootstrapWETH;
     uint256 nonce; // beacon deployment + approve
     Options deploy;
 
@@ -26,25 +30,30 @@ contract MAINNET_DeployAmphorSynthetic is Script {
         // if you want to deploy a vault with a seed phrase instead of a pk,
         // uncomment the following line
         privateKey = vm.envUint("PRIVATE_KEY");
-
-        owner = vm.envAddress("AMPHORLABS_ADDRESS");
+        amphor = vm.envAddress("AMPHORLABS_ADDRESS");
         owner = vm.addr(privateKey);
         fees = uint16(vm.envUint("INITIAL_FEES_AMOUNT"));
-        vaultName = vm.envString("SYNTHETIC_WETH_V1_NAME");
-        vaultSymbol = vm.envString("SYNTHETIC_WETH_V1_SYMBOL");
-        underlying = vm.envAddress("WETH_MAINNET");
-        bootstrap = 1e17;
-        // vm.envUint("BOOTSTRAP_AMOUNT_SYNTHETIC_USDC");
+        vaultNameUSDC = vm.envString("USDC_V1_NAME");
+        vaultSymbolUSDC = vm.envString("USDC_V1_SYMBOL");
+        usdcAddr = vm.envAddress("USDC_MAINNET");
+        bootstrapUSDC = vm.envUint("BOOTSTRAP_AMOUNT_SYNTHETIC_USDC");
+        vaultNameWETH = vm.envString("WETH_V1_NAME");
+        vaultSymbolWETH = vm.envString("WETH_V1_SYMBOL");
+        wethAddr = vm.envAddress("WETH_MAINNET");
+        bootstrapWETH = vm.envUint("BOOTSTRAP_AMOUNT_SYNTHETIC_WETH");
         nonce = vm.getNonce(owner);
-        address nextProxyAddress = vm.computeCreateAddress(owner, nonce + 3);
+        address usdcProxyAddress = vm.computeCreateAddress(owner, nonce + 4);
+        address wethProxyAddress = vm.computeCreateAddress(owner, nonce + 5);
         vm.startBroadcast(privateKey);
 
-        IERC20(underlying).approve(nextProxyAddress, UINT256_MAX);
+        IERC20(usdcAddr).approve(usdcProxyAddress, UINT256_MAX);
+        IERC20(wethAddr).approve(wethProxyAddress, UINT256_MAX);
+
         UpgradeableBeacon beacon = UpgradeableBeacon(
             Upgrades.deployBeacon("AsyncVault.sol:AsyncVault", owner, deploy)
         );
 
-        BeaconProxy proxy = BeaconProxy(
+        BeaconProxy proxyUSDC = BeaconProxy(
             payable(
                 Upgrades.deployBeaconProxy(
                     address(beacon),
@@ -54,29 +63,53 @@ contract MAINNET_DeployAmphorSynthetic is Script {
                             fees,
                             owner,
                             owner,
-                            IERC20(underlying),
-                            bootstrap,
-                            vaultName,
-                            vaultSymbol
+                            IERC20(usdcAddr),
+                            bootstrapUSDC,
+                            vaultNameUSDC,
+                            vaultSymbolUSDC
                         )
                     )
                 )
             )
         );
 
-        address implementation = UpgradeableBeacon(beacon).implementation();
-        console.log("Synthetic vault USDC proxy address: ", address(proxy));
-
-        console.log("Synthetic vault USDC beacon address: ", address(beacon));
-        console.log(
-            "Synthetic vault USDC implementation address: ", implementation
+        BeaconProxy proxyWETH = BeaconProxy(
+            payable(
+                Upgrades.deployBeaconProxy(
+                    address(beacon),
+                    abi.encodeCall(
+                        AsyncVault.initialize,
+                        (
+                            fees,
+                            owner,
+                            owner,
+                            IERC20(wethAddr),
+                            bootstrapWETH,
+                            vaultNameWETH,
+                            vaultSymbolWETH
+                        )
+                    )
+                )
+            )
         );
 
-        // IERC20(underlying).transfer(address(proxy), bootstrap);
+        AsyncVault(address(proxyUSDC)).transferOwnership(amphor);
+        AsyncVault(address(proxyWETH)).transferOwnership(amphor);
+
+        address implementation = UpgradeableBeacon(beacon).implementation();
+        console.log("Vault USDC proxy address: ", address(proxyUSDC));
+        console.log("Vault WETH proxy address: ", address(proxyWETH));
+
+        console.log("Vault beacon address: ", address(beacon));
+        console.log(
+            "Vault implementation address: ", implementation
+        );
 
         vm.stopBroadcast();
 
-        //forge script script/goerli_deploy.s.sol:GOERLI_DeployAmphorSynthetic
-        // --verifier-url ${VERIFIER_URL_GOERLI} --verify --broadcast
+        // Mainnet 
+        // source .env && forge clean && forge script script/mainnet_deploy.s.sol:MAINNET_DeployAmphor --ffi --chain-id 1 --optimizer-runs 10000 --verifier-url ${VERIFIER_URL} --etherscan-api-key ${ETHERSCAN_API_KEY} --verify #--broadcast
+        // Sepolia
+        // source .env && forge clean && forge script script/mainnet_deploy.s.sol:MAINNET_DeployAmphor --ffi --chain-id 534351 --optimizer-runs 10000 --verifier-url ${VERIFIER_URL_SEPOLIA} --etherscan-api-key ${ETHERSCAN_API_KEY} --verify #--broadcast
     }
 }
