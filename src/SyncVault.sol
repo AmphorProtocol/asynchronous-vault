@@ -577,6 +577,8 @@ abstract contract SyncVault is
         view
         returns (uint256)
     {
+        // OXARIO Audit : I will modify this, maybe with a supply offset, still thinking about it
+        // the +1 that make the maths wrong will disappear
         return assets.mulDiv(totalSupply() + 1, totalAssets() + 1, rounding);
     }
 
@@ -596,6 +598,8 @@ abstract contract SyncVault is
         view
         returns (uint256)
     {
+        // OXARIO Audit : I will modify this, maybe with a supply offset, still thinking about it
+        // the +1 that make the maths wrong will disappear
         return shares.mulDiv(totalAssets() + 1, totalSupply() + 1, rounding);
     }
 

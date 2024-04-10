@@ -23,3 +23,7 @@ lcov.info
 
 # Mac files
 .DS_Store
+
+
+# yarn error
+yarn-error.log
