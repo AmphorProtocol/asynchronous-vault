@@ -35,42 +35,19 @@ contract MAINNET_DeployAmphor is Script {
         fees = uint16(vm.envUint("INITIAL_FEES_AMOUNT"));
         vaultNameUSDC = vm.envString("USDC_V1_NAME");
         vaultSymbolUSDC = vm.envString("USDC_V1_SYMBOL");
-        usdcAddr = vm.envAddress("USDC_MAINNET");
-        bootstrapUSDC = vm.envUint("BOOTSTRAP_AMOUNT_SYNTHETIC_USDC");
         vaultNameWETH = vm.envString("WETH_V1_NAME");
         vaultSymbolWETH = vm.envString("WETH_V1_SYMBOL");
         wethAddr = vm.envAddress("WETH_MAINNET");
         bootstrapWETH = vm.envUint("BOOTSTRAP_AMOUNT_SYNTHETIC_WETH");
         nonce = vm.getNonce(owner);
-        address usdcProxyAddress = vm.computeCreateAddress(owner, nonce + 4);
-        address wethProxyAddress = vm.computeCreateAddress(owner, nonce + 5);
+        address wethProxyAddress = vm.computeCreateAddress(owner, nonce + 3);
+        console.log("proxy address ", address(wethProxyAddress));
         vm.startBroadcast(privateKey);
 
-        IERC20(usdcAddr).approve(usdcProxyAddress, UINT256_MAX);
         IERC20(wethAddr).approve(wethProxyAddress, UINT256_MAX);
 
         UpgradeableBeacon beacon = UpgradeableBeacon(
             Upgrades.deployBeacon("AsyncVault.sol:AsyncVault", owner, deploy)
-        );
-
-        BeaconProxy proxyUSDC = BeaconProxy(
-            payable(
-                Upgrades.deployBeaconProxy(
-                    address(beacon),
-                    abi.encodeCall(
-                        AsyncVault.initialize,
-                        (
-                            fees,
-                            owner,
-                            owner,
-                            IERC20(usdcAddr),
-                            bootstrapUSDC,
-                            vaultNameUSDC,
-                            vaultSymbolUSDC
-                        )
-                    )
-                )
-            )
         );
 
         BeaconProxy proxyWETH = BeaconProxy(
@@ -93,11 +70,9 @@ contract MAINNET_DeployAmphor is Script {
             )
         );
 
-        AsyncVault(address(proxyUSDC)).transferOwnership(amphor);
         AsyncVault(address(proxyWETH)).transferOwnership(amphor);
 
         address implementation = UpgradeableBeacon(beacon).implementation();
-        console.log("Vault USDC proxy address: ", address(proxyUSDC));
         console.log("Vault WETH proxy address: ", address(proxyWETH));
 
         console.log("Vault beacon address: ", address(beacon));

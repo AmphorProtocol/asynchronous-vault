@@ -3,22 +3,30 @@ pragma solidity 0.8.21;
 
 import { Script, console } from "forge-std/Script.sol";
 import { VaultZapper } from "../src/VaultZapper.sol";
+import { AsyncVault } from "../src/AsyncVault.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract MAINNET_DeployAmphorZapper is Script {
     uint256 privateKey;
     address owner;
     address amphor;
+    address router;
 
     function run() external {
         // if you want to deploy a vault with a seed phrase instead of a pk,
         // uncomment the following line
         privateKey = vm.envUint("PRIVATE_KEY");
+        router = vm.envAddress("ONE_INCH_ROUTER_V5");
 
         amphor = vm.envAddress("AMPHORLABS_ADDRESS");
         owner = vm.addr(privateKey);
         vm.startBroadcast(privateKey);
         VaultZapper zapper = new VaultZapper();
+        zapper.toggleVaultAuthorization(
+            AsyncVault(0xcDC51F2B0e5F0906f2fd5f557de49D99c34Df54e)
+        );
+        zapper.toggleRouterAuthorization(router);
+
         zapper.transferOwnership(amphor);
 
         console.log("Zapper address: ", address(zapper));
