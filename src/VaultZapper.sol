@@ -230,6 +230,7 @@ contract VaultZapper is Ownable2Step, Pausable {
     )
         internal
     {
+        require(data.length > 0, "empty call data for zapin");
         uint256 expectedBalance; // of tokenIn (currently)
 
         if (msg.value == 0) {
@@ -303,10 +304,15 @@ contract VaultZapper is Ownable2Step, Pausable {
         // Zap
         _zapIn(tokenIn, router, amount, data);
 
+
+        uint256 assets = IERC20(vault.asset()).balanceOf(address(this))
+                - initialTokenOutBalance;
+
+        require(assets > 0, "zap generated 0 assets");
+
         // Deposit
         uint256 shares = vault.deposit(
-            IERC20(vault.asset()).balanceOf(address(this))
-                - initialTokenOutBalance,
+            assets,
             _msgSender()
         );
 
@@ -346,12 +352,16 @@ contract VaultZapper is Ownable2Step, Pausable {
         // Zap
         _zapIn(tokenIn, router, amountIn, swapData);
 
+        uint256 assets = IERC20(vault.asset()).balanceOf(address(this))
+                - initialTokenOutBalance;
+
+        require(assets > 0, "zap generated 0 assets");
+
         // Request deposit
         vault.requestDeposit(
-            IERC20(vault.asset()).balanceOf(address(this))
-                - initialTokenOutBalance,
+            assets,
             _msgSender(),
-            _msgSender(),
+            address(this),
             callback7540Data
         );
 
