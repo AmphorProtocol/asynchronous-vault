@@ -87,7 +87,8 @@ struct EpochData {
  */
 struct SettleValues {
     uint256 lastSavedBalance;
-    uint256 fees;
+    uint256 fees1;
+    uint256 fees2;
     uint256 pendingRedeem;
     uint256 sharesToMint;
     uint256 pendingDeposit;
@@ -120,15 +121,33 @@ contract AsyncVault is IERC7540, SyncVault {
      * function.
      */
     uint256 public epochId;
+
+    uint256 public epochStart;
     /**
-     * @notice The treasury is used to store the address of the treasury.
-     * The treasury is used to store the fees taken from the vault.
-     * The treasury can be the owner of the contract or a specific address.
-     * The treasury can be changed by the owner of the contract.
-     * The treasury can be used to store the fees taken from the vault.
-     * The treasury can be the owner of the contract or a specific address.
+     * @notice The treasury1 is used to store the address of the treasury1.
+     * The treasury1 is used to store the fees taken from the vault.
+     * The treasury1 can be the owner of the contract or a specific address.
+     * The treasury1 can be changed by the owner of the contract.
+     * The treasury1 can be used to store the fees taken from the vault.
+     * The treasury1 can be the owner of the contract or a specific address.
      */
-    address public treasury;
+    address public treasury1;
+
+    /**
+     * @notice The treasury2 is used to store the address of the treasury2.
+     * The treasury2 is used to store the fees taken from the vault.
+     * The treasury2 can be the owner of the contract or a specific address.
+     * The treasury2 can be changed by the owner of the contract.
+     * The treasury2 can be used to store the fees taken from the vault.
+     * The treasury2 can be the owner of the contract or a specific address.
+     */
+    address public treasury2;
+
+
+    uint16 public fees1;
+
+    uint16 public fees2;
+
     /**
      * @notice The lastSavedBalance is used to keep track of the assets in the
      * vault at the time of the last `settle` call.
@@ -291,9 +310,11 @@ contract AsyncVault is IERC7540, SyncVault {
     }
 
     function initialize(
-        uint16 fees,
+        uint16 _fees1,
+        uint16 _fees2,
         address owner,
-        address _treasury,
+        address _treasury1,
+        address _treasury2,
         IERC20 underlying,
         uint256 bootstrapAmount,
         string memory name,
@@ -302,9 +323,12 @@ contract AsyncVault is IERC7540, SyncVault {
         public
         initializer
     {
-        super.initialize(fees, owner, underlying, bootstrapAmount, name, symbol);
+        super.initialize(0, owner, underlying, bootstrapAmount, name, symbol);
         epochId = 1;
-        setTreasury(_treasury);
+        setTreasury1(_treasury1);
+        setFees1(_fees1);
+        setTreasury2(_treasury2);
+        setFees2(_fees2);
         pendingSilo = new Silo(underlying);
         claimableSilo = new Silo(underlying);
     }
@@ -369,9 +393,22 @@ contract AsyncVault is IERC7540, SyncVault {
      * modifier).
      * @param _treasury The address of the treasury.
      */
-    function setTreasury(address _treasury) public onlyOwner {
+    function setTreasury1(address _treasury) public onlyOwner {
         if (_treasury == address(0)) revert InvalidTreasury();
-        treasury = _treasury;
+        treasury1 = _treasury;
+    }
+
+    function setFees1(uint16 _fees1) public onlyOwner {
+        fees1 = _fees1;
+    }
+
+    function setTreasury2(address _treasury) public onlyOwner {
+        if (_treasury == address(0)) revert InvalidTreasury();
+        treasury2 = _treasury;
+    }
+
+    function setFees2(uint16 _fees2) public onlyOwner {
+        fees2 = _fees2;
     }
 
     /**
@@ -387,6 +424,7 @@ contract AsyncVault is IERC7540, SyncVault {
         lastSavedBalance = totalAssets();
         vaultIsOpen = false;
         _asset.safeTransfer(owner(), lastSavedBalance);
+        epochStart = block.timestamp;
         emit EpochStart(block.timestamp, lastSavedBalance, totalSupply());
     }
 
@@ -440,6 +478,8 @@ contract AsyncVault is IERC7540, SyncVault {
     {
         (uint256 _lastSavedBalance, uint256 totalSupply) =
             _settle(newSavedBalance);
+
+        epochStart = block.timestamp;
         emit EpochStart(block.timestamp, _lastSavedBalance, totalSupply);
     }
 
@@ -598,9 +638,11 @@ contract AsyncVault is IERC7540, SyncVault {
         if (_msgSender() != owner) {
             _spendAllowance(owner, _msgSender(), shares);
         }
+
         if (previewClaimRedeem(receiver) > 0) {
             _claimRedeem(receiver, receiver);
         }
+
         if (shares > maxRedeemRequest(owner)) {
             revert ExceededMaxRedeemRequest(
                 receiver, shares, maxRedeemRequest(owner)
@@ -611,6 +653,39 @@ contract AsyncVault is IERC7540, SyncVault {
         // Create a new request
         _createRedeemRequest(shares, receiver, owner, data);
     }
+
+
+    /**
+     * @dev requestRedeemAll will create a redeem request with all the sender shares
+     * available
+     * @param data The data to be sent to the receiver.
+     */
+
+    function requestRedeemAll(
+        bytes memory data
+    )
+        public
+        whenNotPaused
+        whenClosed
+    {
+
+        address sender = _msgSender();
+        if (previewClaimRedeem(sender) > 0) {
+            _claimRedeem(sender, sender);
+        }
+
+        if (previewClaimDeposit(sender)  > 0 ) {
+            _claimDeposit(sender, sender);
+        }
+
+        uint256 shares = maxRedeemRequest(sender);
+
+        _update(sender, address(pendingSilo), shares);
+        // Create a new request
+        _createRedeemRequest(shares, sender, sender, data);
+    }
+
+
 
     /**
      * @dev This function let users claim the shares we owe them after we
@@ -795,12 +870,17 @@ contract AsyncVault is IERC7540, SyncVault {
         uint256 _lastSavedBalance = lastSavedBalance;
         _checkMaxDrawdown(_lastSavedBalance, newSavedBalance);
 
+
+        uint256 duration = block.timestamp - epochStart;
         // calculate the fees between lastSavedBalance and newSavedBalance
-        uint256 fees = _computeFees(_lastSavedBalance, newSavedBalance);
+        uint256 _fees1 = _computeFees(_lastSavedBalance, newSavedBalance, duration, fees1);
+        uint256 _fees2 = _computeFees(_lastSavedBalance, newSavedBalance, duration, fees2);
+
         uint256 totalSupply = totalSupply();
 
+
         // taking fees if positive yield
-        _lastSavedBalance = newSavedBalance - fees;
+        _lastSavedBalance = newSavedBalance - fees1 -fees2;
 
         address pendingSiloAddr = address(pendingSilo);
         uint256 pendingRedeem = balanceOf(pendingSiloAddr);
@@ -820,8 +900,9 @@ contract AsyncVault is IERC7540, SyncVault {
         );
 
         settleValues = SettleValues({
-            lastSavedBalance: _lastSavedBalance + fees,
-            fees: fees,
+            lastSavedBalance: _lastSavedBalance + fees1 + fees2,
+            fees1: _fees1,
+            fees2: _fees2,
             pendingRedeem: pendingRedeem,
             sharesToMint: sharesToMint,
             pendingDeposit: pendingDeposit,
@@ -835,7 +916,7 @@ contract AsyncVault is IERC7540, SyncVault {
         } else if (pendingDeposit < assetsToWithdraw) {
             assetsToVault = assetsToWithdraw - pendingDeposit;
         }
-        expectedAssetFromOwner = fees + assetsToVault;
+        expectedAssetFromOwner = fees1 + fees2 + assetsToVault;
     }
 
     /**
@@ -984,11 +1065,12 @@ contract AsyncVault is IERC7540, SyncVault {
             block.timestamp,
             lastSavedBalance,
             newSavedBalance,
-            settleValues.fees,
+            settleValues.fees1 + settleValues.fees2,
             totalSupply()
         );
 
-        _asset.safeTransferFrom(owner(), treasury, settleValues.fees);
+        _asset.safeTransferFrom(owner(), treasury1, settleValues.fees1);
+        _asset.safeTransferFrom(owner(), treasury2, settleValues.fees2);
 
         // Settle the shares balance
         _burn(address(pendingSilo), settleValues.pendingRedeem);
@@ -1047,7 +1129,7 @@ contract AsyncVault is IERC7540, SyncVault {
         );
 
         settleValues.lastSavedBalance = settleValues.lastSavedBalance
-            - settleValues.fees + settleValues.pendingDeposit
+            - settleValues.fees1 - settleValues.fees2 + settleValues.pendingDeposit
             - settleValues.assetsToWithdraw;
         lastSavedBalance = settleValues.lastSavedBalance;
 
@@ -1137,20 +1219,22 @@ contract AsyncVault is IERC7540, SyncVault {
         ) revert MaxDrawdownReached();
     }
 
+
+    // compute fees 
+    // the tvl is averaged during the period
     function _computeFees(
         uint256 _lastSavedBalance,
-        uint256 newSavedBalance
+        uint256 newSavedBalance,
+        uint256 duration,
+        uint256 annualBips
     )
         internal
-        view
+        pure
         returns (uint256 fees)
     {
-        if (newSavedBalance > _lastSavedBalance && feesInBps > 0) {
-            uint256 profits;
-            unchecked {
-                profits = newSavedBalance - _lastSavedBalance;
-            }
-            fees = (profits).mulDiv(feesInBps, BPS_DIVIDER, Math.Rounding.Floor);
-        }
+        uint256 year = 3600*24*360;
+        uint256 avg = (newSavedBalance + _lastSavedBalance) / 2;
+        uint256 annualized = (avg).mulDiv(duration , year, Math.Rounding.Floor);
+        fees = (annualized).mulDiv(annualBips, BPS_DIVIDER, Math.Rounding.Floor);
     }
 }
